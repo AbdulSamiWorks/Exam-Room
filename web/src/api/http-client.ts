@@ -31,6 +31,10 @@ export function postJson<ResponseBody>(path: string, body?: unknown): Promise<Re
   });
 }
 
+export function postForm<ResponseBody>(path: string, formData: FormData): Promise<ResponseBody> {
+  return requestJson<ResponseBody>(path, { method: 'POST', body: formData });
+}
+
 async function requestJson<ResponseBody>(path: string, init: RequestInit): Promise<ResponseBody> {
   const response = await sendRequest(path, init);
   if (!response.ok) throw await readApiError(response);

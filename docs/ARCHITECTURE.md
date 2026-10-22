@@ -289,6 +289,22 @@ Other: `GET /api/health`. Errors always use one JSON shape: `{ error: { code, me
 | Turso   | 5 GB storage, 100 databases, 500 M row reads / 10 M row writes per month, no credit card                                        |
 
 - Because the server is stateless (§1.3), Render's restarts and lack of disk don't matter.
+
+**Free-tier budget** — the design keeps every resource far below the free limits:
+
+| Resource         | Free limit        | Our usage (approx.)                                                          |
+| ---------------- | ----------------- | ---------------------------------------------------------------------------- |
+| Render memory    | 512 MB            | Node ~80 MB + worst-case upload (30 pages × 3 MB) + sharp one page at a time |
+| Render CPU       | ~0.1 vCPU         | PDF rendering happens in the teacher's browser; server only re-encodes pages |
+| Turso storage    | 5 GB              | ~250 KB per page → ~20,000 pages                                             |
+| Turso row writes | 10 M / month      | One test ≈ pages + 1 rows; one exam of 10 students ≈ < 100 rows              |
+| Turso row reads  | 500 M / month     | One read per page view; watermarked pages cached in memory                   |
+| Render bandwidth | monthly allowance | One exam ≈ 10 students × 10 pages × ~250 KB ≈ 25 MB                          |
+
+Rules that protect the budget: sharp runs with its cache off and one thread
+(`configureImageProcessingForSmallServers`), pages are processed one at a time, uploads are capped
+(30 pages, 3 MB each), and pdf.js is loaded only on the teacher's "New test" screen.
+
 - **Cold start:** after 15 min with no traffic the app sleeps and the next visit takes ~1 minute.
   Open the site 2–3 minutes before an exam; during the exam, student traffic keeps it awake.
 - Render may sometimes ask for a card to verify the account (a $1 hold that is cancelled).
@@ -376,3 +392,9 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 - Delete/archive tests, CSV export of results → small additions to `tests` / `attempts` modules.
 - Larger storage → swap page storage to Cloudflare R2 behind the same `tests` module interface.
 - Urdu-script names in the watermark → bundle a second font (e.g. Noto Naskh Arabic).
+
+## 15. Release checklist (to verify before first deploy)
+
+- Production build + CSP: create a test from a scanned PDF and from a Word-exported PDF; confirm
+  pdf.js renders both (worker, fonts, and image decoders allowed by the Content Security Policy).
+- Real devices: Android Chrome and iPhone Safari for every student screen.

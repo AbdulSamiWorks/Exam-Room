@@ -1,0 +1,45 @@
+.dropZone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px 16px;
+  border: 2px dashed var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dropZone:has(.fileInput:focus-visible) {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.ready {
+  border-style: solid;
+  border-color: var(--color-primary);
+}
+
+.failed {
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.fileInput {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.headline {
+  font-weight: 600;
+}
+
+.details {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}

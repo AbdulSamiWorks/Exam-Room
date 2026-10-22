@@ -1,34 +1,25 @@
 import { useId, type InputHTMLAttributes } from 'react';
-import styles from './TextField.module.css';
+import { fieldAccessibilityProps, type FieldMessages } from './form-field-accessibility';
+import { FormField } from './FormField';
+import styles from './FormField.module.css';
 
-type TextFieldProps = InputHTMLAttributes<HTMLInputElement> & {
-  label: string;
-  errorMessage?: string;
-};
+type TextFieldProps = InputHTMLAttributes<HTMLInputElement> &
+  FieldMessages & {
+    label: string;
+  };
 
-export function TextField({ label, errorMessage, id, ...inputProps }: TextFieldProps) {
+export function TextField({ label, hint, errorMessage, id, ...inputProps }: TextFieldProps) {
   const generatedId = useId();
-  const inputId = id ?? generatedId;
-  const errorMessageId = `${inputId}-error`;
-  const hasError = Boolean(errorMessage);
+  const controlId = id ?? generatedId;
 
   return (
-    <div className={styles.field}>
-      <label htmlFor={inputId} className={styles.label}>
-        {label}
-      </label>
+    <FormField label={label} controlId={controlId} hint={hint} errorMessage={errorMessage}>
       <input
-        id={inputId}
-        className={styles.input}
-        aria-invalid={hasError || undefined}
-        aria-describedby={hasError ? errorMessageId : undefined}
+        id={controlId}
+        className={styles.control}
+        {...fieldAccessibilityProps(controlId, { hint, errorMessage })}
         {...inputProps}
       />
-      {hasError && (
-        <p id={errorMessageId} className={styles.errorMessage}>
-          {errorMessage}
-        </p>
-      )}
-    </div>
+    </FormField>
   );
 }

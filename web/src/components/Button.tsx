@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from 'react';
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from 'react';
 import { Link, type LinkProps } from 'react-router';
 import { classNames } from '../lib/class-names';
 import styles from './Button.module.css';
@@ -14,6 +14,10 @@ type ButtonStyleProps = {
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & ButtonStyleProps;
 type ButtonLinkProps = LinkProps & ButtonStyleProps;
+type ExternalButtonLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> &
+  ButtonStyleProps & {
+    href: string;
+  };
 
 export function Button({
   variant,
@@ -35,6 +39,23 @@ export function Button({
 export function ButtonLink({ variant, size, fullWidth, className, ...linkProps }: ButtonLinkProps) {
   return (
     <Link className={buttonClassNames({ variant, size, fullWidth }, className)} {...linkProps} />
+  );
+}
+
+export function ExternalButtonLink({
+  variant,
+  size,
+  fullWidth,
+  className,
+  ...anchorProps
+}: ExternalButtonLinkProps) {
+  return (
+    <a
+      target="_blank"
+      rel="noopener noreferrer"
+      className={buttonClassNames({ variant, size, fullWidth }, className)}
+      {...anchorProps}
+    />
   );
 }
 
