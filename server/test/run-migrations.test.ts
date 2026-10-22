@@ -32,6 +32,28 @@ describe('runMigrations', () => {
     );
   });
 
+  it('gives existing attempts version 0 when migration 2 adds the version column', async () => {
+    const initialSchemaOnly = migrations.filter((migration) => migration.id === 1);
+    await runMigrations(database, initialSchemaOnly);
+    await database.batch(
+      [
+        "INSERT INTO subjects (id, name, created_at) VALUES (1, 'Physics', 0)",
+        `INSERT INTO tests (id, code, subject_id, title, duration_minutes, allowed_exits,
+                            page_count, created_at)
+         VALUES (1, 'K7M2QX', 1, 'Quiz', 30, 1, 1, 0)`,
+        `INSERT INTO attempts (test_id, student_name, roll_no, roll_no_key, token_hash, status,
+                               started_at, deadline_at)
+         VALUES (1, 'Ayesha', '17', '17', 'hash', 'in_progress', 0, 1800000)`,
+      ],
+      'write',
+    );
+
+    expect(await runMigrations(database)).toEqual([2]);
+
+    const { rows } = await database.execute('SELECT version FROM attempts');
+    expect(rows.map((row) => row.version)).toEqual([0]);
+  });
+
   it('rolls back a migration that fails part-way', async () => {
     const brokenMigration = {
       id: 1,

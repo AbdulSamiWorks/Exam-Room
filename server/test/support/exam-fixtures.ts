@@ -1,0 +1,74 @@
+import type {
+  AllowedExits,
+  StartAttemptRequest,
+  StartAttemptResponse,
+  TestSummary,
+} from '@exam-room/shared';
+import type { Express } from 'express';
+import request from 'supertest';
+import { createBlankPageImage } from './page-image-fixtures.js';
+import { logInAsTeacher } from './teacher-agent.js';
+
+export type TestSettings = {
+  title?: string;
+  durationMinutes?: number;
+  allowedExits?: AllowedExits;
+  pageImages?: Buffer[];
+};
+
+export const STUDENT: StartAttemptRequest = { studentName: 'Ayesha Khan', rollNumber: '17' };
+
+let createdSubjectCount = 0;
+
+export async function publishTest(app: Express, settings: TestSettings = {}): Promise<TestSummary> {
+  const teacher = await logInAsTeacher(app);
+  createdSubjectCount += 1;
+  const subject = await teacher
+    .post('/api/subjects')
+    .send({ name: `Subject ${createdSubjectCount}` });
+
+  const upload = teacher
+    .post('/api/tests')
+    .field('subjectId', String(subject.body.subject.id))
+    .field('title', settings.title ?? 'Chapter 3 Quiz')
+    .field('durationMinutes', String(settings.durationMinutes ?? 30))
+    .field('allowedExits', String(settings.allowedExits ?? 1));
+
+  const pageImages = settings.pageImages ?? [await createBlankPageImage()];
+  pageImages.forEach((pageImage, pageIndex) => {
+    upload.attach('pages', pageImage, {
+      filename: `page-${pageIndex + 1}.png`,
+      contentType: 'image/png',
+    });
+  });
+
+  const response = await upload;
+  if (response.status !== 201) throw new Error(`Test creation failed: ${response.status}`);
+  return response.body.test;
+}
+
+export function startAttempt(
+  app: Express,
+  testCode: string,
+  student: StartAttemptRequest = STUDENT,
+) {
+  return request(app).post(`/api/public/tests/${testCode}/attempts`).send(student);
+}
+
+export async function startAttemptToken(
+  app: Express,
+  testCode: string,
+  student: StartAttemptRequest = STUDENT,
+): Promise<string> {
+  const response = await startAttempt(app, testCode, student);
+  if (response.status !== 201) throw new Error(`Starting the attempt failed: ${response.status}`);
+  return (response.body as StartAttemptResponse).attemptToken;
+}
+
+export function studentRequests(app: Express, attemptToken: string) {
+  const authorization = `Bearer ${attemptToken}`;
+  return {
+    get: (path: string) => request(app).get(path).set('Authorization', authorization),
+    post: (path: string) => request(app).post(path).set('Authorization', authorization),
+  };
+}

@@ -19,6 +19,11 @@ describe('API basics', () => {
     expect(response.body).toEqual({ status: 'ok' });
   });
 
+  it('allows images only from this site, data: URLs and blob: URLs', async () => {
+    const response = await request(context.app).get('/api/health');
+    expect(response.headers['content-security-policy']).toContain("img-src 'self' data: blob:");
+  });
+
   it('unknown API routes return a JSON 404', async () => {
     const response = await request(context.app).get('/api/does-not-exist');
     expect(response.status).toBe(404);
