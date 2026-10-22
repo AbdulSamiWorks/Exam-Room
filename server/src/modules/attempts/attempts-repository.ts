@@ -1,0 +1,141 @@
+import type { AttemptStatus, FinishReason } from '@exam-room/shared';
+import type { Row } from '@libsql/client';
+import type { Database } from '../../database/connection.js';
+import { requireFirstRow } from '../../database/query-helpers.js';
+import type { AttemptChange, AttemptRecord } from './attempt-record.js';
+
+export type NewAttempt = {
+  testId: number;
+  studentName: string;
+  rollNumber: string;
+  rollNumberKey: string;
+  tokenHash: string;
+  startedAt: number;
+  deadlineAt: number;
+};
+
+const ATTEMPT_COLUMNS = `
+  id, test_id, student_name, roll_no, token_hash, status, finish_reason,
+  started_at, deadline_at, finished_at, exit_count, forgiven_exits, version`;
+
+export async function insertAttempt(
+  database: Database,
+  newAttempt: NewAttempt,
+): Promise<AttemptRecord> {
+  const result = await database.execute({
+    sql: `INSERT INTO attempts
+            (test_id, student_name, roll_no, roll_no_key, token_hash, status, started_at, deadline_at)
+          VALUES (?, ?, ?, ?, ?, 'in_progress', ?, ?)
+          RETURNING ${ATTEMPT_COLUMNS}`,
+    args: [
+      newAttempt.testId,
+      newAttempt.studentName,
+      newAttempt.rollNumber,
+      newAttempt.rollNumberKey,
+      newAttempt.tokenHash,
+      newAttempt.startedAt,
+      newAttempt.deadlineAt,
+    ],
+  });
+  return toAttemptRecord(requireFirstRow(result));
+}
+
+export async function findAttemptById(
+  database: Database,
+  attemptId: number,
+): Promise<AttemptRecord | undefined> {
+  return findOneAttempt(database, 'id = ?', [attemptId]);
+}
+
+export async function findAttemptByTokenHash(
+  database: Database,
+  tokenHash: string,
+): Promise<AttemptRecord | undefined> {
+  return findOneAttempt(database, 'token_hash = ?', [tokenHash]);
+}
+
+export async function findAttemptByRollNumber(
+  database: Database,
+  testId: number,
+  rollNumberKey: string,
+): Promise<AttemptRecord | undefined> {
+  return findOneAttempt(database, 'test_id = ? AND roll_no_key = ?', [testId, rollNumberKey]);
+}
+
+export async function saveAttemptChange(
+  database: Database,
+  expectedVersion: number,
+  { attempt, newExit }: AttemptChange,
+): Promise<boolean> {
+  const transaction = await database.transaction('write');
+  try {
+    const update = await transaction.execute({
+      sql: `UPDATE attempts
+            SET token_hash = ?, status = ?, finish_reason = ?, finished_at = ?,
+                exit_count = ?, forgiven_exits = ?, version = version + 1
+            WHERE id = ? AND version = ?`,
+      args: [
+        attempt.tokenHash,
+        attempt.status,
+        attempt.finishReason,
+        attempt.finishedAt,
+        attempt.exitCount,
+        attempt.forgivenExits,
+        attempt.id,
+        expectedVersion,
+      ],
+    });
+    if (update.rowsAffected === 0) return false;
+
+    if (newExit) {
+      await transaction.execute({
+        sql: `INSERT INTO exits (attempt_id, client_exit_id, reason, left_at, returned_at, away_ms)
+              VALUES (?, ?, ?, ?, ?, ?)`,
+        args: [
+          attempt.id,
+          newExit.clientExitId,
+          newExit.reason,
+          newExit.leftAt,
+          newExit.returnedAt,
+          newExit.awayMs,
+        ],
+      });
+    }
+
+    await transaction.commit();
+    return true;
+  } finally {
+    transaction.close();
+  }
+}
+
+async function findOneAttempt(
+  database: Database,
+  condition: string,
+  args: Array<string | number>,
+): Promise<AttemptRecord | undefined> {
+  const { rows } = await database.execute({
+    sql: `SELECT ${ATTEMPT_COLUMNS} FROM attempts WHERE ${condition}`,
+    args,
+  });
+  const [row] = rows;
+  return row ? toAttemptRecord(row) : undefined;
+}
+
+function toAttemptRecord(row: Row): AttemptRecord {
+  return {
+    id: Number(row.id),
+    testId: Number(row.test_id),
+    studentName: String(row.student_name),
+    rollNumber: String(row.roll_no),
+    tokenHash: String(row.token_hash),
+    status: String(row.status) as AttemptStatus,
+    finishReason: row.finish_reason === null ? null : (String(row.finish_reason) as FinishReason),
+    startedAt: Number(row.started_at),
+    deadlineAt: Number(row.deadline_at),
+    finishedAt: row.finished_at === null ? null : Number(row.finished_at),
+    exitCount: Number(row.exit_count),
+    forgivenExits: Number(row.forgiven_exits),
+    version: Number(row.version),
+  };
+}

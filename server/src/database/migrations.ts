@@ -63,4 +63,9 @@ export const migrations: readonly Migration[] = [
       )`,
     ],
   },
+  {
+    id: 2,
+    name: 'attempt version for safe concurrent updates',
+    statements: [`ALTER TABLE attempts ADD COLUMN version INTEGER NOT NULL DEFAULT 0`],
+  },
 ];

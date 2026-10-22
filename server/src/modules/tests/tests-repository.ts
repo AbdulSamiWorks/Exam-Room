@@ -1,4 +1,4 @@
-import type { AllowedExits, TestSummary } from '@exam-room/shared';
+import type { AllowedExits, PageSize, TestSummary } from '@exam-room/shared';
 import type { Row } from '@libsql/client';
 import type { Database } from '../../database/connection.js';
 import { requireFirstRow } from '../../database/query-helpers.js';
@@ -96,6 +96,39 @@ export async function findTestById(
   });
   const [row] = rows;
   return row ? toTestSummary(row) : undefined;
+}
+
+export async function findTestByCode(
+  database: Database,
+  code: string,
+): Promise<TestSummary | undefined> {
+  const { rows } = await database.execute({
+    sql: `${SELECT_TEST_SUMMARY} WHERE tests.code = ?`,
+    args: [code],
+  });
+  const [row] = rows;
+  return row ? toTestSummary(row) : undefined;
+}
+
+export async function listPageSizes(database: Database, testId: number): Promise<PageSize[]> {
+  const { rows } = await database.execute({
+    sql: 'SELECT width, height FROM test_pages WHERE test_id = ? ORDER BY page_no',
+    args: [testId],
+  });
+  return rows.map((row) => ({ width: Number(row.width), height: Number(row.height) }));
+}
+
+export async function findPageImage(
+  database: Database,
+  testId: number,
+  pageNumber: number,
+): Promise<Buffer | undefined> {
+  const { rows } = await database.execute({
+    sql: 'SELECT image FROM test_pages WHERE test_id = ? AND page_no = ?',
+    args: [testId, pageNumber],
+  });
+  const [row] = rows;
+  return row ? Buffer.from(row.image as ArrayBuffer) : undefined;
 }
 
 export async function isTestCodeTaken(database: Database, code: string): Promise<boolean> {
