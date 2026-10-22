@@ -1,0 +1,8 @@
+.formError {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-weight: 500;
+}

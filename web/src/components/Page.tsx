@@ -6,7 +6,6 @@ type PageProps = {
   children?: ReactNode;
 };
 
-/** Standard centered page layout with a title. */
 export function Page({ title, children }: PageProps) {
   return (
     <main className={styles.page}>

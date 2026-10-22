@@ -67,40 +67,51 @@ Runtime: **Node 22 LTS** (pinned in `.nvmrc` and `engines`).
 
 ```
 exam-room/
-├─ package.json              # workspaces + root scripts (dev, build, start, test, lint)
-├─ render.yaml               # Render blueprint (one-click deploy)
+├─ package.json                 workspaces + root scripts (dev, build, start, check)
+├─ render.yaml                  Render blueprint (added in M7)
 ├─ .env.example
-├─ docs/ARCHITECTURE.md      # this file
-├─ shared/                   # API contract TYPES only (erased at build → no runtime coupling)
-│  └─ src/index.ts
+├─ docs/ARCHITECTURE.md         this file
+├─ shared/src/                  API contract TYPES only, one file per feature (auth.ts, …)
 ├─ server/
 │  ├─ src/
-│  │  ├─ index.ts            # boot: load config, migrate DB, listen
-│  │  ├─ app.ts              # builds the Express app (tests use it without listening)
-│  │  ├─ config.ts           # env vars parsed with zod; fail fast if missing
-│  │  ├─ db/                 # client, migration runner, migrations (as TS strings)
-│  │  ├─ modules/
-│  │  │  ├─ auth/            # teacher login, session cookie, requireTeacher middleware
-│  │  │  ├─ subjects/
-│  │  │  ├─ tests/           # create test, store pages, list/filter
-│  │  │  └─ attempts/        # rules.ts (pure), service, routes, watermark, results, unlock
-│  │  └─ lib/                # errors, ids/codes, tokens, time
-│  └─ test/
-└─ web/
-   ├─ index.html
-   └─ src/
-      ├─ main.tsx, App.tsx   # router
-      ├─ api/                # one typed fetch client
-      ├─ components/         # Button, Modal, etc. (shared UI)
-      ├─ features/
-      │  ├─ teacher/         # Login, Dashboard, CreateTest (pdf.js), Results
-      │  └─ student/         # Join, ExamScreen, PaperViewer, TopBar,
-      │                      # Warning/Locked/Submitted screens, useExitDetection, useCountdown
-      └─ styles/
+│  │  ├─ index.ts               boot: load .env + config, open DB, run migrations, listen
+│  │  ├─ app.ts                 builds the Express app (tests use it without listening)
+│  │  ├─ app-dependencies.ts    { config, database, clock } passed to every module
+│  │  ├─ api-router.ts          the ONE place where feature routers are mounted under /api
+│  │  ├─ config.ts              env vars parsed with zod; boot fails fast if invalid
+│  │  ├─ database/              connection, migrations list, migration runner
+│  │  ├─ modules/<feature>/     one folder per feature: <feature>-router.ts + its logic
+│  │  │  ├─ health/
+│  │  │  ├─ auth/               login/logout/session, session token, requireTeacher
+│  │  │  ├─ subjects/  tests/  attempts/   (M2–M6)
+│  │  └─ lib/                   framework-level helpers: http-errors, parse-input, crypto, …
+│  └─ test/                     Vitest + supertest; support/test-context.ts builds an app
+│                               with an in-memory DB and a fake clock
+└─ web/src/
+   ├─ main.tsx
+   ├─ app/                      App (routes), AppProviders, query-client
+   ├─ api/http-client.ts        getJson/postJson + ApiError
+   ├─ components/               shared UI: Button, TextField, FormError, Page, LoadingScreen
+   ├─ lib/                      tiny helpers (classNames)
+   ├─ features/
+   │  ├─ home/
+   │  ├─ teacher/               TeacherArea (session gate + routes), TeacherLayout,
+   │  │                         auth/, dashboard/, … (create test, results)
+   │  └─ student/               join, exam screen, viewer, warning/locked/submitted screens
+   └─ styles/global.css         design tokens (CSS variables)
 ```
 
-Rule of thumb: **each feature owns its routes, data access and UI**; `lib/` and `components/` hold
-only genuinely shared code.
+**Adding a feature** (e.g. "export results"):
+
+1. Types for its requests/responses → `shared/src/<feature>.ts`, re-exported from `index.ts`.
+2. Server → `server/src/modules/<feature>/` with a `create<Feature>Router(dependencies)`;
+   mount it with one line in `api-router.ts`. Schema changes → a new migration.
+3. Web → `web/src/features/<feature>/` with its pages and `use-<feature>.ts` query hooks;
+   add its route in `app/App.tsx` (or inside `TeacherArea`).
+4. Tests next to the others in `server/test/`.
+
+Each feature owns its routes, data access and UI; `lib/` and `components/` hold only genuinely
+shared code.
 
 ## 5. Data model
 
@@ -131,7 +142,10 @@ exits      (id PK, attempt_id → attempts, client_exit_id UNIQUE,   -- idempote
             left_at, returned_at NULL, away_ms NULL)
 ```
 
-Migrations are ordered TS modules applied on boot and tracked in a `schema_migrations` table.
+Migrations live in `server/src/database/migrations.ts`, run on boot, and are tracked in a
+`schema_migrations` table. Each migration runs atomically (its statements + bookkeeping row in one
+batch). **Migrations are append-only:** once one has run in production, never edit it — add a new
+one with the next id.
 
 Size check: a page is ~150–250 KB as WebP, so Turso's 5 GB free storage holds 20,000+ pages.
 
@@ -298,12 +312,29 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 
 ## 11. Quality and workflow
 
-- **Tests:** unit tests for `rules.ts`; integration tests (supertest, temp SQLite file) for the full
-  journeys: create test → start → exit → lock → unlock → finish → page refused. Manual checklist on
-  real devices (Android Chrome, iPhone Safari) before every release.
-- **Tooling:** TypeScript strict, ESLint, Prettier, `npm run check` = typecheck + lint + test.
+- **Tests:** unit tests for pure logic (rules, tokens, config); integration tests (supertest +
+  in-memory SQLite + fake clock) for the full journeys: create test → start → exit → lock → unlock
+  → finish → page refused. Manual checklist on real devices (Android Chrome, iPhone Safari) before
+  every release.
+- **Tooling:** TypeScript strict, ESLint, Prettier. `npm run check` = typecheck + lint + format
+  check + tests, and must be green before every commit.
 - **Git:** Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `chore:`, `refactor:`), small
-  focused commits on `main`; feature branches + PRs once the GitHub remote exists.
+  focused commits on `main`, pushed to GitHub (`origin`). No AI co-author/attribution lines.
+
+### Code conventions
+
+- **No comments in code.** Code explains itself through names and small functions; the "why"
+  lives in this document and in commit messages.
+- **Human-readable names, no abbreviations:** `database` not `db`, `request`/`response` not
+  `req`/`res`, `environmentVariables` not `env`. Magic numbers become named constants
+  (`SESSION_DURATION_MS`, `MAX_FAILED_LOGINS_PER_WINDOW`).
+- **Files:** kebab-case for modules (`session-token.ts`), PascalCase for React components
+  (`LoginPage.tsx`) with a matching `*.module.css`.
+- **Server modules** receive `AppDependencies` instead of importing globals, so everything is
+  testable with an in-memory database and a fake clock.
+- **Errors:** throw `HttpError` (or a helper like `notFound()`); the error handler turns it into
+  `{ error: { code, message } }`. Validate every input with `parseInput(schema, input)`.
+- **Shared types only** in `shared/` — always imported with `import type`.
 
 ## 12. Build milestones
 
@@ -334,6 +365,10 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 | D10 | Teacher results by 5 s polling, no WebSockets          | Simpler; enough for 10 students                                | Many concurrent tests                                                  |
 | D11 | Single teacher password, no user table                 | Spec: one teacher                                              | Multiple teachers needed → add `teachers` table behind the auth module |
 | D12 | Original PDF never stored                              | Can't leak what we don't keep                                  | —                                                                      |
+| D13 | TypeScript pinned to 6.0                               | typescript-eslint does not support TS 7 yet                    | typescript-eslint supports TS 7                                        |
+| D14 | Server bundled with esbuild; `tsc` only type-checks    | One output file, no `rootDir`/workspace build issues           | —                                                                      |
+| D15 | `shared/` is types-only                                | Erased at build → nothing to build or deploy for it            | Runtime sharing needed (e.g. zod schemas on both sides)                |
+| D16 | Stateless HMAC session cookie (no sessions table)      | One teacher; nothing to store                                  | Need to revoke sessions → rotate `SESSION_SECRET` or add a table       |
 
 ## 14. Future extension points (not built now)
 

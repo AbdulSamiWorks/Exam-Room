@@ -6,14 +6,16 @@
   --color-text: #0f172a;
   --color-muted: #64748b;
   --color-border: #e2e8f0;
+  --color-border-strong: #cbd5e1;
   --color-primary: #2563eb;
   --color-primary-hover: #1d4ed8;
+  --color-focus: rgb(37 99 235 / 35%);
   --color-danger: #dc2626;
   --color-danger-bg: #fef2f2;
 
   --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
   --radius: 12px;
-  --tap-size: 48px; /* minimum comfortable touch target */
+  --tap-size: 48px;
   --page-padding: 16px;
   --content-width: 640px;
 }
@@ -36,7 +38,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Form controls inherit the 16px font; anything smaller makes iPhone Safari zoom in on focus. */
 button,
 input,
 select,
@@ -49,4 +50,8 @@ h2,
 h3 {
   line-height: 1.2;
   margin: 0;
+}
+
+a {
+  color: var(--color-primary);
 }
