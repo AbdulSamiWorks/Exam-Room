@@ -19,5 +19,10 @@ export const unauthorized = (message = 'Please log in first.', code = 'unauthent
 export const notFound = (message = 'Not found.', code = 'not_found') =>
   new HttpError(404, code, message);
 
+export const conflict = (message: string, code = 'conflict') => new HttpError(409, code, message);
+
+export const payloadTooLarge = (message: string, code = 'payload_too_large') =>
+  new HttpError(413, code, message);
+
 export const tooManyRequests = (message: string, code = 'too_many_requests') =>
   new HttpError(429, code, message);

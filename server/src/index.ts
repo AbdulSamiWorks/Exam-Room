@@ -5,11 +5,13 @@ import { loadConfig } from './config.js';
 import { openDatabase } from './database/connection.js';
 import { runMigrations } from './database/run-migrations.js';
 import { systemClock } from './lib/clock.js';
+import { configureImageProcessingForSmallServers } from './lib/image-processing.js';
 
 const projectRoot = path.resolve(import.meta.dirname, '../..');
 
 async function startServer(): Promise<void> {
   loadLocalEnvironmentFile();
+  configureImageProcessingForSmallServers();
 
   const config = loadConfig(process.env, {
     databaseUrl: `file:${path.join(projectRoot, 'data', 'exam-room.db')}`,

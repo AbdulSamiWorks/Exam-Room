@@ -37,8 +37,8 @@ export function createAuthRouter(dependencies: AppDependencies): Router {
   });
 
   router.get('/session', (request, response) => {
-    const body: SessionResponse = { authenticated: isTeacherRequest(request, dependencies) };
-    response.json(body);
+    const authenticated = isTeacherRequest(request, dependencies);
+    response.json({ authenticated } satisfies SessionResponse);
   });
 
   router.post('/login', failedLoginLimiter, (request, response) => {
@@ -56,14 +56,12 @@ export function createAuthRouter(dependencies: AppDependencies): Router {
       maxAge: SESSION_DURATION_MS,
     });
 
-    const body: SessionResponse = { authenticated: true };
-    response.json(body);
+    response.json({ authenticated: true } satisfies SessionResponse);
   });
 
   router.post('/logout', (_request, response) => {
     response.clearCookie(SESSION_COOKIE_NAME, sessionCookieOptions(config));
-    const body: SessionResponse = { authenticated: false };
-    response.json(body);
+    response.json({ authenticated: false } satisfies SessionResponse);
   });
 
   return router;

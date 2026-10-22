@@ -1,0 +1,143 @@
+import request from 'supertest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { createBlankPageImage, isWebpImage } from './support/page-image-fixtures.js';
+import { logInAsTeacher } from './support/teacher-agent.js';
+import { createTestContext, TEST_START_TIME, type TestContext } from './support/test-context.js';
+
+type TeacherAgent = Awaited<ReturnType<typeof logInAsTeacher>>;
+
+describe('tests', () => {
+  let context: TestContext;
+  let teacher: TeacherAgent;
+  let subjectId: number;
+  let pageImage: Buffer;
+
+  beforeAll(async () => {
+    pageImage = await createBlankPageImage();
+  });
+
+  beforeEach(async () => {
+    context = await createTestContext();
+    teacher = await logInAsTeacher(context.app);
+    const subject = await teacher.post('/api/subjects').send({ name: 'Physics' });
+    subjectId = subject.body.subject.id;
+  });
+  afterEach(() => context.cleanUp());
+
+  function createTestRequest(pages: Buffer[], fieldOverrides: Record<string, string> = {}) {
+    const fields = {
+      subjectId: String(subjectId),
+      title: 'Chapter 3 Quiz',
+      durationMinutes: '30',
+      allowedExits: '1',
+      ...fieldOverrides,
+    };
+    const upload = teacher.post('/api/tests');
+    for (const [name, value] of Object.entries(fields)) upload.field(name, value);
+    pages.forEach((page, pageIndex) => {
+      upload.attach('pages', page, {
+        filename: `page-${pageIndex + 1}.png`,
+        contentType: 'image/png',
+      });
+    });
+    return upload;
+  }
+
+  async function countRows(table: 'tests' | 'test_pages') {
+    const { rows } = await context.database.execute(`SELECT COUNT(*) AS total FROM ${table}`);
+    return Number(rows[0]?.total);
+  }
+
+  it('requires a teacher login', async () => {
+    const response = await request(context.app).post('/api/tests');
+    expect(response.status).toBe(401);
+  });
+
+  it('creates a test with its pages and a share code', async () => {
+    const response = await createTestRequest([pageImage, pageImage]);
+
+    expect(response.status).toBe(201);
+    expect(response.body.test).toEqual({
+      id: expect.any(Number),
+      code: expect.stringMatching(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/),
+      title: 'Chapter 3 Quiz',
+      subject: { id: subjectId, name: 'Physics' },
+      durationMinutes: 30,
+      allowedExits: 1,
+      pageCount: 2,
+      createdAt: TEST_START_TIME,
+    });
+  });
+
+  it('stores pages as WebP in order', async () => {
+    await createTestRequest([pageImage, pageImage, pageImage]);
+
+    const { rows } = await context.database.execute(
+      'SELECT page_no, image FROM test_pages ORDER BY page_no',
+    );
+    expect(rows.map((row) => row.page_no)).toEqual([1, 2, 3]);
+    for (const row of rows) {
+      expect(isWebpImage(new Uint8Array(row.image as ArrayBuffer))).toBe(true);
+    }
+  });
+
+  it('shrinks very wide pages to the maximum page width', async () => {
+    const widePage = await createBlankPageImage(2400, 3400);
+    await createTestRequest([widePage]);
+
+    const { rows } = await context.database.execute('SELECT width, height FROM test_pages');
+    expect(rows[0]).toMatchObject({ width: 1600, height: 2267 });
+  });
+
+  it('reads a created test back by id', async () => {
+    const created = await createTestRequest([pageImage]);
+
+    const response = await teacher.get(`/api/tests/${created.body.test.id}`);
+    expect(response.status).toBe(200);
+    expect(response.body.test).toEqual(created.body.test);
+  });
+
+  it('returns 404 for an unknown test', async () => {
+    const response = await teacher.get('/api/tests/999');
+    expect(response.status).toBe(404);
+  });
+
+  it('requires at least one page', async () => {
+    const response = await createTestRequest([]);
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('pages_required');
+  });
+
+  it('rejects an unknown subject', async () => {
+    const response = await createTestRequest([pageImage], { subjectId: '999' });
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('subject_not_found');
+  });
+
+  it.each([
+    ['allowedExits', '3'],
+    ['durationMinutes', '0'],
+    ['durationMinutes', '601'],
+    ['title', '   '],
+  ])('rejects invalid %s = %j', async (field, value) => {
+    const response = await createTestRequest([pageImage], { [field]: value });
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('invalid_input');
+  });
+
+  it('rejects more pages than allowed', async () => {
+    const tooManyPages = Array.from({ length: 31 }, () => pageImage);
+    const response = await createTestRequest(tooManyPages);
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('too_many_pages');
+  });
+
+  it('saves nothing when one of the pages is not a real image', async () => {
+    const response = await createTestRequest([pageImage, Buffer.from('not an image')]);
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('invalid_page_image');
+    expect(await countRows('tests')).toBe(0);
+    expect(await countRows('test_pages')).toBe(0);
+  });
+});

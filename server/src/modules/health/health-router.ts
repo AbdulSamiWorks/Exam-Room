@@ -5,8 +5,7 @@ export function createHealthRouter(): Router {
   const router = Router();
 
   router.get('/', (_request, response) => {
-    const body: HealthResponse = { status: 'ok' };
-    response.json(body);
+    response.json({ status: 'ok' } satisfies HealthResponse);
   });
 
   return router;
