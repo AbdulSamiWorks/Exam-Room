@@ -1,0 +1,6 @@
+# Normalize line endings so Windows and Linux (deploy server) agree
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.webp binary
+*.pdf binary
