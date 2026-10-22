@@ -1,0 +1,16 @@
+.page {
+  min-height: 100dvh;
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 24px var(--page-padding);
+}
+
+.title {
+  font-size: 1.75rem;
+  margin-bottom: 8px;
+}
+
+.text {
+  color: var(--color-muted);
+  margin: 0 0 24px;
+}

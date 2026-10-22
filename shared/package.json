@@ -1,0 +1,15 @@
+{
+  "name": "@exam-room/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "API contract types shared by server and web (types only)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

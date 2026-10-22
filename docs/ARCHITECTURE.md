@@ -46,20 +46,20 @@ Locally, the same code uses a plain SQLite file (`data/exam-room.db`) — no acc
 
 ## 3. Tech stack
 
-| Layer        | Choice                                                        | Why |
-|--------------|---------------------------------------------------------------|-----|
-| Language     | TypeScript (strict) everywhere                                | Catches bugs early; shared API types between client and server |
-| Frontend     | React + Vite + React Router                                   | Simple, fast, standard |
-| Server state | TanStack Query                                                | Caching + polling for the live results table |
-| Styling      | CSS Modules + a small set of CSS variables                    | No framework to learn; simple white design |
-| PDF viewer   | Page images + `react-zoom-pan-pinch`                          | Same pinch/zoom on iPhone and Android; native pinch would also zoom the top bar |
-| PDF → images | `pdfjs-dist` **in the teacher's browser**                     | Free server has little CPU; the PDF never reaches the server at all |
-| Backend      | Express 5, zod, helmet, express-rate-limit, multer            | Mature, minimal, well understood |
-| Database     | SQLite via `@libsql/client` (local file in dev, Turso in prod) | Same SQL everywhere; switching is one env var |
-| Watermark    | `sharp`, burned into each image on the server per student     | The image bytes themselves carry the name — removing a CSS overlay does nothing |
-| Tests        | Vitest + supertest                                            | Unit tests for rules, integration tests for the API |
-| Repo         | npm workspaces: `shared`, `server`, `web`                     | One repo, one install, shared types |
-| Hosting      | Render (free) + Turso (free)                                  | $0, deploy on `git push` — see §10 |
+| Layer        | Choice                                                         | Why                                                                             |
+| ------------ | -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Language     | TypeScript (strict) everywhere                                 | Catches bugs early; shared API types between client and server                  |
+| Frontend     | React + Vite + React Router                                    | Simple, fast, standard                                                          |
+| Server state | TanStack Query                                                 | Caching + polling for the live results table                                    |
+| Styling      | CSS Modules + a small set of CSS variables                     | No framework to learn; simple white design                                      |
+| PDF viewer   | Page images + `react-zoom-pan-pinch`                           | Same pinch/zoom on iPhone and Android; native pinch would also zoom the top bar |
+| PDF → images | `pdfjs-dist` **in the teacher's browser**                      | Free server has little CPU; the PDF never reaches the server at all             |
+| Backend      | Express 5, zod, helmet, express-rate-limit, multer             | Mature, minimal, well understood                                                |
+| Database     | SQLite via `@libsql/client` (local file in dev, Turso in prod) | Same SQL everywhere; switching is one env var                                   |
+| Watermark    | `sharp`, burned into each image on the server per student      | The image bytes themselves carry the name — removing a CSS overlay does nothing |
+| Tests        | Vitest + supertest                                             | Unit tests for rules, integration tests for the API                             |
+| Repo         | npm workspaces: `shared`, `server`, `web`                      | One repo, one install, shared types                                             |
+| Hosting      | Render (free) + Turso (free)                                   | $0, deploy on `git push` — see §10                                              |
 
 Runtime: **Node 22 LTS** (pinned in `.nvmrc` and `engines`).
 
@@ -138,6 +138,7 @@ Size check: a page is ~150–250 KB as WebP, so Turso's 5 GB free storage holds 
 ## 6. Core flows
 
 ### 6.1 Creating a test (teacher)
+
 1. Teacher picks a PDF, subject, title, time limit, allowed exits.
 2. **In the browser**, pdf.js renders each page to a canvas (~1600 px wide) and encodes it as an image.
    The PDF file itself is never uploaded.
@@ -148,8 +149,9 @@ Size check: a page is ~150–250 KB as WebP, so Turso's 5 GB free storage holds 
    WhatsApp buttons.
 
 ### 6.2 Starting / resuming (student)
+
 1. Student opens `/t/<code>`, sees title + subject + time limit, enters name and roll number.
-2. Tapping **Start Test** requests fullscreen *first* (browsers only allow it inside a tap), then
+2. Tapping **Start Test** requests fullscreen _first_ (browsers only allow it inside a tap), then
    calls the server.
 3. Server creates the attempt: `deadline_at = now + duration`, generates a random secret token,
    stores only its hash, returns the token. The phone keeps it in `localStorage` (per test code)
@@ -160,12 +162,14 @@ Size check: a page is ~150–250 KB as WebP, so Turso's 5 GB free storage holds 
      (`device_change`) and rotate the token so the old device is logged out.
 
 ### 6.3 Time limit
+
 Every student request goes through one function, `loadAttempt()`, which first applies the time rule:
 if `now > deadline_at` and the attempt is still in progress, it is marked `submitted / time_up`.
 No background jobs. Every response includes `serverNow`, so the phone's countdown is corrected for a
 wrong phone clock.
 
 ### 6.4 Showing pages
+
 - `GET /api/attempt/pages/:n` returns a page **only while the attempt is in progress**.
 - The server burns a light diagonal watermark (name + roll number) into the image with `sharp`,
   using a **font bundled in the repo** (no dependence on fonts installed on the host).
@@ -176,6 +180,7 @@ wrong phone clock.
 - After submit/lock the server refuses every page request, so the paper is gone for good.
 
 ### 6.5 Exit detection
+
 - Signals: `visibilitychange` (hidden), `window blur`, and `fullscreenchange` (only if fullscreen was
   entered). They often fire together, so the phone merges them: the **first** signal moves the
   client from `present` to `away`; further signals are ignored until the student returns.
@@ -191,6 +196,7 @@ wrong phone clock.
   fire `blur` and would count as a false exit.
 
 ### 6.6 The rules (pure functions in `attempts/rules.ts`)
+
 - **Lock:** an attempt locks when `exit_count > allowed_exits + forgiven_exits`.
   With 0 allowed exits, the first exit locks immediately (no warning screen).
 - **Unlock (teacher):** `forgiven_exits += 1`, status back to `in_progress`. The exit stays in the
@@ -199,6 +205,7 @@ wrong phone clock.
 - **Refreshing the page counts as an exit** — a browser cannot tell a refresh from leaving.
 
 ### 6.7 Teacher results
+
 `GET /api/tests/:id/attempts` returns, per student: name, roll number, start, finish, exits, total time
 away (including a still-open exit), status. The page polls every 5 s (TanStack Query). Status labels:
 `in_progress → In progress`, `submitted → Submitted`, `locked → Left the test` (row in red, with an
@@ -207,6 +214,7 @@ away (including a still-open exit), status. The page polls every 5 s (TanStack Q
 ## 7. API
 
 Teacher (session cookie required, except login):
+
 ```
 POST   /api/auth/login            { password }
 POST   /api/auth/logout
@@ -221,6 +229,7 @@ POST   /api/attempts/:id/unlock
 ```
 
 Student (public by test code, then `Authorization: Bearer <token>`):
+
 ```
 GET    /api/public/tests/:code             → title, subject, durationMinutes, pageCount, allowedExits
 POST   /api/public/tests/:code/attempts    { name, rollNo }  → token + state
@@ -260,10 +269,10 @@ Other: `GET /api/health`. Errors always use one JSON shape: `{ error: { code, me
 
 **Production: Render (free web service) + Turso (free database).**
 
-| Service | Free allowance (Oct 2026 — verify before relying on it) |
-|---------|---------------------------------------------------------|
+| Service | Free allowance (Oct 2026 — verify before relying on it)                                                                         |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | Render  | 750 instance-hours/month, HTTPS, deploy on `git push`; **no persistent disk** (files lost on restart), sleeps after 15 min idle |
-| Turso   | 5 GB storage, 100 databases, 500 M row reads / 10 M row writes per month, no credit card |
+| Turso   | 5 GB storage, 100 databases, 500 M row reads / 10 M row writes per month, no credit card                                        |
 
 - Because the server is stateless (§1.3), Render's restarts and lack of disk don't matter.
 - **Cold start:** after 15 min with no traffic the app sleeps and the next visit takes ~1 minute.
@@ -279,13 +288,13 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 
 ### Environment variables
 
-| Name                  | Required | Example / default              |
-|-----------------------|----------|--------------------------------|
-| `PORT`                | no       | `3000`                         |
-| `TEACHER_PASSWORD`    | yes      | —                              |
-| `SESSION_SECRET`      | yes      | 32+ random characters          |
+| Name                  | Required | Example / default                                                |
+| --------------------- | -------- | ---------------------------------------------------------------- |
+| `PORT`                | no       | `3000`                                                           |
+| `TEACHER_PASSWORD`    | yes      | —                                                                |
+| `SESSION_SECRET`      | yes      | 32+ random characters                                            |
 | `DATABASE_URL`        | no       | `file:data/exam-room.db` (dev) / `libsql://<db>.turso.io` (prod) |
-| `DATABASE_AUTH_TOKEN` | prod     | Turso token                    |
+| `DATABASE_AUTH_TOKEN` | prod     | Turso token                                                      |
 
 ## 11. Quality and workflow
 
@@ -298,33 +307,33 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 
 ## 12. Build milestones
 
-| #  | Milestone |
-|----|-----------|
-| M0 | Scaffold: workspaces, TypeScript, lint/format, Express health check, Vite app, `npm run dev` runs both |
-| M1 | Server foundation: config, DB + migrations, error handling, teacher login |
-| M2 | Subjects + create test (pdf.js in browser → upload → store pages) |
-| M3 | Teacher dashboard: tests grouped by subject, filter, share link (Copy / WhatsApp) |
-| M4 | Student exam: join/resume, fullscreen, viewer (Page X of Y, zoom), watermark, timer, finish |
-| M5 | Anti-cheating: exit detection, warning/lock screens, server rules, copy/select/long-press blocking |
-| M6 | Live results table (red rows) + Unlock |
-| M7 | Hardening, real-device testing, `render.yaml`, README run + deploy guide |
+| #   | Milestone                                                                                              |
+| --- | ------------------------------------------------------------------------------------------------------ |
+| M0  | Scaffold: workspaces, TypeScript, lint/format, Express health check, Vite app, `npm run dev` runs both |
+| M1  | Server foundation: config, DB + migrations, error handling, teacher login                              |
+| M2  | Subjects + create test (pdf.js in browser → upload → store pages)                                      |
+| M3  | Teacher dashboard: tests grouped by subject, filter, share link (Copy / WhatsApp)                      |
+| M4  | Student exam: join/resume, fullscreen, viewer (Page X of Y, zoom), watermark, timer, finish            |
+| M5  | Anti-cheating: exit detection, warning/lock screens, server rules, copy/select/long-press blocking     |
+| M6  | Live results table (red rows) + Unlock                                                                 |
+| M7  | Hardening, real-device testing, `render.yaml`, README run + deploy guide                               |
 
 ## 13. Decision log
 
-| #  | Decision | Reason | Revisit when |
-|----|----------|--------|--------------|
-| D1 | Single process serves API + SPA | Same origin, one deploy unit | Never at this scale |
-| D2 | SQLite via libSQL (file locally, Turso in prod) | Free, simple, same SQL in both places | > hundreds of concurrent users |
-| D3 | Page images stored in the DB | Host has no persistent disk; tiny data volume | Storage > ~3 GB → move to object storage (R2) |
-| D4 | PDF → images in the teacher's browser | Free server CPU is tiny; PDF never leaves the teacher's device | Never |
-| D5 | Watermark burned in on the server | Removing an overlay can't strip it | — |
-| D6 | Server-authoritative timer and status | Client can't be trusted | — |
-| D7 | Refresh counts as an exit | Browser can't distinguish refresh from leaving | Teacher feedback |
-| D8 | Timer never pauses (away, locked, unlocked) | Simple and fair | Teacher feedback |
-| D9 | Resume on another device allowed but counts as an exit | Dead-battery case without a free pass | Teacher feedback |
-| D10 | Teacher results by 5 s polling, no WebSockets | Simpler; enough for 10 students | Many concurrent tests |
-| D11 | Single teacher password, no user table | Spec: one teacher | Multiple teachers needed → add `teachers` table behind the auth module |
-| D12 | Original PDF never stored | Can't leak what we don't keep | — |
+| #   | Decision                                               | Reason                                                         | Revisit when                                                           |
+| --- | ------------------------------------------------------ | -------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| D1  | Single process serves API + SPA                        | Same origin, one deploy unit                                   | Never at this scale                                                    |
+| D2  | SQLite via libSQL (file locally, Turso in prod)        | Free, simple, same SQL in both places                          | > hundreds of concurrent users                                         |
+| D3  | Page images stored in the DB                           | Host has no persistent disk; tiny data volume                  | Storage > ~3 GB → move to object storage (R2)                          |
+| D4  | PDF → images in the teacher's browser                  | Free server CPU is tiny; PDF never leaves the teacher's device | Never                                                                  |
+| D5  | Watermark burned in on the server                      | Removing an overlay can't strip it                             | —                                                                      |
+| D6  | Server-authoritative timer and status                  | Client can't be trusted                                        | —                                                                      |
+| D7  | Refresh counts as an exit                              | Browser can't distinguish refresh from leaving                 | Teacher feedback                                                       |
+| D8  | Timer never pauses (away, locked, unlocked)            | Simple and fair                                                | Teacher feedback                                                       |
+| D9  | Resume on another device allowed but counts as an exit | Dead-battery case without a free pass                          | Teacher feedback                                                       |
+| D10 | Teacher results by 5 s polling, no WebSockets          | Simpler; enough for 10 students                                | Many concurrent tests                                                  |
+| D11 | Single teacher password, no user table                 | Spec: one teacher                                              | Multiple teachers needed → add `teachers` table behind the auth module |
+| D12 | Original PDF never stored                              | Can't leak what we don't keep                                  | —                                                                      |
 
 ## 14. Future extension points (not built now)
 
