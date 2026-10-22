@@ -23,9 +23,29 @@ const SELECT_TEST_SUMMARY = `
     tests.page_count,
     tests.created_at,
     subjects.id   AS subject_id,
-    subjects.name AS subject_name
+    subjects.name AS subject_name,
+    (SELECT COUNT(*) FROM attempts WHERE attempts.test_id = tests.id) AS student_count
   FROM tests
   JOIN subjects ON subjects.id = tests.subject_id`;
+
+export type TestListFilter = {
+  subjectId?: number;
+};
+
+export async function listTests(
+  database: Database,
+  filter: TestListFilter = {},
+): Promise<TestSummary[]> {
+  const { rows } = await database.execute(
+    filter.subjectId === undefined
+      ? `${SELECT_TEST_SUMMARY} ORDER BY subjects.name, tests.created_at DESC`
+      : {
+          sql: `${SELECT_TEST_SUMMARY} WHERE tests.subject_id = ? ORDER BY tests.created_at DESC`,
+          args: [filter.subjectId],
+        },
+  );
+  return rows.map(toTestSummary);
+}
 
 export async function insertTestWithPages(
   database: Database,
@@ -95,6 +115,7 @@ function toTestSummary(row: Row): TestSummary {
     durationMinutes: Number(row.duration_minutes),
     allowedExits: Number(row.allowed_exits) as AllowedExits,
     pageCount: Number(row.page_count),
+    studentCount: Number(row.student_count),
     createdAt: Number(row.created_at),
   };
 }

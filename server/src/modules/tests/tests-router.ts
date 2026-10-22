@@ -1,4 +1,4 @@
-import type { TestResponse } from '@exam-room/shared';
+import type { TestListResponse, TestResponse } from '@exam-room/shared';
 import { Router } from 'express';
 import { z } from 'zod';
 import type { AppDependencies } from '../../app-dependencies.js';
@@ -10,7 +10,7 @@ import { normalizePageImages } from './page-images.js';
 import { receivePageImages, uploadedPageImages } from './receive-page-images.js';
 import { createUniqueTestCode } from './test-code.js';
 import { testLimits } from './test-limits.js';
-import { findTestById, insertTestWithPages } from './tests-repository.js';
+import { findTestById, insertTestWithPages, listTests } from './tests-repository.js';
 
 const createTestFieldsSchema = z.object({
   subjectId: z.coerce.number().int().positive('Choose a subject.'),
@@ -34,11 +34,21 @@ const testIdParamsSchema = z.object({
   testId: z.coerce.number().int().positive(),
 });
 
+const testListQuerySchema = z.object({
+  subjectId: z.coerce.number().int().positive().optional(),
+});
+
 export function createTestsRouter(dependencies: AppDependencies): Router {
   const { database, clock } = dependencies;
   const router = Router();
 
   router.use(requireTeacher(dependencies));
+
+  router.get('/', async (request, response) => {
+    const filter = parseInput(testListQuerySchema, request.query);
+    const tests = await listTests(database, filter);
+    response.json({ tests } satisfies TestListResponse);
+  });
 
   router.post('/', receivePageImages, async (request, response) => {
     const fields = parseInput(createTestFieldsSchema, request.body);

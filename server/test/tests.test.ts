@@ -65,8 +65,37 @@ describe('tests', () => {
       durationMinutes: 30,
       allowedExits: 1,
       pageCount: 2,
+      studentCount: 0,
       createdAt: TEST_START_TIME,
     });
+  });
+
+  it('lists tests by subject name, newest first within a subject', async () => {
+    const chemistry = await teacher.post('/api/subjects').send({ name: 'Chemistry' });
+    const chemistryId = String(chemistry.body.subject.id);
+
+    await createTestRequest([pageImage], { title: 'Physics old' });
+    context.clock.advanceBy(1000);
+    await createTestRequest([pageImage], { title: 'Physics new' });
+    await createTestRequest([pageImage], { title: 'Chemistry only', subjectId: chemistryId });
+
+    const allTests = await teacher.get('/api/tests');
+    expect(allTests.body.tests.map((test: { title: string }) => test.title)).toEqual([
+      'Chemistry only',
+      'Physics new',
+      'Physics old',
+    ]);
+
+    const physicsTests = await teacher.get(`/api/tests?subjectId=${subjectId}`);
+    expect(physicsTests.body.tests.map((test: { title: string }) => test.title)).toEqual([
+      'Physics new',
+      'Physics old',
+    ]);
+  });
+
+  it('rejects an invalid subject filter', async () => {
+    const response = await teacher.get('/api/tests?subjectId=abc');
+    expect(response.status).toBe(400);
   });
 
   it('stores pages as WebP in order', async () => {

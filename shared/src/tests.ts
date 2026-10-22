@@ -10,11 +10,16 @@ export type TestSummary = {
   durationMinutes: number;
   allowedExits: AllowedExits;
   pageCount: number;
+  studentCount: number;
   createdAt: number;
 };
 
 export type TestResponse = {
   test: TestSummary;
+};
+
+export type TestListResponse = {
+  tests: TestSummary[];
 };
 
 export type CreateTestFormField =
