@@ -7,7 +7,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  globalIgnores(['**/dist/', '**/coverage/', 'data/']),
+  globalIgnores(['**/dist/', '**/coverage/', 'data/', 'web/public/pdfjs/']),
   js.configs.recommended,
   tseslint.configs.recommended,
   {
