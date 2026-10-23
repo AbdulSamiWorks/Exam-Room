@@ -1,0 +1,10 @@
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.manageLink {
+  align-self: flex-start;
+  font-weight: 600;
+}

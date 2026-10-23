@@ -20,7 +20,7 @@ export type TestSettingsFormValues = {
 };
 
 export type TestSettingsFormErrors = Partial<
-  Record<'classId' | 'subjectId' | 'chapterIds' | 'title' | 'durationMinutes', string>
+  Record<'subjectId' | 'chapterIds' | 'title' | 'durationMinutes', string>
 >;
 
 export const NEW_TEST_SETTINGS: TestSettingsFormValues = {
@@ -73,8 +73,7 @@ export function withChapterToggled(
 export function validateTestSettings(values: TestSettingsFormValues): TestSettingsFormErrors {
   const errors: TestSettingsFormErrors = {};
 
-  if (!values.classId) errors.classId = 'Choose a class.';
-  else if (!values.subjectId) errors.subjectId = 'Choose a subject.';
+  if (!values.subjectId) errors.subjectId = 'Choose a subject.';
 
   if (values.chapterIds.length > testLimits.maxChaptersPerTest) {
     errors.chapterIds = `Choose at most ${testLimits.maxChaptersPerTest} chapters.`;

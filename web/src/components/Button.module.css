@@ -56,3 +56,9 @@
 .fullWidth {
   width: 100%;
 }
+
+.small {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 0.875rem;
+}

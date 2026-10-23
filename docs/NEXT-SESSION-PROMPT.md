@@ -15,6 +15,28 @@ You are continuing **Exam Room**. Work like a principal engineer and follow ever
 `npm run check` green before every commit, no AI attribution, simple English for the owner, free
 hosting only, TypeScript pinned to 6.0). The owner said: build every milestone **one by one**.
 
+## 0. Latest status (end of the second session, on `wip/m10-manage`)
+
+Done since the first WIP commit, and `npm run check` was green before the last few files:
+test form with class + subject picker (`ClassSubjectPicker`), test/quiz type, `ChapterPicker`,
+`use-test-settings-form.ts`; dashboard grouped by class and subject with subject and type
+filters (`group-tests-by-subject.ts`, `SubjectFilter.tsx`, shared `components/Chip.tsx`); test
+card and test page show type, class and chapters; `Button` has `size="small"`;
+`manage/student-list-parser.ts`, `manage/manage-rules.ts` (both with tests), `manage/NameForm.tsx`,
+`manage/ManagePage.tsx` (classes list + add class), `manage/manage-paths.ts`, `lib/text.ts`,
+`lib/natural-order.ts`.
+
+Left for M10: `ManagePage` is not routed yet — add routes `manage` and
+`manage/classes/:classId` in `TeacherArea.tsx` and "Tests | Manage" links (NavLink) in
+`TeacherLayout`; move `describeClassContents` out of `ManagePage.tsx` into `manage-rules.ts`
+(react-refresh lint); build `ClassPage` (rename/delete class with `classDeletionBlocker`, tabs
+Subjects / Students), `SubjectCard` (rename, move to class, move tests with
+`otherSubjectChoices`, delete with `subjectDeletionBlocker`, chapters list with up/down via
+`chapterIdsAfterMove`, rename/delete chapter), `StudentsSection` (add one, paste a list with
+`parseStudentList` preview, `NewPinsPanel` with "Copy all PINs" via `pinListText`, edit, reset
+PIN, delete, move all students); a `TextAreaField` component; tests for `test-settings-form.ts`
+helpers and `group-tests-by-subject.ts`; then the docs and commits listed in section 2.
+
 ## 1. Read first
 
 1. `CLAUDE.md`.

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '../../../components/Button';
 import { FormError } from '../../../components/FormError';
@@ -11,21 +11,18 @@ import {
 } from './create-test-form';
 import { PdfPicker } from './PdfPicker';
 import { hasErrors, NEW_TEST_SETTINGS } from './test-settings-form';
-import { TestSettingsFields, type ChangeTestSetting } from './TestSettingsFields';
+import { TestSettingsFields } from './TestSettingsFields';
 import { usePdfPages } from './use-pdf-pages';
+import { useTestSettingsForm } from './use-test-settings-form';
 import styles from './CreateTestPage.module.css';
 
 export function CreateTestPage() {
   const navigate = useNavigate();
   const createTest = useCreateTest();
   const { pdfPages, choosePdf } = usePdfPages();
-  const [values, setValues] = useState(NEW_TEST_SETTINGS);
-  const [errors, setErrors] = useState<CreateTestFormErrors>({});
-
-  const updateValue: ChangeTestSetting = (field, value) => {
-    setValues((currentValues) => ({ ...currentValues, [field]: value }));
-    setErrors((currentErrors) => ({ ...currentErrors, [field]: undefined }));
-  };
+  const { values, errors, setErrors, updateValues } = useTestSettingsForm<CreateTestFormErrors>(
+    () => NEW_TEST_SETTINGS,
+  );
 
   function choosePdfFile(pdfFile: File) {
     setErrors((currentErrors) => ({ ...currentErrors, pdf: undefined }));
@@ -48,7 +45,7 @@ export function CreateTestPage() {
       <form className={styles.form} onSubmit={handleSubmit} noValidate>
         <PdfPicker pdfPages={pdfPages} onChoose={choosePdfFile} errorMessage={errors.pdf} />
 
-        <TestSettingsFields values={values} errors={errors} onChange={updateValue} />
+        <TestSettingsFields values={values} errors={errors} onChange={updateValues} />
 
         {createTest.error && <FormError>{createTest.error.message}</FormError>}
 
