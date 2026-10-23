@@ -4,6 +4,7 @@ const PAGE_IMAGE_WIDTH_PX = 1600;
 const PAGE_IMAGE_TYPE = 'image/webp';
 const PAGE_IMAGE_QUALITY = 0.85;
 const PAPER_WHITE = '#ffffff';
+const PDFJS_ASSETS_PATH = '/pdfjs/';
 
 export type RenderedPage = {
   image: Blob;
@@ -30,7 +31,13 @@ export async function renderPdfPages(
 ): Promise<RenderedPage[]> {
   const pdfjs = await loadPdfJs();
   const pdfBytes = new Uint8Array(await pdfFile.arrayBuffer());
-  const loadingTask = pdfjs.getDocument({ data: pdfBytes });
+  const loadingTask = pdfjs.getDocument({
+    data: pdfBytes,
+    wasmUrl: pdfjsAssetUrl('wasm'),
+    standardFontDataUrl: pdfjsAssetUrl('standard_fonts'),
+    cMapUrl: pdfjsAssetUrl('cmaps'),
+    iccUrl: pdfjsAssetUrl('iccs'),
+  });
 
   try {
     const pdfDocument = await openPdf(loadingTask);
@@ -60,6 +67,10 @@ async function loadPdfJs() {
   ]);
   pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker.default;
   return pdfjs;
+}
+
+function pdfjsAssetUrl(folder: string): string {
+  return new URL(`${PDFJS_ASSETS_PATH}${folder}/`, window.location.origin).href;
 }
 
 async function openPdf(loadingTask: PDFDocumentLoadingTask): Promise<PDFDocumentProxy> {

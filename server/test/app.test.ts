@@ -24,6 +24,13 @@ describe('API basics', () => {
     expect(response.headers['content-security-policy']).toContain("img-src 'self' data: blob:");
   });
 
+  it('allows scripts only from this site, plus WebAssembly for the PDF image decoders', async () => {
+    const response = await request(context.app).get('/api/health');
+    expect(response.headers['content-security-policy']).toContain(
+      "script-src 'self' 'wasm-unsafe-eval'",
+    );
+  });
+
   it('unknown API routes return a JSON 404', async () => {
     const response = await request(context.app).get('/api/does-not-exist');
     expect(response.status).toBe(404);

@@ -8,6 +8,7 @@ import { serveWebApp } from './lib/serve-web-app.js';
 const PROXIES_IN_FRONT_OF_SERVER = 1;
 const JSON_BODY_LIMIT = '100kb';
 const IMAGE_SOURCES = ["'self'", 'data:', 'blob:'];
+const SCRIPT_SOURCES = ["'self'", "'wasm-unsafe-eval'"];
 
 export type AppOptions = {
   webAppDirectory?: string;
@@ -20,7 +21,7 @@ export function createApp(dependencies: AppDependencies, options: AppOptions = {
   app.use(
     helmet({
       contentSecurityPolicy: {
-        directives: { imgSrc: IMAGE_SOURCES },
+        directives: { imgSrc: IMAGE_SOURCES, scriptSrc: SCRIPT_SOURCES },
       },
     }),
   );
