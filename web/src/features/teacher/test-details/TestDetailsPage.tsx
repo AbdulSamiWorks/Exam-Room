@@ -1,4 +1,5 @@
 import { useParams } from 'react-router';
+import { ButtonLink } from '../../../components/Button';
 import { FormError } from '../../../components/FormError';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { Page } from '../../../components/Page';
@@ -36,7 +37,16 @@ export function TestDetailsPage() {
   ].join(' · ');
 
   return (
-    <Page title={test.title} subtitle={subtitle} backLink={BACK_TO_TESTS}>
+    <Page
+      title={test.title}
+      subtitle={subtitle}
+      backLink={BACK_TO_TESTS}
+      actions={
+        <ButtonLink variant="secondary" to={`/teacher/tests/${test.id}/edit`}>
+          Edit
+        </ButtonLink>
+      }
+    >
       <div className={styles.sections}>
         <TestAvailabilityPanel test={test} />
         <ShareTestPanel test={test} />

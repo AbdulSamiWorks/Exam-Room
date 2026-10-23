@@ -36,20 +36,24 @@ export function postJson<ResponseBody>(
   body?: unknown,
   options: RequestOptions = {},
 ): Promise<ResponseBody> {
-  return requestJson<ResponseBody>(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    keepalive: options.keepalive,
-  });
+  return requestJson<ResponseBody>(path, jsonRequest('POST', body, options));
 }
 
 export function putJson<ResponseBody>(path: string, body: unknown): Promise<ResponseBody> {
-  return requestJson<ResponseBody>(path, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  return requestJson<ResponseBody>(path, jsonRequest('PUT', body));
+}
+
+export function patchJson<ResponseBody>(path: string, body: unknown): Promise<ResponseBody> {
+  return requestJson<ResponseBody>(path, jsonRequest('PATCH', body));
+}
+
+function jsonRequest(method: string, body: unknown, options: RequestOptions = {}): RequestInit {
+  return {
+    method,
+    headers: { 'Content-Type': 'application/json', ...options.headers },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    keepalive: options.keepalive,
+  };
 }
 
 export async function deleteResource(path: string): Promise<void> {
@@ -65,6 +69,10 @@ export async function getBlob(path: string, options: RequestOptions = {}): Promi
 
 export function postForm<ResponseBody>(path: string, formData: FormData): Promise<ResponseBody> {
   return requestJson<ResponseBody>(path, { method: 'POST', body: formData });
+}
+
+export function putForm<ResponseBody>(path: string, formData: FormData): Promise<ResponseBody> {
+  return requestJson<ResponseBody>(path, { method: 'PUT', body: formData });
 }
 
 async function requestJson<ResponseBody>(path: string, init: RequestInit): Promise<ResponseBody> {

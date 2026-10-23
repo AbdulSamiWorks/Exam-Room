@@ -3,9 +3,18 @@ import type {
   TestListResponse,
   TestResponse,
   TestSummary,
+  UpdateTestRequest,
 } from '@exam-room/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { deleteResource, getJson, postForm, postJson, putJson } from '../../../api/http-client';
+import {
+  deleteResource,
+  getJson,
+  patchJson,
+  postForm,
+  postJson,
+  putForm,
+  putJson,
+} from '../../../api/http-client';
 
 const ALL_SUBJECTS = 'all';
 const SCHEDULE_REFRESH_INTERVAL_MS = 10_000;
@@ -65,6 +74,18 @@ export function useCloseTest(testId: number) {
 export function useScheduleTest(testId: number) {
   return useTestChange(testId, (schedule: ScheduleTestRequest) =>
     putJson<TestResponse>(`/tests/${testId}/schedule`, schedule),
+  );
+}
+
+export function useUpdateTest(testId: number) {
+  return useTestChange(testId, (changes: UpdateTestRequest) =>
+    patchJson<TestResponse>(`/tests/${testId}`, changes),
+  );
+}
+
+export function useReplacePaper(testId: number) {
+  return useTestChange(testId, (pages: FormData) =>
+    putForm<TestResponse>(`/tests/${testId}/pages`, pages),
   );
 }
 

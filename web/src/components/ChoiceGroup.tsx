@@ -13,6 +13,7 @@ type ChoiceGroupProps<Value extends string | number> = {
   hint?: string;
   choices: Choice<Value>[];
   selectedValue: Value;
+  disabled?: boolean;
   onChange: (value: Value) => void;
 };
 
@@ -21,12 +22,16 @@ export function ChoiceGroup<Value extends string | number>({
   hint,
   choices,
   selectedValue,
+  disabled = false,
   onChange,
 }: ChoiceGroupProps<Value>) {
   const groupName = useId();
 
   return (
-    <fieldset className={fieldStyles.field}>
+    <fieldset
+      className={classNames(fieldStyles.field, disabled && styles.disabled)}
+      disabled={disabled}
+    >
       <legend className={fieldStyles.label}>{label}</legend>
       {hint && <p className={fieldStyles.hint}>{hint}</p>}
       <div className={styles.choices}>

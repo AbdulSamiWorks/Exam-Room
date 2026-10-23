@@ -33,3 +33,8 @@
   opacity: 0;
   pointer-events: none;
 }
+
+.disabled .choice {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

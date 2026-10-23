@@ -6,6 +6,7 @@ import type { PdfPagesState } from './use-pdf-pages';
 import styles from './PdfPicker.module.css';
 
 type PdfPickerProps = {
+  label?: string;
   pdfPages: PdfPagesState;
   onChoose: (pdfFile: File) => void;
   errorMessage?: string;
@@ -13,7 +14,12 @@ type PdfPickerProps = {
 
 const CHOOSE_ANOTHER_FILE = 'Tap to choose a different file';
 
-export function PdfPicker({ pdfPages, onChoose, errorMessage }: PdfPickerProps) {
+export function PdfPicker({
+  label = 'Test paper (PDF)',
+  pdfPages,
+  onChoose,
+  errorMessage,
+}: PdfPickerProps) {
   const labelId = useId();
   const { headline, details } = describePdfPagesState(pdfPages);
 
@@ -26,7 +32,7 @@ export function PdfPicker({ pdfPages, onChoose, errorMessage }: PdfPickerProps) 
   return (
     <div className={fieldStyles.field}>
       <p id={labelId} className={fieldStyles.label}>
-        Test paper (PDF)
+        {label}
       </p>
       <label
         className={classNames(
