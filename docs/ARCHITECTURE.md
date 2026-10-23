@@ -1,7 +1,7 @@
 # Exam Room — Architecture
 
-> Status: **approved plan, v1** (2026-10-22). Milestones M0–M17 are built (2026-10-25); the
-> real-device checks in §15 are still to do. M18–M19 are planned in §16 (2026-10-24). Update this
+> Status: **approved plan, v1** (2026-10-22). Milestones M0–M18 are built (2026-10-25); the
+> real-device checks in §15 are still to do. M19 is planned in §16 (2026-10-24). Update this
 > file whenever a decision below changes.
 
 Exam Room is a small mobile-first web app. A teacher uploads a test paper (PDF), shares a link, and
@@ -392,6 +392,7 @@ GET    /api/tests/:id/offline-marks   → the class list with the entered marks
 PUT    /api/tests/:id/offline-marks   { marks: [{ studentId, marks | null }] }
 GET    /api/classes/:id/points        → every student's points
 GET    /api/students/:id/points       → one student's points history
+GET    /api/students/:id/progress     → every marked result of one student (released or not)
 POST   /api/students/:id/points       { points, reason }
 GET    /api/attempts/:id/photos       → the student's answer photos
 GET    /api/attempts/:id/photos/:n
@@ -407,6 +408,7 @@ POST   /api/student-auth/logout
 GET    /api/student/home                   → profile + tests of the class with the own attempt state
                                               and the released marks
 GET    /api/student/results/:code          → the own released result (403 before release)
+GET    /api/student/progress               → released results with chapters, and the class subjects
 POST   /api/student-auth/passkeys/registration-options   (student cookie) → WebAuthn options
 POST   /api/student-auth/passkeys/registrations          (student cookie) the phone's answer
 POST   /api/student-auth/passkeys/login-options          → WebAuthn options (public)
@@ -570,8 +572,8 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 | M18 | Dashboard and progress for students and the teacher                                                    |
 | M19 | Waiting room: the teacher starts everyone at the same time                                             |
 
-Status (2026-10-25): M0–M17 are built and tested (unit tests, API tests and a smoke test of the
-production build). Still to do by hand: the real-device checks in §15. M18–M19 are planned in §16.
+Status (2026-10-25): M0–M18 are built and tested (unit tests, API tests and a smoke test of the
+production build). Still to do by hand: the real-device checks in §15. M19 is planned in §16.
 
 ## 13. Decision log
 
@@ -863,6 +865,22 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 | Render hours     | One service awake all month ≈ 744 hours                               | 750 hours / month                  |
 
 ## 17. Built milestones
+
+### M18 Dashboard and progress (built 2026-10-25)
+
+- **Student dashboard** (`/`): open, upcoming and the last finished tests, then **Progress**
+  (tests done, average, best subject, trend, a line chart of the scores) and **Subjects** with an
+  average bar each. **Menu** opens a side drawer with the profile, points, class leader, theme
+  and log out.
+- **Subject page** (`/subjects/:id`): scores over time, progress per chapter from the tests
+  tagged with it, and all tests, quizzes and assignments of the subject.
+- **Teacher's student profile** (`/teacher/students/:id`, from the student's name in Manage):
+  the same overview over every marked result (also before release), the results list and the
+  points history.
+- The server returns one list of results (D55); `progress-stats.ts` computes averages, the best
+  subject, the trend (last three against the three before, 5 points apart) and chapter progress
+  in the browser, with tests. Charts are two small SVG components that use the theme colours
+  (D54).
 
 ### M17 Assignments, bounties and points (built 2026-10-25)
 

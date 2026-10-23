@@ -180,3 +180,12 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
 - [ ] Give a test a reward (for example 10 points), release it: the top scorer's home shows the
       points and the class leader. **Hide results** takes the points back.
 - [ ] On **Manage → class → Points**, give 5 points and take 2 away with a reason.
+
+## 18. Dashboard and progress
+
+- [ ] After a few released results, the student home shows **Progress** with a line chart and
+      **Subjects** with bars; it is readable in light and dark.
+- [ ] **Menu** opens the profile drawer; **Close** and the back gesture close it.
+- [ ] A subject page shows the chapters with their bars.
+- [ ] In **Manage → class → Students**, tap a name: the teacher sees that student's progress and
+      points.
