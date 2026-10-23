@@ -1,0 +1,36 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--page-padding);
+  background: rgb(15 23 42 / 55%);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 400px;
+  padding: 20px;
+  border-radius: var(--radius);
+  background: var(--color-bg);
+}
+
+.title {
+  font-size: 1.25rem;
+}
+
+.message {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}

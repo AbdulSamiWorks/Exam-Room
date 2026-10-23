@@ -1,7 +1,7 @@
 import { useId, type ChangeEvent } from 'react';
 import fieldStyles from '../../../components/FormField.module.css';
 import { classNames } from '../../../lib/class-names';
-import { describePageCount } from '../tests/describe-test';
+import { describePageCount } from '../../../lib/describe-test-length';
 import type { PdfPagesState } from './use-pdf-pages';
 import styles from './PdfPicker.module.css';
 

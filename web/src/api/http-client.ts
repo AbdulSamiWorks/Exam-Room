@@ -19,16 +19,35 @@ export class ApiError extends Error {
   }
 }
 
-export function getJson<ResponseBody>(path: string): Promise<ResponseBody> {
-  return requestJson<ResponseBody>(path, { method: 'GET' });
+export type RequestOptions = {
+  headers?: Record<string, string>;
+  keepalive?: boolean;
+};
+
+export function getJson<ResponseBody>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<ResponseBody> {
+  return requestJson<ResponseBody>(path, { method: 'GET', headers: options.headers });
 }
 
-export function postJson<ResponseBody>(path: string, body?: unknown): Promise<ResponseBody> {
+export function postJson<ResponseBody>(
+  path: string,
+  body?: unknown,
+  options: RequestOptions = {},
+): Promise<ResponseBody> {
   return requestJson<ResponseBody>(path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...options.headers },
     body: body === undefined ? undefined : JSON.stringify(body),
+    keepalive: options.keepalive,
   });
+}
+
+export async function getBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
+  const response = await sendRequest(path, { method: 'GET', headers: options.headers });
+  if (!response.ok) throw await readApiError(response);
+  return response.blob();
 }
 
 export function postForm<ResponseBody>(path: string, formData: FormData): Promise<ResponseBody> {

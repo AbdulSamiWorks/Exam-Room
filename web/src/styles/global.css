@@ -12,6 +12,9 @@
   --color-focus: rgb(37 99 235 / 35%);
   --color-danger: #dc2626;
   --color-danger-bg: #fef2f2;
+  --color-success: #15803d;
+  --color-success-bg: #f0fdf4;
+  --color-warning: #b45309;
 
   --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
   --radius: 12px;

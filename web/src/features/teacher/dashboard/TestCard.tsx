@@ -1,10 +1,9 @@
 import type { TestSummary } from '@exam-room/shared';
 import { Link } from 'react-router';
+import { describeDuration, describePageCount } from '../../../lib/describe-test-length';
 import {
   describeAllowedExits,
   describeCreatedDate,
-  describeDuration,
-  describePageCount,
   describeStudentCount,
 } from '../tests/describe-test';
 import styles from './TestCard.module.css';
