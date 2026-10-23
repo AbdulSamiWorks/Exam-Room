@@ -2,26 +2,27 @@ import { ConfirmDialog } from '../../../components/ConfirmDialog';
 
 type FinishDialogProps = {
   isFinishing: boolean;
-  errorMessage: string | undefined;
+  isOffline: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 };
 
-export function FinishDialog({
-  isFinishing,
-  errorMessage,
-  onCancel,
-  onConfirm,
-}: FinishDialogProps) {
+const OFFLINE_MESSAGE =
+  'No internet right now. Your answers and Finish are saved on this phone and are sent by themselves as soon as the internet is back. Keep this page open, or open the app again later.';
+
+export function FinishDialog({ isFinishing, isOffline, onCancel, onConfirm }: FinishDialogProps) {
   return (
     <ConfirmDialog
-      title="Finish the test?"
-      message="After you finish, you cannot open the paper again."
+      title={isFinishing ? 'Finishing your test' : 'Finish the test?'}
+      message={
+        isFinishing && isOffline
+          ? OFFLINE_MESSAGE
+          : 'After you finish, you cannot open the paper again.'
+      }
       confirmLabel="Finish test"
-      busyLabel="Finishing…"
+      busyLabel={isOffline ? 'Waiting for internet…' : 'Sending your answers…'}
       cancelLabel="Keep working"
       isBusy={isFinishing}
-      errorMessage={errorMessage}
       onCancel={onCancel}
       onConfirm={onConfirm}
     />

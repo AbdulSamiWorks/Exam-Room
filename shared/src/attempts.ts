@@ -83,6 +83,7 @@ export type AttemptResult = {
   forgivenExits: number;
   awayMs: number;
   isAwayNow: boolean;
+  answeredCount: number;
   exits: AttemptExit[];
 };
 

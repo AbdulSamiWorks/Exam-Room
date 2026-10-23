@@ -1,6 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { forgetOutbox } from './answers/outbox-store';
+import { hasUnsentWork } from './answers/outbox-state';
+import { useAnswerOutbox } from './answers/use-answer-outbox';
 import { readStoredAttempt, updateStoredAttempt } from './attempt-storage';
 import { ExamScreen } from './exam/ExamScreen';
 import { forgetPaper } from './exam/use-page-image';
@@ -27,13 +30,29 @@ export function AttemptScreen({ testCode, attemptToken, onSessionLost }: Attempt
   const [acknowledgedExits, acknowledgeExits] = useAcknowledgedExits(testCode);
   const { refetch } = attemptQuery;
   const reloadAttempt = useCallback(() => void refetch(), [refetch]);
+  const outbox = useAnswerOutbox(
+    testCode,
+    attemptToken,
+    attemptQuery.data,
+    attemptQuery.dataUpdatedAt,
+  );
+  const isFinishing = outbox?.outbox.finishRequested ?? false;
+  const isOutboxSettled = outbox !== undefined && !hasUnsentWork(outbox.outbox);
 
-  useExitReporting({ testCode, attemptToken, isWatching: status === 'in_progress' });
+  useExitReporting({
+    testCode,
+    attemptToken,
+    isWatching: status === 'in_progress' && !isFinishing,
+  });
   useScreenWakeLock(status === 'in_progress');
 
   useEffect(() => {
     if (status && status !== 'in_progress') forgetPaper(queryClient, testCode);
   }, [status, queryClient, testCode]);
+
+  useEffect(() => {
+    if (status === 'submitted' && isOutboxSettled) void forgetOutbox(testCode);
+  }, [status, isOutboxSettled, testCode]);
 
   if (attemptQuery.isPending) return <LoadingScreen message="Opening your test…" />;
 
@@ -45,7 +64,7 @@ export function AttemptScreen({ testCode, attemptToken, onSessionLost }: Attempt
   }
 
   const attempt = attemptQuery.data;
-  if (attempt.status === 'submitted') return <FinishedScreen attempt={attempt} />;
+  if (attempt.status === 'submitted') return <FinishedScreen attempt={attempt} outbox={outbox} />;
   if (attempt.status === 'locked') return <LockedScreen />;
 
   const hasUnseenExit = attempt.exitsUsed > acknowledgedExits;
@@ -56,6 +75,7 @@ export function AttemptScreen({ testCode, attemptToken, onSessionLost }: Attempt
         testCode={testCode}
         attemptToken={attemptToken}
         attempt={attempt}
+        outbox={outbox}
         onTimeUp={reloadAttempt}
       />
       {hasUnseenExit && (

@@ -62,3 +62,26 @@
     display: none;
   }
 }
+
+.viewTabs {
+  padding: 0 var(--page-padding);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.viewArea {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.viewArea[hidden] {
+  display: none;
+}
+
+.writtenNote {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-style: italic;
+}

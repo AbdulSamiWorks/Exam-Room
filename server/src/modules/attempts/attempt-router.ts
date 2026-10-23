@@ -1,11 +1,21 @@
-import type { AttemptResponse, StudentPaperResponse } from '@exam-room/shared';
+import type {
+  AnswerChange,
+  AttemptResponse,
+  SaveAnswersResponse,
+  StoredAnswersResponse,
+  StudentPaperResponse,
+} from '@exam-room/shared';
+import { numberQuestions } from '@exam-room/shared/paper-rules';
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import type { AppDependencies } from '../../app-dependencies.js';
+import { retryTransientErrors } from '../../database/transient-errors.js';
 import { sha256 } from '../../lib/crypto.js';
-import { HttpError, notFound } from '../../lib/http-errors.js';
+import { badRequest, HttpError, notFound } from '../../lib/http-errors.js';
 import { parseInput } from '../../lib/parse-input.js';
 import type { TestRecord } from '../tests/test-record.js';
+import { answerProblem, isAcceptingAnswers, isAnswerInTime } from '../answers/answer-rules.js';
+import { listAnswersOfAttempt, saveAnswers } from '../answers/answers-repository.js';
 import { findPaperForStudents, findPaperImage } from '../tests/paper-repository.js';
 import { findPageImage } from '../tests/tests-repository.js';
 import type { AttemptRecord } from './attempt-record.js';
@@ -26,6 +36,25 @@ const imageParamsSchema = z.object({
 });
 
 const IMAGE_HEADERS = { 'Content-Type': 'image/webp', 'Cache-Control': 'no-store' };
+
+const MAX_ANSWERS_PER_REQUEST = 200;
+const MAX_ANSWER_TEXT_LENGTH = 5000;
+const MAX_SEQUENCE = Number.MAX_SAFE_INTEGER;
+
+const saveAnswersSchema = z.object({
+  answers: z
+    .array(
+      z.object({
+        questionId: z.string().regex(/^q\d{1,4}$/),
+        choice: z.number().int().min(0).nullable(),
+        text: z.string().max(MAX_ANSWER_TEXT_LENGTH).nullable(),
+        sequence: z.number().int().positive().max(MAX_SEQUENCE),
+        answeredAt: z.number().int().positive(),
+      }),
+    )
+    .min(1)
+    .max(MAX_ANSWERS_PER_REQUEST),
+});
 
 const exitReportSchema = z.object({
   clientExitId: z.string().regex(/^[\w-]{8,64}$/, 'Invalid exit id.'),
@@ -100,6 +129,55 @@ export function createAttemptRouter(dependencies: AppDependencies): Router {
     response.set(IMAGE_HEADERS).send(image);
   });
 
+  router.get('/answers', async (request, response) => {
+    const attempt = await loadAttemptWithOpenPaper(request);
+    const answers = await listAnswersOfAttempt(database, attempt.id);
+    response.json({ answers } satisfies StoredAnswersResponse);
+  });
+
+  router.post('/answers', async (request, response) => {
+    const attempt = await loadAttempt(request);
+    const { answers } = parseInput(saveAnswersSchema, request.body);
+    const receivedAt = clock.now();
+    if (!isAcceptingAnswers(attempt, receivedAt)) {
+      response.json({
+        savedCount: 0,
+        tooLateCount: answers.length,
+        serverTime: receivedAt,
+      } satisfies SaveAnswersResponse);
+      return;
+    }
+
+    const [test, paper] = await Promise.all([
+      findTestOfAttempt(database, attempt),
+      findPaperForStudents(database, attempt.testId),
+    ]);
+    const questionsById = new Map(
+      numberQuestions(paper ?? { instructions: '', sections: [] }).map((question) => [
+        question.id,
+        question,
+      ]),
+    );
+    for (const change of answers) {
+      const problem = answerProblem(
+        questionsById.get(change.questionId),
+        change,
+        test.writtenAnswers,
+      );
+      if (problem) throw badRequest(problem, 'invalid_answer');
+    }
+
+    const inTime: AnswerChange[] = answers.filter((change) =>
+      isAnswerInTime(attempt, change.answeredAt, receivedAt),
+    );
+    await retryTransientErrors(() => saveAnswers(database, attempt.id, inTime, receivedAt));
+    response.json({
+      savedCount: inTime.length,
+      tooLateCount: answers.length - inTime.length,
+      serverTime: receivedAt,
+    } satisfies SaveAnswersResponse);
+  });
+
   router.post('/exits', async (request, response) => {
     const attempt = await loadAttempt(request);
     const exitReport = parseInput(exitReportSchema, request.body);
@@ -130,8 +208,8 @@ export function createAttemptRouter(dependencies: AppDependencies): Router {
 
   router.post('/finish', async (request, response) => {
     const attempt = await loadAttempt(request);
-    const finishedAttempt = await changeAttempt(database, attempt, (current) =>
-      finishByStudent(current, clock.now()),
+    const finishedAttempt = await retryTransientErrors(() =>
+      changeAttempt(database, attempt, (current) => finishByStudent(current, clock.now())),
     );
     await respondWithAttempt(response, finishedAttempt);
   });

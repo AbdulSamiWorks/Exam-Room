@@ -17,6 +17,7 @@ function attemptResult(overrides: Partial<AttemptResult> = {}): AttemptResult {
     forgivenExits: 0,
     awayMs: 65_000,
     isAwayNow: false,
+    answeredCount: 0,
     exits: [],
     ...overrides,
   };

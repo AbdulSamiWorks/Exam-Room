@@ -90,6 +90,7 @@ export function ResultsPanel({ test }: { test: TestSummary }) {
               <ResultRow
                 key={attempt.id}
                 result={attempt}
+                questionCount={test.questionCount}
                 actions={{
                   isUnlocking: unlockAttempt.isPending && unlockAttempt.variables === attempt.id,
                   onUnlock: () => unlockAttempt.mutate(attempt.id),

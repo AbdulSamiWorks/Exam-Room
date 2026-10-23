@@ -14,7 +14,7 @@ function closedExit(leftAt: number, awayMs: number): ExitEvent {
 
 describe('summarizeAttempt', () => {
   it('describes a running attempt without exits', () => {
-    expect(summarizeAttempt(attemptRecord(), [], STARTED_AT + 60_000)).toEqual({
+    expect(summarizeAttempt(attemptRecord(), [], STARTED_AT + 60_000, 4)).toEqual({
       id: 1,
       studentName: 'Ayesha Khan',
       rollNumber: '17',
@@ -26,6 +26,7 @@ describe('summarizeAttempt', () => {
       forgivenExits: 0,
       awayMs: 0,
       isAwayNow: false,
+      answeredCount: 4,
       exits: [],
     });
   });

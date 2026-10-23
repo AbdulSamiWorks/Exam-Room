@@ -1,3 +1,4 @@
+export type * from './answers.js';
 export type * from './attempts.js';
 export type * from './auth.js';
 export type * from './chapters.js';

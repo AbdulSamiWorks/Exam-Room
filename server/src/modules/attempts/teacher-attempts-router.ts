@@ -14,6 +14,7 @@ import { closeNow } from '../tests/test-availability.js';
 import type { TestRecord } from '../tests/test-record.js';
 import { findTestById, saveTestSchedule } from '../tests/tests-repository.js';
 import type { AttemptRecord } from './attempt-record.js';
+import { countAnswersOfTest } from '../answers/answers-repository.js';
 import { summarizeAttempt } from './attempt-results.js';
 import { endByTeacher, unlockByTeacher } from './attempt-rules.js';
 import { changeAttempt } from './attempt-service.js';
@@ -50,11 +51,17 @@ export function createTestResultsRouter(dependencies: AppDependencies): Router {
     const currentTime = clock.now();
     const attempts = await listAttemptsOfTest(database, test.id);
     const exitsByAttemptId = await listExitsOfTest(database, test.id);
+    const answeredCountByAttemptId = await countAnswersOfTest(database, test.id);
     const notStarted = await listStudentsWithoutAttempt(database, test.schoolClass.id, test.id);
 
     response.json({
       attempts: attempts.map((attempt) =>
-        summarizeAttempt(attempt, exitsByAttemptId.get(attempt.id) ?? [], currentTime),
+        summarizeAttempt(
+          attempt,
+          exitsByAttemptId.get(attempt.id) ?? [],
+          currentTime,
+          answeredCountByAttemptId.get(attempt.id) ?? 0,
+        ),
       ),
       notStarted,
       serverTime: currentTime,
@@ -129,6 +136,14 @@ async function buildAttemptResult(
   attempt: AttemptRecord,
   currentTime: number,
 ): Promise<AttemptResult> {
-  const exitsByAttemptId = await listExitsOfTest(database, attempt.testId);
-  return summarizeAttempt(attempt, exitsByAttemptId.get(attempt.id) ?? [], currentTime);
+  const [exitsByAttemptId, answeredCountByAttemptId] = await Promise.all([
+    listExitsOfTest(database, attempt.testId),
+    countAnswersOfTest(database, attempt.testId),
+  ]);
+  return summarizeAttempt(
+    attempt,
+    exitsByAttemptId.get(attempt.id) ?? [],
+    currentTime,
+    answeredCountByAttemptId.get(attempt.id) ?? 0,
+  );
 }

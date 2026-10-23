@@ -143,6 +143,7 @@ export async function deleteAttemptWithExits(database: Database, attemptId: numb
   await database.batch(
     [
       { sql: 'DELETE FROM exits WHERE attempt_id = ?', args: [attemptId] },
+      { sql: 'DELETE FROM answers WHERE attempt_id = ?', args: [attemptId] },
       { sql: 'DELETE FROM attempts WHERE id = ?', args: [attemptId] },
     ],
     'write',

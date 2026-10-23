@@ -3,7 +3,10 @@ import type {
   PublicTestResponse,
   RecordExitRequest,
   RecordReturnRequest,
+  SaveAnswersRequest,
+  SaveAnswersResponse,
   StartAttemptResponse,
+  StoredAnswersResponse,
   StudentPaperResponse,
 } from '@exam-room/shared';
 import { getBlob, getJson, postJson, type RequestOptions } from '../../api/http-client';
@@ -34,6 +37,21 @@ export function fetchPaperPicture(attemptToken: string, imageNumber: number): Pr
 
 export function fetchStudentPaper(attemptToken: string): Promise<StudentPaperResponse> {
   return getJson<StudentPaperResponse>('/attempt/paper', withAttemptToken(attemptToken));
+}
+
+export function sendAnswers(
+  attemptToken: string,
+  answers: SaveAnswersRequest['answers'],
+): Promise<SaveAnswersResponse> {
+  return postJson<SaveAnswersResponse>(
+    '/attempt/answers',
+    { answers } satisfies SaveAnswersRequest,
+    withAttemptToken(attemptToken),
+  );
+}
+
+export function fetchSavedAnswers(attemptToken: string): Promise<StoredAnswersResponse> {
+  return getJson<StoredAnswersResponse>('/attempt/answers', withAttemptToken(attemptToken));
 }
 
 export function reportExit(

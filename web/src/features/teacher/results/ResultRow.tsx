@@ -21,9 +21,11 @@ export type ResultRowActions = {
 
 export function ResultRow({
   result,
+  questionCount,
   actions,
 }: {
   result: AttemptResult;
+  questionCount: number;
   actions: ResultRowActions;
 }) {
   const status = describeResultStatus(result);
@@ -42,6 +44,9 @@ export function ResultRow({
         <Fact label="Finished" value={describeClockTime(result.finishedAt)} />
         <Fact label="Exits" value={describeExits(result)} />
         <Fact label="Away" value={describeAwayTime(result.awayMs)} />
+        {questionCount > 0 && (
+          <Fact label="Answered" value={`${result.answeredCount} of ${questionCount}`} />
+        )}
       </dl>
       {result.exits.length > 0 && <ExitHistory exits={result.exits} />}
       <div className={styles.rowActions}>

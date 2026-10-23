@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 import { ApiError } from '../../api/http-client';
 import { studentAccountQueryKeys } from '../student-account/use-student-account';
 import { saveStoredAttempt } from './attempt-storage';
-import { fetchAttempt, fetchPublicTest, finishAttempt, startAttempt } from './student-api';
+import { fetchAttempt, fetchPublicTest, startAttempt } from './student-api';
 
 const LOCKED_REFRESH_INTERVAL_MS = 5000;
 const IN_PROGRESS_REFRESH_INTERVAL_MS = 30_000;
@@ -75,13 +75,5 @@ export function useStartAttempt(testCode: string) {
         return queryClient.invalidateQueries({ queryKey: studentAccountQueryKeys.session });
       }
     },
-  });
-}
-
-export function useFinishAttempt(testCode: string, attemptToken: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () => finishAttempt(attemptToken),
-    onSuccess: (response) => setAttemptData(queryClient, testCode, response),
   });
 }

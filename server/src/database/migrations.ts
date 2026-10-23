@@ -287,4 +287,20 @@ export const migrations: readonly Migration[] = [
       )`,
     ],
   },
+  {
+    id: 9,
+    name: 'answers saved from the phone',
+    statements: [
+      `CREATE TABLE answers (
+        attempt_id   INTEGER NOT NULL REFERENCES attempts (id) ON DELETE CASCADE,
+        question_id  TEXT    NOT NULL,
+        choice       INTEGER,
+        text         TEXT,
+        sequence     INTEGER NOT NULL,
+        answered_at  INTEGER NOT NULL,
+        received_at  INTEGER NOT NULL,
+        PRIMARY KEY (attempt_id, question_id)
+      ) WITHOUT ROWID`,
+    ],
+  },
 ];

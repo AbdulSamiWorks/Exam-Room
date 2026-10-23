@@ -14,6 +14,7 @@ import { TestNotOpenScreen } from '../screens/TestNotOpenScreen';
 import { usePublicTest, useStartAttempt } from '../use-attempt';
 import { studentLoginPath, studentTestPath } from '../../student-account/student-paths';
 import { useStudentSession } from '../../student-account/use-student-account';
+import { describeHowToAnswer } from '../answers/answer-rules';
 import { PhoneLockSteps } from './PhoneLockSteps';
 import styles from './JoinScreen.module.css';
 
@@ -78,7 +79,7 @@ function JoinForm({ test, testCode, onStarted, isResuming }: JoinFormProps) {
               </li>
             )}
             <li>{describeExitRule(test)}</li>
-            <li>Answer on your own paper. When you are done, tap Finish.</li>
+            <li>{describeHowToAnswer(test)}</li>
           </ul>
         </Panel>
 
