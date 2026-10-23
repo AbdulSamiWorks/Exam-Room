@@ -1,7 +1,7 @@
 # Exam Room — Architecture
 
-> Status: **approved plan, v1** (2026-10-22). Milestones M0–M14 are built (2026-10-25); the
-> real-device checks in §15 are still to do. M15–M19 are planned in §16 (2026-10-24). Update this
+> Status: **approved plan, v1** (2026-10-22). Milestones M0–M15 are built (2026-10-25); the
+> real-device checks in §15 are still to do. M16–M19 are planned in §16 (2026-10-24). Update this
 > file whenever a decision below changes.
 
 Exam Room is a small mobile-first web app. A teacher uploads a test paper (PDF), shares a link, and
@@ -149,6 +149,10 @@ answers    (attempt_id → attempts, question_id, choice NULL, text NULL,
             sequence,                      -- grows with every change on the phone; newest wins (D45)
             answered_at, received_at,      -- server-clock time on the phone, and arrival time
             PRIMARY KEY (attempt_id, question_id)) WITHOUT ROWID
+
+answer_photos (id PK, attempt_id → attempts, photo_no, client_photo_id, image BLOB (as sent),
+            media_type, width, height, created_at,
+            UNIQUE (attempt_id, photo_no), UNIQUE (attempt_id, client_photo_id))
 
 test_chapters (test_id → tests, chapter_id → chapters, PRIMARY KEY (test_id, chapter_id))
 
@@ -369,6 +373,8 @@ POST   /api/tests/:id/close
 PUT    /api/tests/:id/schedule        { opensAt, closesAt | null }
 DELETE /api/tests/:id                 → test, pages, attempts and exits
 DELETE /api/attempts/:id              → one attempt and its exits (frees the roll number)
+GET    /api/attempts/:id/photos       → the student's answer photos
+GET    /api/attempts/:id/photos/:n
 ```
 
 Student account (student session cookie, D39):
@@ -401,6 +407,9 @@ GET    /api/attempt/paper-images/:n        → a picture of the typed paper (in 
 GET    /api/attempt/answers                → the saved answers (in progress only)
 POST   /api/attempt/answers                { answers: [{ questionId, choice, text, sequence,
                                               answeredAt }] } → { savedCount, tooLateCount }
+GET    /api/attempt/photos                 → saved photos and photosOpenUntil
+PUT    /api/attempt/photos/:clientPhotoId  raw image body (after finishing, 30 minutes, max 10)
+DELETE /api/attempt/photos/:clientPhotoId
 POST   /api/attempt/exits                  { clientExitId, reason }
 POST   /api/attempt/return                 { clientExitId, reason, awayMsClient }
 POST   /api/attempt/finish
@@ -539,8 +548,8 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 | M18 | Dashboard and progress for students and the teacher                                                    |
 | M19 | Waiting room: the teacher starts everyone at the same time                                             |
 
-Status (2026-10-25): M0–M14 are built and tested (unit tests, API tests and a smoke test of the
-production build). Still to do by hand: the real-device checks in §15. M15–M19 are planned in §16.
+Status (2026-10-25): M0–M15 are built and tested (unit tests, API tests and a smoke test of the
+production build). Still to do by hand: the real-device checks in §15. M16–M19 are planned in §16.
 
 ## 13. Decision log
 
@@ -832,6 +841,18 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 | Render hours     | One service awake all month ≈ 744 hours                               | 750 hours / month                  |
 
 ## 17. Built milestones
+
+### M15 Photo answers (built 2026-10-25)
+
+- Tests whose written answers are **photos** (or **typed and photos**) show **Photos of your
+  written answers** after Finish: up to 10 photos within 30 minutes (`photo-rules.ts`, pure and
+  tested). The phone shrinks each photo to 1600 px JPEG (about 200–300 KB) and keeps it in a
+  **photo outbox** (IndexedDB) that sends one photo at a time with the same backoff as answers,
+  also after the app was closed.
+- The server checks the type and the size with `sharp` metadata and stores the bytes as they came
+  (D30). Each photo carries a random id from the phone, so a repeated upload is stored once.
+  Counting and numbering happen in one `INSERT … SELECT … HAVING COUNT(*) < 10` statement.
+- The teacher's results show **Photos N** and **See the answer photos**.
 
 ### M14 Answering and never losing an answer (built 2026-10-25)
 

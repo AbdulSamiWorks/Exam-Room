@@ -151,3 +151,12 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
       test is submitted.
 - [ ] On a PDF test with an answer sheet, switch between **Paper** and **Answer sheet**.
 - [ ] The teacher's results show **Answered N of M** for each student.
+
+## 15. Photo answers
+
+- [ ] On a test with photo answers, finish the test: **Photos of your written answers** shows.
+      **Take a photo** opens the camera; the photo shows as saved.
+- [ ] Turn on airplane mode and take a photo: it waits on the phone. Turn the network on: it is
+      sent by itself.
+- [ ] The teacher's results show the photo count and **See the answer photos** shows them sharp
+      enough to read.
