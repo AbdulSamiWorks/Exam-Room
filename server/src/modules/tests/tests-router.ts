@@ -2,20 +2,27 @@ import type { TestListResponse, TestResponse, TestSchedule } from '@exam-room/sh
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import type { AppDependencies } from '../../app-dependencies.js';
+import type { Database } from '../../database/connection.js';
 import { badRequest, conflict, notFound } from '../../lib/http-errors.js';
+import { atLeastOneChange, idParams, positiveId } from '../../lib/input-fields.js';
 import { parseInput } from '../../lib/parse-input.js';
 import { requireTeacher } from '../auth/teacher-session.js';
+import { findChapterIdsInSubject } from '../chapters/chapters-repository.js';
 import { findSubjectById } from '../subjects/subjects-repository.js';
 import { normalizePageImages } from './page-images.js';
 import { receivePageImages, uploadedPageImages } from './receive-page-images.js';
 import { closeNow, openNow, summarizeTest } from './test-availability.js';
 import { createUniqueTestCode } from './test-code.js';
 import { testLimits } from './test-limits.js';
-import type { TestRecord } from './test-record.js';
-import { changesFixedSettings, settingsOf } from './test-settings.js';
+import type { TestWithChapters } from './test-record.js';
+import {
+  applySettingChanges,
+  chapterIdsAfterChange,
+  changesFixedSettings,
+} from './test-settings.js';
 import {
   deleteTestWithResults,
-  findTestById,
+  findTestWithChapters,
   insertTestWithPages,
   listTests,
   replacePagesBeforeAnyStart,
@@ -23,8 +30,24 @@ import {
   saveTestSettings,
 } from './tests-repository.js';
 
+const COMMA = ',';
+
+const chapterIdsField = z
+  .preprocess(
+    (value) => (typeof value === 'string' ? value.split(COMMA).filter(Boolean) : value),
+    z
+      .array(positiveId)
+      .max(
+        testLimits.maxChaptersPerTest,
+        `Choose at most ${testLimits.maxChaptersPerTest} chapters.`,
+      ),
+  )
+  .transform((chapterIds) => [...new Set(chapterIds)]);
+
 const testSettingsFields = {
   subjectId: z.coerce.number().int().positive('Choose a subject.'),
+  kind: z.enum(['test', 'quiz'], 'Choose test or quiz.'),
+  chapterIds: chapterIdsField,
   title: z
     .string()
     .trim()
@@ -44,19 +67,18 @@ const testSettingsFields = {
 
 const createTestFieldsSchema = z.object({
   ...testSettingsFields,
+  kind: testSettingsFields.kind.default('test'),
+  chapterIds: testSettingsFields.chapterIds.default([]),
   leaveRule: testSettingsFields.leaveRule.default('lock'),
 });
 
 const updateTestSchema = z
   .object(testSettingsFields)
   .partial()
-  .refine(
-    (changes) => Object.values(changes).some((value) => value !== undefined),
-    'Nothing to change.',
-  );
+  .refine(atLeastOneChange, 'Nothing to change.');
 
 const STARTED_TEST_SETTINGS_MESSAGE =
-  'Students have already started this test. Now you can only change the title and subject.';
+  'Students have already started this test. Now you can only change the title, type, subject and chapters.';
 const STARTED_TEST_PAPER_MESSAGE =
   'Students have already started this test, so the paper cannot be replaced.';
 
@@ -70,15 +92,13 @@ const scheduleSchema = z
     'The closing time must be after the opening time.',
   );
 
-const testIdParamsSchema = z.object({
-  testId: z.coerce.number().int().positive(),
-});
+const testIdParamsSchema = idParams('testId');
 
 const testListQuerySchema = z.object({
-  subjectId: z.coerce.number().int().positive().optional(),
+  subjectId: positiveId.optional(),
 });
 
-type DecideSchedule = (test: TestRecord, currentTime: number) => TestSchedule;
+type DecideSchedule = (test: TestWithChapters, currentTime: number) => TestSchedule;
 
 export function createTestsRouter(dependencies: AppDependencies): Router {
   const { database, clock } = dependencies;
@@ -86,17 +106,17 @@ export function createTestsRouter(dependencies: AppDependencies): Router {
 
   router.use(requireTeacher(dependencies));
 
-  async function requireTest(request: Request): Promise<TestRecord> {
+  async function requireTest(request: Request): Promise<TestWithChapters> {
     const { testId } = parseInput(testIdParamsSchema, request.params);
-    const test = await findTestById(database, testId);
+    const test = await findTestWithChapters(database, testId);
     if (!test) throw notFound('Test not found.');
     return test;
   }
 
-  async function respondWithTest(response: Response, testId: number): Promise<void> {
-    const test = await findTestById(database, testId);
+  async function respondWithTest(response: Response, testId: number, status = 200) {
+    const test = await findTestWithChapters(database, testId);
     if (!test) throw notFound('Test not found.');
-    response.json({ test: summarizeTest(test, clock.now()) } satisfies TestResponse);
+    response.status(status).json({ test: summarizeTest(test, clock.now()) } satisfies TestResponse);
   }
 
   async function changeSchedule(
@@ -129,27 +149,15 @@ export function createTestsRouter(dependencies: AppDependencies): Router {
       throw badRequest('Add the test paper.', 'pages_required');
     }
 
-    const subject = await findSubjectById(database, fields.subjectId);
-    if (!subject) throw badRequest('Choose a subject.', 'subject_not_found');
+    await requireSubjectWithChapters(database, fields.subjectId, fields.chapterIds);
 
     const pages = await normalizePageImages(pageImages);
     const testId = await insertTestWithPages(
       database,
-      {
-        code: await createUniqueTestCode(database),
-        subjectId: subject.id,
-        title: fields.title,
-        durationMinutes: fields.durationMinutes,
-        allowedExits: fields.allowedExits,
-        leaveRule: fields.leaveRule,
-        createdAt: clock.now(),
-      },
+      { ...fields, code: await createUniqueTestCode(database), createdAt: clock.now() },
       pages,
     );
-
-    const test = await findTestById(database, testId);
-    if (!test) throw new Error('A newly created test could not be read back.');
-    response.status(201).json({ test: summarizeTest(test, clock.now()) } satisfies TestResponse);
+    await respondWithTest(response, testId, 201);
   });
 
   router.get('/:testId', async (request, response) => {
@@ -176,11 +184,12 @@ export function createTestsRouter(dependencies: AppDependencies): Router {
     if (changesFixedSettings(test, changes)) {
       throw conflict(STARTED_TEST_SETTINGS_MESSAGE, 'test_already_started');
     }
-    if (changes.subjectId !== undefined && !(await findSubjectById(database, changes.subjectId))) {
-      throw badRequest('Choose a subject.', 'subject_not_found');
-    }
 
-    await saveTestSettings(database, test.id, { ...settingsOf(test), ...changes });
+    const settings = applySettingChanges(test, changes);
+    const chapterIds = chapterIdsAfterChange(test, changes);
+    await requireSubjectWithChapters(database, settings.subjectId, chapterIds ?? []);
+
+    await saveTestSettings(database, test.id, settings, chapterIds);
     await respondWithTest(response, test.id);
   });
 
@@ -204,4 +213,18 @@ export function createTestsRouter(dependencies: AppDependencies): Router {
   });
 
   return router;
+}
+
+async function requireSubjectWithChapters(
+  database: Database,
+  subjectId: number,
+  chapterIds: readonly number[],
+): Promise<void> {
+  if (!(await findSubjectById(database, subjectId))) {
+    throw badRequest('Choose a subject.', 'subject_not_found');
+  }
+  const foundChapterIds = await findChapterIdsInSubject(database, subjectId, chapterIds);
+  if (foundChapterIds.length !== chapterIds.length) {
+    throw badRequest('Choose chapters of the chosen subject.', 'chapter_not_found');
+  }
 }

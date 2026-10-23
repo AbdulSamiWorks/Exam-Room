@@ -1,14 +1,15 @@
+import type { SchoolClass } from '@exam-room/shared';
 import request from 'supertest';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { createChapter, createClass, createSubject } from './support/catalog-fixtures.js';
 import { createBlankPageImage, isWebpImage } from './support/page-image-fixtures.js';
-import { logInAsTeacher } from './support/teacher-agent.js';
+import { logInAsTeacher, type TeacherAgent } from './support/teacher-agent.js';
 import { createTestContext, TEST_START_TIME, type TestContext } from './support/test-context.js';
-
-type TeacherAgent = Awaited<ReturnType<typeof logInAsTeacher>>;
 
 describe('tests', () => {
   let context: TestContext;
   let teacher: TeacherAgent;
+  let schoolClass: SchoolClass;
   let subjectId: number;
   let pageImage: Buffer;
 
@@ -19,8 +20,8 @@ describe('tests', () => {
   beforeEach(async () => {
     context = await createTestContext();
     teacher = await logInAsTeacher(context.app);
-    const subject = await teacher.post('/api/subjects').send({ name: 'Physics' });
-    subjectId = subject.body.subject.id;
+    schoolClass = await createClass(teacher);
+    subjectId = (await createSubject(teacher, schoolClass.id, 'Physics')).id;
   });
   afterEach(() => context.cleanUp());
 
@@ -60,8 +61,11 @@ describe('tests', () => {
     expect(response.body.test).toEqual({
       id: expect.any(Number),
       code: expect.stringMatching(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/),
+      kind: 'test',
       title: 'Chapter 3 Quiz',
-      subject: { id: subjectId, name: 'Physics' },
+      schoolClass,
+      subject: { id: subjectId, classId: schoolClass.id, name: 'Physics' },
+      chapters: [],
       durationMinutes: 30,
       allowedExits: 1,
       leaveRule: 'lock',
@@ -74,9 +78,8 @@ describe('tests', () => {
     });
   });
 
-  it('lists tests by subject name, newest first within a subject', async () => {
-    const chemistry = await teacher.post('/api/subjects').send({ name: 'Chemistry' });
-    const chemistryId = String(chemistry.body.subject.id);
+  it('lists tests newest first and filters them by subject', async () => {
+    const chemistryId = String((await createSubject(teacher, schoolClass.id, 'Chemistry')).id);
 
     await createTestRequest([pageImage], { title: 'Physics old' });
     context.clock.advanceBy(1000);
@@ -163,6 +166,44 @@ describe('tests', () => {
     const response = await createTestRequest(tooManyPages);
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe('too_many_pages');
+  });
+
+  it('saves the type and the chapter tags in chapter order', async () => {
+    const forces = await createChapter(teacher, subjectId, 'Forces');
+    const motion = await createChapter(teacher, subjectId, 'Motion');
+
+    const response = await createTestRequest([pageImage], {
+      kind: 'quiz',
+      chapterIds: `${motion.id},${forces.id},${motion.id}`,
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body.test).toMatchObject({
+      kind: 'quiz',
+      chapters: [
+        { id: forces.id, name: 'Forces' },
+        { id: motion.id, name: 'Motion' },
+      ],
+    });
+    const listed = await teacher.get('/api/tests');
+    expect(listed.body.tests[0].chapters).toEqual(response.body.test.chapters);
+  });
+
+  it('rejects a chapter of another subject', async () => {
+    const chemistry = await createSubject(teacher, schoolClass.id, 'Chemistry');
+    const atoms = await createChapter(teacher, chemistry.id, 'Atoms');
+
+    const response = await createTestRequest([pageImage], { chapterIds: String(atoms.id) });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('chapter_not_found');
+    expect(await countRows('tests')).toBe(0);
+  });
+
+  it('rejects an unknown type', async () => {
+    const response = await createTestRequest([pageImage], { kind: 'exam' });
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('invalid_input');
   });
 
   it('saves nothing when one of the pages is not a real image', async () => {

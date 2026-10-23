@@ -1,6 +1,7 @@
 import type { TestSummary } from '@exam-room/shared';
 import request from 'supertest';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { createChapter, createSubject } from './support/catalog-fixtures.js';
 import { publishTest, startAttemptToken } from './support/exam-fixtures.js';
 import { createBlankPageImage } from './support/page-image-fixtures.js';
 import { logInAsTeacher } from './support/teacher-agent.js';
@@ -33,18 +34,21 @@ describe('editing a test', () => {
     return upload;
   }
 
-  async function createSubject(name: string): Promise<number> {
+  async function createChapterOf(test: TestSummary, name: string) {
     const teacher = await logInAsTeacher(context.app);
-    const response = await teacher.post('/api/subjects').send({ name });
-    return response.body.subject.id;
+    return createChapter(teacher, test.subject.id, name);
   }
 
   it('changes every setting while no student has started', async () => {
     const test = await publishTest(context.app);
-    const chemistryId = await createSubject('Chemistry');
+    const teacher = await logInAsTeacher(context.app);
+    const chemistry = await createSubject(teacher, test.schoolClass.id, 'Chemistry');
+    const atoms = await createChapter(teacher, chemistry.id, 'Atoms');
 
     const response = await patchTest(test, {
-      subjectId: chemistryId,
+      subjectId: chemistry.id,
+      kind: 'quiz',
+      chapterIds: [atoms.id],
       title: '  Chapter 4 Quiz ',
       durationMinutes: 45,
       allowedExits: 0,
@@ -53,13 +57,50 @@ describe('editing a test', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.test).toMatchObject({
-      subject: { id: chemistryId, name: 'Chemistry' },
+      subject: { id: chemistry.id, name: 'Chemistry' },
+      kind: 'quiz',
+      chapters: [{ id: atoms.id, name: 'Atoms' }],
       title: 'Chapter 4 Quiz',
       durationMinutes: 45,
       allowedExits: 0,
       leaveRule: 'finish',
       code: test.code,
     });
+  });
+
+  it('replaces the chapter tags, and clears them when the subject changes', async () => {
+    const test = await publishTest(context.app);
+    const forces = await createChapterOf(test, 'Forces');
+    const motion = await createChapterOf(test, 'Motion');
+
+    const tagged = await patchTest(test, { chapterIds: [forces.id, motion.id] });
+    expect(tagged.body.test.chapters.map((chapter: { name: string }) => chapter.name)).toEqual([
+      'Forces',
+      'Motion',
+    ]);
+
+    const retagged = await patchTest(test, { chapterIds: [motion.id] });
+    expect(retagged.body.test.chapters).toEqual([{ id: motion.id, name: 'Motion' }]);
+
+    const unchanged = await patchTest(test, { title: 'Renamed' });
+    expect(unchanged.body.test.chapters).toEqual([{ id: motion.id, name: 'Motion' }]);
+
+    const teacher = await logInAsTeacher(context.app);
+    const chemistry = await createSubject(teacher, test.schoolClass.id, 'Chemistry');
+    const moved = await patchTest(test, { subjectId: chemistry.id });
+    expect(moved.body.test.chapters).toEqual([]);
+  });
+
+  it('refuses chapters of another subject', async () => {
+    const test = await publishTest(context.app);
+    const teacher = await logInAsTeacher(context.app);
+    const chemistry = await createSubject(teacher, test.schoolClass.id, 'Chemistry');
+    const atoms = await createChapter(teacher, chemistry.id, 'Atoms');
+
+    const response = await patchTest(test, { chapterIds: [atoms.id] });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('chapter_not_found');
   });
 
   describe('after a student has started', () => {
@@ -70,10 +111,19 @@ describe('editing a test', () => {
       await startAttemptToken(context.app, test.code);
     });
 
-    it('still changes the title and subject', async () => {
-      const response = await patchTest(test, { title: 'Renamed' });
+    it('still changes the title, type, subject and chapters', async () => {
+      const motion = await createChapterOf(test, 'Motion');
+      const response = await patchTest(test, {
+        title: 'Renamed',
+        kind: 'quiz',
+        chapterIds: [motion.id],
+      });
       expect(response.status).toBe(200);
-      expect(response.body.test.title).toBe('Renamed');
+      expect(response.body.test).toMatchObject({
+        title: 'Renamed',
+        kind: 'quiz',
+        chapters: [{ id: motion.id, name: 'Motion' }],
+      });
     });
 
     it('accepts the same time limit, exits and leave rule as before', async () => {

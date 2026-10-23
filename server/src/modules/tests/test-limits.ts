@@ -6,4 +6,5 @@ export const testLimits: TestLimits = {
   maxDurationMinutes: 600,
   maxPages: 30,
   maxPageImageBytes: 3_000_000,
+  maxChaptersPerTest: 20,
 };

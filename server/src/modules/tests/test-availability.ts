@@ -1,5 +1,5 @@
 import type { TestAvailability, TestSchedule, TestSummary } from '@exam-room/shared';
-import type { TestRecord } from './test-record.js';
+import type { TestWithChapters } from './test-record.js';
 
 export const NOT_OPEN_SCHEDULE: TestSchedule = { opensAt: null, closesAt: null };
 
@@ -23,6 +23,6 @@ export function closeNow(schedule: TestSchedule, currentTime: number): TestSched
   return schedule;
 }
 
-export function summarizeTest(test: TestRecord, currentTime: number): TestSummary {
+export function summarizeTest(test: TestWithChapters, currentTime: number): TestSummary {
   return { ...test, availability: availabilityAt(test, currentTime) };
 }

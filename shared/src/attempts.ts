@@ -94,8 +94,3 @@ export type AttemptResultListResponse = {
 export type AttemptResultResponse = {
   attempt: AttemptResult;
 };
-
-export type StudentLimits = {
-  maxNameLength: 60;
-  maxRollNumberLength: 30;
-};

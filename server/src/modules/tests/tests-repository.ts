@@ -1,23 +1,20 @@
-import type {
-  AllowedExits,
-  LeaveRule,
-  PageSize,
-  TestSchedule,
-  TestSettings,
-} from '@exam-room/shared';
+import type { AllowedExits, LeaveRule, PageSize, TestKind, TestSchedule } from '@exam-room/shared';
 import type { Row, Transaction } from '@libsql/client';
 import type { Database } from '../../database/connection.js';
 import { requireFirstRow } from '../../database/query-helpers.js';
 import type { PageImage } from './page-images.js';
-import type { TestRecord } from './test-record.js';
+import {
+  chapterTagsByTestId,
+  chapterTagsQuery,
+  insertChapterTagsStatements,
+  replaceChapterTagsStatements,
+} from './test-chapters-repository.js';
+import type { TestRecord, TestWithChapters } from './test-record.js';
+import type { StoredTestSettings } from './test-settings.js';
 
-export type NewTest = {
+export type NewTest = StoredTestSettings & {
   code: string;
-  subjectId: number;
-  title: string;
-  durationMinutes: number;
-  allowedExits: AllowedExits;
-  leaveRule: LeaveRule;
+  chapterIds: number[];
   createdAt: number;
 };
 
@@ -25,6 +22,7 @@ const SELECT_TEST_SUMMARY = `
   SELECT
     tests.id,
     tests.code,
+    tests.kind,
     tests.title,
     tests.duration_minutes,
     tests.allowed_exits,
@@ -35,9 +33,14 @@ const SELECT_TEST_SUMMARY = `
     tests.closes_at,
     subjects.id   AS subject_id,
     subjects.name AS subject_name,
+    classes.id    AS class_id,
+    classes.name  AS class_name,
     (SELECT COUNT(*) FROM attempts WHERE attempts.test_id = tests.id) AS student_count
   FROM tests
-  JOIN subjects ON subjects.id = tests.subject_id`;
+  JOIN subjects ON subjects.id = tests.subject_id
+  JOIN classes ON classes.id = subjects.class_id`;
+
+const NEWEST_FIRST = 'ORDER BY tests.created_at DESC, tests.id DESC';
 
 export type TestListFilter = {
   subjectId?: number;
@@ -46,16 +49,36 @@ export type TestListFilter = {
 export async function listTests(
   database: Database,
   filter: TestListFilter = {},
-): Promise<TestRecord[]> {
-  const { rows } = await database.execute(
-    filter.subjectId === undefined
-      ? `${SELECT_TEST_SUMMARY} ORDER BY subjects.name, tests.created_at DESC`
-      : {
-          sql: `${SELECT_TEST_SUMMARY} WHERE tests.subject_id = ? ORDER BY tests.created_at DESC`,
-          args: [filter.subjectId],
-        },
+): Promise<TestWithChapters[]> {
+  const { subjectId } = filter;
+  const [testRows, tagRows] = await database.batch(
+    subjectId === undefined
+      ? [`${SELECT_TEST_SUMMARY} ${NEWEST_FIRST}`, chapterTagsQuery('all tests')]
+      : [
+          {
+            sql: `${SELECT_TEST_SUMMARY} WHERE tests.subject_id = ? ${NEWEST_FIRST}`,
+            args: [subjectId],
+          },
+          chapterTagsQuery({ subjectId }),
+        ],
+    'read',
   );
-  return rows.map(toTestRecord);
+  return withChapters(testRows?.rows ?? [], tagRows?.rows ?? []);
+}
+
+export async function findTestWithChapters(
+  database: Database,
+  testId: number,
+): Promise<TestWithChapters | undefined> {
+  const [testRows, tagRows] = await database.batch(
+    [
+      { sql: `${SELECT_TEST_SUMMARY} WHERE tests.id = ?`, args: [testId] },
+      chapterTagsQuery({ testId }),
+    ],
+    'read',
+  );
+  const [test] = withChapters(testRows?.rows ?? [], tagRows?.rows ?? []);
+  return test;
 }
 
 export async function insertTestWithPages(
@@ -67,13 +90,14 @@ export async function insertTestWithPages(
   try {
     const insertedTest = await transaction.execute({
       sql: `INSERT INTO tests
-              (code, subject_id, title, duration_minutes, allowed_exits, leave_rule, page_count,
-               created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              (code, subject_id, kind, title, duration_minutes, allowed_exits, leave_rule,
+               page_count, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id`,
       args: [
         newTest.code,
         newTest.subjectId,
+        newTest.kind,
         newTest.title,
         newTest.durationMinutes,
         newTest.allowedExits,
@@ -84,6 +108,8 @@ export async function insertTestWithPages(
     });
     const testId = Number(requireFirstRow(insertedTest).id);
     await insertPages(transaction, testId, pages);
+    const chapterTagStatements = insertChapterTagsStatements(testId, newTest.chapterIds);
+    if (chapterTagStatements.length > 0) await transaction.batch(chapterTagStatements);
     await transaction.commit();
     return testId;
   } finally {
@@ -134,21 +160,30 @@ async function insertPages(
 export async function saveTestSettings(
   database: Database,
   testId: number,
-  settings: TestSettings,
+  settings: StoredTestSettings,
+  chapterIds: readonly number[] | undefined,
 ): Promise<void> {
-  await database.execute({
-    sql: `UPDATE tests
-          SET subject_id = ?, title = ?, duration_minutes = ?, allowed_exits = ?, leave_rule = ?
-          WHERE id = ?`,
-    args: [
-      settings.subjectId,
-      settings.title,
-      settings.durationMinutes,
-      settings.allowedExits,
-      settings.leaveRule,
-      testId,
+  await database.batch(
+    [
+      {
+        sql: `UPDATE tests
+              SET subject_id = ?, kind = ?, title = ?, duration_minutes = ?, allowed_exits = ?,
+                  leave_rule = ?
+              WHERE id = ?`,
+        args: [
+          settings.subjectId,
+          settings.kind,
+          settings.title,
+          settings.durationMinutes,
+          settings.allowedExits,
+          settings.leaveRule,
+          testId,
+        ],
+      },
+      ...(chapterIds === undefined ? [] : replaceChapterTagsStatements(testId, chapterIds)),
     ],
-  });
+    'write',
+  );
 }
 
 export async function findTestById(
@@ -216,6 +251,7 @@ export async function deleteTestWithResults(database: Database, testId: number):
       },
       { sql: 'DELETE FROM attempts WHERE test_id = ?', args: [testId] },
       { sql: 'DELETE FROM test_pages WHERE test_id = ?', args: [testId] },
+      { sql: 'DELETE FROM test_chapters WHERE test_id = ?', args: [testId] },
       { sql: 'DELETE FROM tests WHERE id = ?', args: [testId] },
     ],
     'write',
@@ -230,12 +266,23 @@ export async function isTestCodeTaken(database: Database, code: string): Promise
   return rows.length > 0;
 }
 
+function withChapters(testRows: readonly Row[], tagRows: readonly Row[]): TestWithChapters[] {
+  const tagsByTestId = chapterTagsByTestId(tagRows);
+  return testRows.map((row) => {
+    const test = toTestRecord(row);
+    return { ...test, chapters: tagsByTestId.get(test.id) ?? [] };
+  });
+}
+
 function toTestRecord(row: Row): TestRecord {
+  const classId = Number(row.class_id);
   return {
     id: Number(row.id),
     code: String(row.code),
+    kind: String(row.kind) as TestKind,
     title: String(row.title),
-    subject: { id: Number(row.subject_id), name: String(row.subject_name) },
+    schoolClass: { id: classId, name: String(row.class_name) },
+    subject: { id: Number(row.subject_id), classId, name: String(row.subject_name) },
     durationMinutes: Number(row.duration_minutes),
     allowedExits: Number(row.allowed_exits) as AllowedExits,
     leaveRule: String(row.leave_rule) as LeaveRule,

@@ -1,8 +1,12 @@
+import type { ChapterTag } from './chapters.js';
+import type { SchoolClass } from './classes.js';
 import type { Subject } from './subjects.js';
 
 export type AllowedExits = 0 | 1 | 2;
 
 export type LeaveRule = 'lock' | 'finish';
+
+export type TestKind = 'test' | 'quiz';
 
 export type TestAvailability = 'not_open' | 'scheduled' | 'open' | 'closed';
 
@@ -14,8 +18,11 @@ export type TestSchedule = {
 export type TestSummary = TestSchedule & {
   id: number;
   code: string;
+  kind: TestKind;
   title: string;
+  schoolClass: SchoolClass;
   subject: Subject;
+  chapters: ChapterTag[];
   durationMinutes: number;
   allowedExits: AllowedExits;
   leaveRule: LeaveRule;
@@ -35,6 +42,8 @@ export type TestListResponse = {
 
 export type TestSettings = {
   subjectId: number;
+  kind: TestKind;
+  chapterIds: number[];
   title: string;
   durationMinutes: number;
   allowedExits: AllowedExits;
@@ -48,8 +57,7 @@ export type ScheduleTestRequest = {
   closesAt: number | null;
 };
 
-export type CreateTestFormField =
-  'subjectId' | 'title' | 'durationMinutes' | 'allowedExits' | 'leaveRule' | 'pages';
+export type CreateTestFormField = keyof TestSettings | 'pages';
 
 export type TestLimits = {
   maxTitleLength: 120;
@@ -57,4 +65,5 @@ export type TestLimits = {
   maxDurationMinutes: 600;
   maxPages: 30;
   maxPageImageBytes: 3_000_000;
+  maxChaptersPerTest: 20;
 };

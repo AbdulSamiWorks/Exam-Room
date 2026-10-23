@@ -20,7 +20,7 @@ import {
   insertAttempt,
   saveAttemptChange,
 } from './attempts-repository.js';
-import { comparisonKey, tidyText } from './student-identity.js';
+import { comparisonKey, tidyText } from '../../lib/text.js';
 
 const MAX_SAVE_ATTEMPTS = 3;
 const MILLISECONDS_PER_MINUTE = 60_000;
