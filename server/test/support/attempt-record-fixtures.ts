@@ -8,6 +8,7 @@ export function attemptRecord(overrides: Partial<AttemptRecord> = {}): AttemptRe
   return {
     id: 1,
     testId: 1,
+    studentId: 1,
     studentName: 'Ayesha Khan',
     rollNumber: '17',
     tokenHash: 'original-token-hash',

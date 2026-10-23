@@ -183,4 +183,41 @@ export const migrations: readonly Migration[] = [
       `CREATE INDEX test_chapters_chapter_id ON test_chapters (chapter_id)`,
     ],
   },
+  {
+    id: 6,
+    name: 'attempts belong to student accounts',
+    rebuildsTables: true,
+    statements: [
+      `CREATE TABLE attempts_rebuilt (
+        id              INTEGER PRIMARY KEY,
+        test_id         INTEGER NOT NULL REFERENCES tests (id) ON DELETE CASCADE,
+        student_id      INTEGER REFERENCES students (id),
+        student_name    TEXT    NOT NULL,
+        roll_no         TEXT    NOT NULL,
+        roll_no_key     TEXT    NOT NULL,
+        token_hash      TEXT    UNIQUE,
+        status          TEXT    NOT NULL
+                        CHECK (status IN ('waiting', 'in_progress', 'submitted', 'locked')),
+        finish_reason   TEXT
+                        CHECK (finish_reason IN ('student', 'time_up', 'teacher', 'left_test')),
+        started_at      INTEGER NOT NULL,
+        deadline_at     INTEGER NOT NULL,
+        finished_at     INTEGER,
+        exit_count      INTEGER NOT NULL DEFAULT 0,
+        forgiven_exits  INTEGER NOT NULL DEFAULT 0,
+        version         INTEGER NOT NULL DEFAULT 0,
+        UNIQUE (test_id, student_id)
+      )`,
+      `INSERT INTO attempts_rebuilt
+         (id, test_id, student_id, student_name, roll_no, roll_no_key, token_hash, status,
+          finish_reason, started_at, deadline_at, finished_at, exit_count, forgiven_exits, version)
+       SELECT id, test_id, NULL, student_name, roll_no, roll_no_key, token_hash, status,
+              finish_reason, started_at, deadline_at, finished_at, exit_count, forgiven_exits,
+              version
+       FROM attempts`,
+      `DROP TABLE attempts`,
+      `ALTER TABLE attempts_rebuilt RENAME TO attempts`,
+      `CREATE INDEX attempts_student_id ON attempts (student_id)`,
+    ],
+  },
 ];

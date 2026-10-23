@@ -1,8 +1,8 @@
-import type { StudentExitReason } from '@exam-room/shared';
+import type { StudentExitReason, StudentProfile } from '@exam-room/shared';
 import { randomUUID } from 'node:crypto';
 import type { Database } from '../../database/connection.js';
 import { isUniqueConstraintError } from '../../database/query-helpers.js';
-import { forbidden, HttpError } from '../../lib/http-errors.js';
+import { forbidden } from '../../lib/http-errors.js';
 import { availabilityAt } from '../tests/test-availability.js';
 import type { TestRecord } from '../tests/test-record.js';
 import type { AttemptChange, AttemptRecord, ExitEvent } from './attempt-record.js';
@@ -16,19 +16,18 @@ import {
   closeExit,
   findAttemptById,
   hasExit,
-  findAttemptByRollNumber,
+  findAttemptOfStudent,
   insertAttempt,
   saveAttemptChange,
 } from './attempts-repository.js';
-import { comparisonKey, tidyText } from '../../lib/text.js';
+import { comparisonKey } from '../../lib/text.js';
 
 const MAX_SAVE_ATTEMPTS = 3;
 const MILLISECONDS_PER_MINUTE = 60_000;
 
 export type StartAttemptInput = {
   test: TestRecord;
-  studentName: string;
-  rollNumber: string;
+  student: StudentProfile;
   tokenHash: string;
   currentTime: number;
 };
@@ -109,20 +108,11 @@ export async function startOrResumeAttempt(
   database: Database,
   input: StartAttemptInput,
 ): Promise<AttemptRecord> {
-  const rollNumberKey = comparisonKey(input.rollNumber);
   const existingAttempt =
-    (await findAttemptByRollNumber(database, input.test.id, rollNumberKey)) ??
-    (await insertAttemptIfTestIsOpen(database, input, rollNumberKey));
+    (await findAttemptOfStudent(database, input.test.id, input.student.id)) ??
+    (await insertAttemptIfTestIsOpen(database, input));
 
   if (existingAttempt.tokenHash === input.tokenHash) return existingAttempt;
-
-  if (comparisonKey(existingAttempt.studentName) !== comparisonKey(input.studentName)) {
-    throw new HttpError(
-      409,
-      'roll_number_taken',
-      'This roll number has already been used for this test. Ask your teacher for help.',
-    );
-  }
 
   const attempt = await enforceTimeLimit(database, existingAttempt, input.currentTime);
   return changeAttempt(database, attempt, (current) =>
@@ -145,7 +135,6 @@ async function requireAttempt(database: Database, attemptId: number): Promise<At
 function insertAttemptIfTestIsOpen(
   database: Database,
   input: StartAttemptInput,
-  rollNumberKey: string,
 ): Promise<AttemptRecord> {
   const availability = availabilityAt(input.test, input.currentTime);
   if (availability === 'closed') {
@@ -154,31 +143,27 @@ function insertAttemptIfTestIsOpen(
   if (availability !== 'open') {
     throw forbidden('This test is not open yet. Wait for your teacher.', 'test_not_open');
   }
-  return tryInsertAttempt(database, input, rollNumberKey);
+  return tryInsertAttempt(database, input);
 }
 
 async function tryInsertAttempt(
   database: Database,
-  input: StartAttemptInput,
-  rollNumberKey: string,
+  { test, student, tokenHash, currentTime }: StartAttemptInput,
 ): Promise<AttemptRecord> {
   try {
     return await insertAttempt(database, {
-      testId: input.test.id,
-      studentName: tidyText(input.studentName),
-      rollNumber: tidyText(input.rollNumber),
-      rollNumberKey,
-      tokenHash: input.tokenHash,
-      startedAt: input.currentTime,
-      deadlineAt: input.currentTime + input.test.durationMinutes * MILLISECONDS_PER_MINUTE,
+      testId: test.id,
+      studentId: student.id,
+      studentName: student.name,
+      rollNumber: student.rollNumber,
+      rollNumberKey: comparisonKey(student.rollNumber),
+      tokenHash,
+      startedAt: currentTime,
+      deadlineAt: currentTime + test.durationMinutes * MILLISECONDS_PER_MINUTE,
     });
   } catch (error) {
     if (!isUniqueConstraintError(error)) throw error;
-    const attemptCreatedMeanwhile = await findAttemptByRollNumber(
-      database,
-      input.test.id,
-      rollNumberKey,
-    );
+    const attemptCreatedMeanwhile = await findAttemptOfStudent(database, test.id, student.id);
     if (!attemptCreatedMeanwhile) throw error;
     return attemptCreatedMeanwhile;
   }

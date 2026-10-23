@@ -3,9 +3,10 @@ import type { AttemptStatus, ExitReason, FinishReason } from '@exam-room/shared'
 export type AttemptRecord = {
   id: number;
   testId: number;
+  studentId: number | null;
   studentName: string;
   rollNumber: string;
-  tokenHash: string;
+  tokenHash: string | null;
   status: AttemptStatus;
   finishReason: FinishReason | null;
   startedAt: number;

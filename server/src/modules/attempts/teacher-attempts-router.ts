@@ -22,6 +22,7 @@ import {
   findAttemptById,
   listAttemptsOfTest,
   listExitsOfTest,
+  listStudentsWithoutAttempt,
 } from './attempts-repository.js';
 
 const testIdParamsSchema = z.object({
@@ -45,22 +46,24 @@ export function createTestResultsRouter(dependencies: AppDependencies): Router {
     return test;
   }
 
-  async function respondWithResults(response: Response, testId: number): Promise<void> {
+  async function respondWithResults(response: Response, test: TestRecord): Promise<void> {
     const currentTime = clock.now();
-    const attempts = await listAttemptsOfTest(database, testId);
-    const exitsByAttemptId = await listExitsOfTest(database, testId);
+    const attempts = await listAttemptsOfTest(database, test.id);
+    const exitsByAttemptId = await listExitsOfTest(database, test.id);
+    const notStarted = await listStudentsWithoutAttempt(database, test.schoolClass.id, test.id);
 
     response.json({
       attempts: attempts.map((attempt) =>
         summarizeAttempt(attempt, exitsByAttemptId.get(attempt.id) ?? [], currentTime),
       ),
+      notStarted,
       serverTime: currentTime,
     } satisfies AttemptResultListResponse);
   }
 
   router.get('/', async (request, response) => {
     const test = await requireTest(request);
-    await respondWithResults(response, test.id);
+    await respondWithResults(response, test);
   });
 
   router.post('/end', async (request, response) => {
@@ -73,7 +76,7 @@ export function createTestResultsRouter(dependencies: AppDependencies): Router {
     const { opensAt, closesAt } = closeNow(test, currentTime);
     await saveTestSchedule(database, test.id, { opensAt, closesAt });
 
-    await respondWithResults(response, test.id);
+    await respondWithResults(response, test);
   });
 
   return router;

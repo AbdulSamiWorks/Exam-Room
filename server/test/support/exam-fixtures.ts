@@ -1,7 +1,7 @@
 import type {
+  AddStudentsResponse,
   AllowedExits,
   LeaveRule,
-  StartAttemptRequest,
   StartAttemptResponse,
   TestSummary,
 } from '@exam-room/shared';
@@ -20,7 +20,65 @@ export type TestSettings = {
   isOpen?: boolean;
 };
 
-export const STUDENT: StartAttemptRequest = { studentName: 'Ayesha Khan', rollNumber: '17' };
+export type StudentIdentity = {
+  studentName: string;
+  rollNumber: string;
+};
+
+export type StudentAgent = ReturnType<typeof request.agent>;
+
+export const STUDENT: StudentIdentity = { studentName: 'Ayesha Khan', rollNumber: '17' };
+
+const classIdsByTestCode = new WeakMap<Express, Map<string, number>>();
+const studentAgentsByAccount = new WeakMap<Express, Map<string, StudentAgent>>();
+
+function entriesOf<Value>(
+  store: WeakMap<Express, Map<string, Value>>,
+  app: Express,
+): Map<string, Value> {
+  const entries = store.get(app) ?? new Map<string, Value>();
+  store.set(app, entries);
+  return entries;
+}
+
+export async function addStudentToClass(
+  app: Express,
+  classId: number,
+  student: StudentIdentity = STUDENT,
+): Promise<string> {
+  const teacher = await logInAsTeacher(app);
+  const response = await teacher
+    .post(`/api/classes/${classId}/students`)
+    .send({ students: [{ rollNumber: student.rollNumber, name: student.studentName }] });
+  if (response.status !== 201) throw new Error(`Adding the student failed: ${response.status}`);
+  return (response.body as AddStudentsResponse).students[0]?.pin ?? '';
+}
+
+export async function logInAsStudent(
+  app: Express,
+  classId: number,
+  student: StudentIdentity = STUDENT,
+): Promise<StudentAgent> {
+  const agents = entriesOf(studentAgentsByAccount, app);
+  const accountKey = `${classId}:${student.rollNumber}`;
+  const knownAgent = agents.get(accountKey);
+  if (knownAgent) return knownAgent;
+
+  const pin = await addStudentToClass(app, classId, student);
+  const agent = request.agent(app);
+  const login = await agent
+    .post('/api/student-auth/login')
+    .send({ classId, rollNumber: student.rollNumber, pin });
+  if (login.status !== 200) throw new Error(`Student login failed: ${login.status}`);
+  agents.set(accountKey, agent);
+  return agent;
+}
+
+export function classIdOfTest(app: Express, testCode: string): number {
+  const classId = entriesOf(classIdsByTestCode, app).get(testCode);
+  if (classId === undefined) throw new Error(`Test ${testCode} was not published by publishTest.`);
+  return classId;
+}
 
 export async function publishTest(app: Express, settings: TestSettings = {}): Promise<TestSummary> {
   const teacher = await logInAsTeacher(app);
@@ -45,6 +103,7 @@ export async function publishTest(app: Express, settings: TestSettings = {}): Pr
   const response = await upload;
   if (response.status !== 201) throw new Error(`Test creation failed: ${response.status}`);
   const createdTest: TestSummary = response.body.test;
+  entriesOf(classIdsByTestCode, app).set(createdTest.code, createdTest.schoolClass.id);
   if (settings.isOpen === false) return createdTest;
 
   const opened = await teacher.post(`/api/tests/${createdTest.id}/open`);
@@ -52,18 +111,19 @@ export async function publishTest(app: Express, settings: TestSettings = {}): Pr
   return opened.body.test;
 }
 
-export function startAttempt(
+export async function startAttempt(
   app: Express,
   testCode: string,
-  student: StartAttemptRequest = STUDENT,
+  student: StudentIdentity = STUDENT,
 ) {
-  return request(app).post(`/api/public/tests/${testCode}/attempts`).send(student);
+  const agent = await logInAsStudent(app, classIdOfTest(app, testCode), student);
+  return agent.post(`/api/public/tests/${testCode}/attempts`).send();
 }
 
 export async function startAttemptToken(
   app: Express,
   testCode: string,
-  student: StartAttemptRequest = STUDENT,
+  student: StudentIdentity = STUDENT,
 ): Promise<string> {
   const response = await startAttempt(app, testCode, student);
   if (response.status !== 201) throw new Error(`Starting the attempt failed: ${response.status}`);

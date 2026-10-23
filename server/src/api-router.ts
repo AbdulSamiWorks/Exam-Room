@@ -14,6 +14,8 @@ import {
 } from './modules/chapters/chapters-router.js';
 import { createClassesRouter } from './modules/classes/classes-router.js';
 import { createHealthRouter } from './modules/health/health-router.js';
+import { createStudentAuthRouter } from './modules/student-auth/student-auth-router.js';
+import { createStudentHomeRouter } from './modules/student-home/student-home-router.js';
 import {
   createClassStudentsRouter,
   createStudentsRouter,
@@ -29,6 +31,8 @@ export function createApiRouter(dependencies: AppDependencies): Router {
 
   apiRouter.use('/health', createHealthRouter());
   apiRouter.use('/auth', createAuthRouter(dependencies));
+  apiRouter.use('/student-auth', createStudentAuthRouter(dependencies));
+  apiRouter.use('/student', createStudentHomeRouter(dependencies));
   apiRouter.use('/classes/:classId/subjects', createClassSubjectsRouter(dependencies));
   apiRouter.use('/classes/:classId/students', createClassStudentsRouter(dependencies));
   apiRouter.use('/classes', createClassesRouter(dependencies));

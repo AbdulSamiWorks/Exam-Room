@@ -41,11 +41,6 @@ export type StudentAttempt = {
   serverTime: number;
 };
 
-export type StartAttemptRequest = {
-  studentName: string;
-  rollNumber: string;
-};
-
 export type StartAttemptResponse = {
   attemptToken: string;
   attempt: StudentAttempt;
@@ -86,8 +81,15 @@ export type AttemptResult = {
   exits: AttemptExit[];
 };
 
+export type NotStartedStudent = {
+  studentId: number;
+  name: string;
+  rollNumber: string;
+};
+
 export type AttemptResultListResponse = {
   attempts: AttemptResult[];
+  notStarted: NotStartedStudent[];
   serverTime: number;
 };
 

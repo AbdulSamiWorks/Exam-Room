@@ -3,7 +3,6 @@ import type {
   PublicTestResponse,
   RecordExitRequest,
   RecordReturnRequest,
-  StartAttemptRequest,
   StartAttemptResponse,
 } from '@exam-room/shared';
 import { getBlob, getJson, postJson, type RequestOptions } from '../../api/http-client';
@@ -16,14 +15,8 @@ export function fetchPublicTest(testCode: string): Promise<PublicTestResponse> {
   return getJson<PublicTestResponse>(`/public/tests/${encodeURIComponent(testCode)}`);
 }
 
-export function startAttempt(
-  testCode: string,
-  student: StartAttemptRequest,
-): Promise<StartAttemptResponse> {
-  return postJson<StartAttemptResponse>(
-    `/public/tests/${encodeURIComponent(testCode)}/attempts`,
-    student,
-  );
+export function startAttempt(testCode: string): Promise<StartAttemptResponse> {
+  return postJson<StartAttemptResponse>(`/public/tests/${encodeURIComponent(testCode)}/attempts`);
 }
 
 export function fetchAttempt(attemptToken: string): Promise<AttemptResponse> {

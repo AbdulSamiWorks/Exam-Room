@@ -1,0 +1,61 @@
+.headerActions {
+  display: flex;
+  gap: 8px;
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.emptyMessage {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.testList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.testCard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.testCard:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+.testCard:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.testTitle {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.testDetails,
+.testState {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.testState {
+  font-weight: 600;
+}

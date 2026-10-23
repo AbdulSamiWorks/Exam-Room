@@ -1,4 +1,4 @@
-import type { NewStudent, Student } from '@exam-room/shared';
+import type { NewStudent, Student, StudentProfile } from '@exam-room/shared';
 import type { Row } from '@libsql/client';
 import type { Database } from '../../database/connection.js';
 import { placeholdersFor } from '../../database/query-helpers.js';
@@ -8,7 +8,23 @@ export type StudentToInsert = NewStudent & {
   pinHash: string;
 };
 
+export type StudentAccount = {
+  profile: StudentProfile;
+  sessionVersion: number;
+};
+
+export type StudentLogin = {
+  account: StudentAccount;
+  pinHash: string;
+};
+
 const STUDENT_COLUMNS = 'id, class_id, name, roll_no';
+
+const ACCOUNT_QUERY = `
+  SELECT students.id, students.name, students.roll_no, students.session_version,
+         students.pin_hash, classes.id AS class_id, classes.name AS class_name
+  FROM students
+  JOIN classes ON classes.id = students.class_id`;
 
 export async function listStudentsOfClass(database: Database, classId: number): Promise<Student[]> {
   const { rows } = await database.execute({
@@ -28,6 +44,31 @@ export async function findStudentById(
   });
   const [row] = rows;
   return row ? toStudent(row) : undefined;
+}
+
+export async function findStudentAccount(
+  database: Database,
+  studentId: number,
+): Promise<StudentAccount | undefined> {
+  const { rows } = await database.execute({
+    sql: `${ACCOUNT_QUERY} WHERE students.id = ?`,
+    args: [studentId],
+  });
+  const [row] = rows;
+  return row ? toStudentAccount(row) : undefined;
+}
+
+export async function findStudentLogin(
+  database: Database,
+  classId: number,
+  rollNumberKey: string,
+): Promise<StudentLogin | undefined> {
+  const { rows } = await database.execute({
+    sql: `${ACCOUNT_QUERY} WHERE students.class_id = ? AND students.roll_no_key = ?`,
+    args: [classId, rollNumberKey],
+  });
+  const [row] = rows;
+  return row ? { account: toStudentAccount(row), pinHash: String(row.pin_hash) } : undefined;
 }
 
 export async function findTakenRollNumbers(
@@ -108,7 +149,13 @@ export async function moveStudentsOfClass(
 }
 
 export async function deleteStudent(database: Database, studentId: number): Promise<void> {
-  await database.execute({ sql: 'DELETE FROM students WHERE id = ?', args: [studentId] });
+  await database.batch(
+    [
+      { sql: 'UPDATE attempts SET student_id = NULL WHERE student_id = ?', args: [studentId] },
+      { sql: 'DELETE FROM students WHERE id = ?', args: [studentId] },
+    ],
+    'write',
+  );
 }
 
 function byRollNumber(first: Student, second: Student): number {
@@ -121,5 +168,17 @@ function toStudent(row: Row): Student {
     classId: Number(row.class_id),
     name: String(row.name),
     rollNumber: String(row.roll_no),
+  };
+}
+
+function toStudentAccount(row: Row): StudentAccount {
+  return {
+    profile: {
+      id: Number(row.id),
+      name: String(row.name),
+      rollNumber: String(row.roll_no),
+      schoolClass: { id: Number(row.class_id), name: String(row.class_name) },
+    },
+    sessionVersion: Number(row.session_version),
   };
 }

@@ -5,6 +5,7 @@ import { Panel } from '../../../components/Panel';
 import { useConfirmation } from '../../../components/use-confirmation';
 import { downloadTextFile } from '../../../lib/download-file';
 import { buildResultsCsv, resultsFileName } from './results-csv';
+import { NotStartedList } from './NotStartedList';
 import { ResultRow } from './ResultRow';
 import {
   useDeleteAttempt,
@@ -27,6 +28,7 @@ export function ResultsPanel({ test }: { test: TestSummary }) {
   const { askToConfirm, confirmationDialog } = useConfirmation();
 
   const attempts = resultsQuery.data?.attempts ?? [];
+  const notStarted = resultsQuery.data?.notStarted ?? [];
   const isAnyoneWriting = attempts.some((attempt) => attempt.status === 'in_progress');
 
   function downloadCsv() {
@@ -74,6 +76,7 @@ export function ResultsPanel({ test }: { test: TestSummary }) {
       {resultsQuery.data && attempts.length === 0 && (
         <p className={styles.note}>Students who start the test will appear here.</p>
       )}
+      <NotStartedList students={notStarted} />
 
       {attempts.length > 0 && (
         <>
