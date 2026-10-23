@@ -84,6 +84,9 @@ The server creates all tables itself on the first start.
    - `DATABASE_URL`: the Turso URL from step 1
    - `DATABASE_AUTH_TOKEN`: the Turso token from step 1
    - `SESSION_SECRET` is created by Render automatically.
+   - The fingerprint login uses the `onrender.com` address that Render gives automatically. Only
+     if you later use your own domain, set `PUBLIC_ORIGIN` to it (students then set up the
+     fingerprint again).
 4. Click **Apply**. The first build takes a few minutes.
 5. Open the `https://exam-room-....onrender.com` address and log in as the teacher.
 

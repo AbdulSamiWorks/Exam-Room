@@ -116,3 +116,16 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
 - [ ] Open a test link while logged out: it asks to log in, then comes back to the test.
 - [ ] The teacher taps **Reset PIN**: the student phone is logged out and only the new PIN works.
 - [ ] The teacher's results list **Not started yet** with the students who have not started.
+
+## 12. Installed app and fingerprint
+
+- [ ] Android Chrome: the student home shows **Install app**. Install it; it opens without the
+      browser bar. iPhone Safari: follow the **Add to Home Screen** steps.
+- [ ] Open the installed app with airplane mode on: the app opens (it says it cannot reach the
+      server, which is expected).
+- [ ] In the installed app, start a test and do not touch the phone for 3 minutes: the screen
+      stays on and there is no exit (older iPhones had a wake lock bug in home screen apps).
+- [ ] Tap **Use fingerprint** on the student home. Log out, then **Log in with fingerprint**.
+- [ ] The teacher taps **Reset PIN**: the fingerprint login on that phone stops working and asks
+      for the PIN.
+- [ ] Follow **Lock your phone to this test** on Android (App pinning) and iPhone (Guided Access).

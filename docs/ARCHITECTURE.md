@@ -1,7 +1,7 @@
 # Exam Room — Architecture
 
-> Status: **approved plan, v1** (2026-10-22). Milestones M0–M11 are built (2026-10-25); the
-> real-device checks in §15 are still to do. M12–M19 are planned in §16 (2026-10-24). Update this
+> Status: **approved plan, v1** (2026-10-22). Milestones M0–M12 are built (2026-10-25); the
+> real-device checks in §15 are still to do. M13–M19 are planned in §16 (2026-10-24). Update this
 > file whenever a decision below changes.
 
 Exam Room is a small mobile-first web app. A teacher uploads a test paper (PDF), shares a link, and
@@ -138,6 +138,9 @@ tests      (id PK, code UNIQUE,            -- 6-char share code, e.g. K7M2QX (no
             opens_at NULL, closes_at NULL)   -- NULL opens_at = not open yet (see 6.8)
 
 test_chapters (test_id → tests, chapter_id → chapters, PRIMARY KEY (test_id, chapter_id))
+
+student_passkeys (id PK, student_id → students, credential_id UNIQUE, public_key BLOB,
+            sign_count, transports, created_at, last_used_at)   -- fingerprint login (D42)
 
 test_pages (test_id → tests ON DELETE CASCADE, page_no,
             image BLOB, width, height,
@@ -358,7 +361,14 @@ POST   /api/student-auth/login             { classId, rollNumber, pin } → prof
 GET    /api/student-auth/session           → profile or null
 POST   /api/student-auth/logout
 GET    /api/student/home                   → profile + tests of the class with the own attempt state
+POST   /api/student-auth/passkeys/registration-options   (student cookie) → WebAuthn options
+POST   /api/student-auth/passkeys/registrations          (student cookie) the phone's answer
+POST   /api/student-auth/passkeys/login-options          → WebAuthn options (public)
+POST   /api/student-auth/passkeys/login                  the phone's answer → profile + cookie
 ```
+
+The passkey request and response bodies are the standard WebAuthn JSON shapes from
+`@simplewebauthn` (browser and server), so they are not repeated in `shared/`.
 
 Student exam (public by test code, then `Authorization: Bearer <token>`):
 
@@ -446,13 +456,14 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 
 ### Environment variables
 
-| Name                  | Required | Example / default                                                |
-| --------------------- | -------- | ---------------------------------------------------------------- |
-| `PORT`                | no       | `3000`                                                           |
-| `TEACHER_PASSWORD`    | yes      | —                                                                |
-| `SESSION_SECRET`      | yes      | 32+ random characters                                            |
-| `DATABASE_URL`        | no       | `file:data/exam-room.db` (dev) / `libsql://<db>.turso.io` (prod) |
-| `DATABASE_AUTH_TOKEN` | prod     | Turso token                                                      |
+| Name                  | Required | Example / default                                                                            |
+| --------------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `PORT`                | no       | `3000`                                                                                       |
+| `TEACHER_PASSWORD`    | yes      | —                                                                                            |
+| `SESSION_SECRET`      | yes      | 32+ random characters                                                                        |
+| `DATABASE_URL`        | no       | `file:data/exam-room.db` (dev) / `libsql://<db>.turso.io` (prod)                             |
+| `DATABASE_AUTH_TOKEN` | prod     | Turso token                                                                                  |
+| `PUBLIC_ORIGIN`       | no       | Site address for passkeys; else Render's `RENDER_EXTERNAL_URL`, else `http://localhost:5173` |
 
 ## 11. Quality and workflow
 
@@ -505,8 +516,8 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 | M18 | Dashboard and progress for students and the teacher                                                    |
 | M19 | Waiting room: the teacher starts everyone at the same time                                             |
 
-Status (2026-10-25): M0–M11 are built and tested (unit tests, API tests and a smoke test of the
-production build). Still to do by hand: the real-device checks in §15. M12–M19 are planned in §16.
+Status (2026-10-25): M0–M12 are built and tested (unit tests, API tests and a smoke test of the
+production build). Still to do by hand: the real-device checks in §15. M13–M19 are planned in §16.
 
 ## 13. Decision log
 
@@ -798,6 +809,23 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 | Render hours     | One service awake all month ≈ 744 hours                               | 750 hours / month                  |
 
 ## 17. Built milestones
+
+### M12 Installable app, fingerprint login and phone-lock steps (built 2026-10-25)
+
+- **Installable app:** `manifest.webmanifest` with black and white icons (normal and maskable,
+  plus an Apple touch icon) and `display: standalone`. `public/service-worker.js` (D43) keeps the
+  app page and the hashed `/assets` files, takes pages from the network and the saved page when
+  offline, and never touches `/api` (so the paper and answers are never cached). It is registered
+  only in the production build. Android shows **Install app** (the `beforeinstallprompt` event is
+  caught in `main.tsx`); iPhone shows the **Share → Add to Home Screen** steps.
+- **Fingerprint or face login** (D42): after a PIN login the student home offers **Use
+  fingerprint**. Only the public key is stored, with user verification required and a platform
+  passkey that the phone keeps. The challenge lives in a signed 5-minute cookie that is cleared
+  when it is used. **Reset PIN** and deleting a student also remove the student's passkeys, so a
+  lost phone cannot log in any more. Tests use a small software authenticator
+  (`test/support/software-authenticator.ts`) that signs real WebAuthn answers.
+- **Locking the phone** (D57): the start page has a **Lock your phone to this test** section with
+  Android App pinning and iPhone Guided Access steps for the student's phone.
 
 ### M11 Student login and home (built 2026-10-25)
 
