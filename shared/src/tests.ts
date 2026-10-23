@@ -2,7 +2,14 @@ import type { Subject } from './subjects.js';
 
 export type AllowedExits = 0 | 1 | 2;
 
-export type TestSummary = {
+export type TestAvailability = 'not_open' | 'scheduled' | 'open' | 'closed';
+
+export type TestSchedule = {
+  opensAt: number | null;
+  closesAt: number | null;
+};
+
+export type TestSummary = TestSchedule & {
   id: number;
   code: string;
   title: string;
@@ -12,6 +19,7 @@ export type TestSummary = {
   pageCount: number;
   studentCount: number;
   createdAt: number;
+  availability: TestAvailability;
 };
 
 export type TestResponse = {
@@ -20,6 +28,11 @@ export type TestResponse = {
 
 export type TestListResponse = {
   tests: TestSummary[];
+};
+
+export type ScheduleTestRequest = {
+  opensAt: number;
+  closesAt: number | null;
 };
 
 export type CreateTestFormField =

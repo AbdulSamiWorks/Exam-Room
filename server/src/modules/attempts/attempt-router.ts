@@ -1,10 +1,11 @@
-import type { AttemptResponse, TestSummary } from '@exam-room/shared';
+import type { AttemptResponse } from '@exam-room/shared';
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import type { AppDependencies } from '../../app-dependencies.js';
 import { sha256 } from '../../lib/crypto.js';
 import { HttpError, notFound } from '../../lib/http-errors.js';
 import { parseInput } from '../../lib/parse-input.js';
+import type { TestRecord } from '../tests/test-record.js';
 import { findPageImage } from '../tests/tests-repository.js';
 import type { AttemptRecord } from './attempt-record.js';
 import { finishByStudent } from './attempt-rules.js';
@@ -50,7 +51,7 @@ export function createAttemptRouter(dependencies: AppDependencies): Router {
   async function respondWithAttempt(
     response: Response,
     attempt: AttemptRecord,
-    knownTest?: TestSummary,
+    knownTest?: TestRecord,
   ): Promise<void> {
     const test = knownTest ?? (await findTestOfAttempt(database, attempt));
     const studentAttempt = await buildStudentAttempt(database, attempt, test, clock.now());

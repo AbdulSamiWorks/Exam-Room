@@ -48,10 +48,29 @@ describe('runMigrations', () => {
       'write',
     );
 
-    expect(await runMigrations(database)).toEqual([2]);
+    expect(await runMigrations(database)).toEqual([2, 3]);
 
     const { rows } = await database.execute('SELECT version FROM attempts');
     expect(rows.map((row) => row.version)).toEqual([0]);
+  });
+
+  it('keeps tests made before migration 3 open from the time they were created', async () => {
+    const schemaBeforeSchedules = migrations.filter((migration) => migration.id < 3);
+    await runMigrations(database, schemaBeforeSchedules);
+    await database.batch(
+      [
+        "INSERT INTO subjects (id, name, created_at) VALUES (1, 'Physics', 0)",
+        `INSERT INTO tests (id, code, subject_id, title, duration_minutes, allowed_exits,
+                            page_count, created_at)
+         VALUES (1, 'K7M2QX', 1, 'Quiz', 30, 1, 1, 5000)`,
+      ],
+      'write',
+    );
+
+    expect(await runMigrations(database)).toEqual([3]);
+
+    const { rows } = await database.execute('SELECT opens_at, closes_at FROM tests');
+    expect(rows.map((row) => [row.opens_at, row.closes_at])).toEqual([[5000, null]]);
   });
 
   it('rolls back a migration that fails part-way', async () => {

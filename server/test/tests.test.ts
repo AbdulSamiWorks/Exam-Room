@@ -67,6 +67,9 @@ describe('tests', () => {
       pageCount: 2,
       studentCount: 0,
       createdAt: TEST_START_TIME,
+      opensAt: null,
+      closesAt: null,
+      availability: 'not_open',
     });
   });
 

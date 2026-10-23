@@ -56,6 +56,9 @@ describe('student attempts', () => {
           durationMinutes: 45,
           allowedExits: 2,
           pageCount: 2,
+          opensAt: TEST_START_TIME,
+          closesAt: null,
+          availability: 'open',
         },
       });
     });
@@ -108,6 +111,9 @@ describe('student attempts', () => {
           durationMinutes: 30,
           allowedExits: 1,
           pageCount: 2,
+          opensAt: TEST_START_TIME,
+          closesAt: null,
+          availability: 'open',
         },
         pageSizes: [
           { width: 800, height: 1100 },

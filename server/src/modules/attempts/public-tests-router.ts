@@ -61,7 +61,7 @@ export function createPublicTestsRouter({ database, clock }: AppDependencies): R
   router.get('/:testCode', async (request, response) => {
     const { testCode } = parseInput(testCodeParamsSchema, request.params);
     const test = await requireTestByCode(testCode);
-    response.json({ test: toPublicTest(test) } satisfies PublicTestResponse);
+    response.json({ test: toPublicTest(test, clock.now()) } satisfies PublicTestResponse);
   });
 
   router.post('/:testCode/attempts', startAttemptLimiter, async (request, response) => {

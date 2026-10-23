@@ -14,6 +14,7 @@ export type TestSettings = {
   durationMinutes?: number;
   allowedExits?: AllowedExits;
   pageImages?: Buffer[];
+  isOpen?: boolean;
 };
 
 export const STUDENT: StartAttemptRequest = { studentName: 'Ayesha Khan', rollNumber: '17' };
@@ -44,7 +45,12 @@ export async function publishTest(app: Express, settings: TestSettings = {}): Pr
 
   const response = await upload;
   if (response.status !== 201) throw new Error(`Test creation failed: ${response.status}`);
-  return response.body.test;
+  const createdTest: TestSummary = response.body.test;
+  if (settings.isOpen === false) return createdTest;
+
+  const opened = await teacher.post(`/api/tests/${createdTest.id}/open`);
+  if (opened.status !== 200) throw new Error(`Opening the test failed: ${opened.status}`);
+  return opened.body.test;
 }
 
 export function startAttempt(

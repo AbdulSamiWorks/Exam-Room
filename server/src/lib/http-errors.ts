@@ -16,6 +16,8 @@ export const badRequest = (message: string, code = 'bad_request') =>
 export const unauthorized = (message = 'Please log in first.', code = 'unauthenticated') =>
   new HttpError(401, code, message);
 
+export const forbidden = (message: string, code = 'forbidden') => new HttpError(403, code, message);
+
 export const notFound = (message = 'Not found.', code = 'not_found') =>
   new HttpError(404, code, message);
 

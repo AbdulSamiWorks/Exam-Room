@@ -1,4 +1,4 @@
-import type { AllowedExits } from './tests.js';
+import type { AllowedExits, TestAvailability, TestSchedule } from './tests.js';
 
 export type AttemptStatus = 'in_progress' | 'submitted' | 'locked';
 
@@ -8,13 +8,14 @@ export type ExitReason = 'hidden' | 'blur' | 'fullscreen' | 'device_change';
 
 export type StudentExitReason = Exclude<ExitReason, 'device_change'>;
 
-export type PublicTest = {
+export type PublicTest = TestSchedule & {
   code: string;
   title: string;
   subjectName: string;
   durationMinutes: number;
   allowedExits: AllowedExits;
   pageCount: number;
+  availability: TestAvailability;
 };
 
 export type PublicTestResponse = {

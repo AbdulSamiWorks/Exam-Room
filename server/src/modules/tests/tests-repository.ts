@@ -1,8 +1,9 @@
-import type { AllowedExits, PageSize, TestSummary } from '@exam-room/shared';
+import type { AllowedExits, PageSize, TestSchedule } from '@exam-room/shared';
 import type { Row } from '@libsql/client';
 import type { Database } from '../../database/connection.js';
 import { requireFirstRow } from '../../database/query-helpers.js';
 import type { PageImage } from './page-images.js';
+import type { TestRecord } from './test-record.js';
 
 export type NewTest = {
   code: string;
@@ -22,6 +23,8 @@ const SELECT_TEST_SUMMARY = `
     tests.allowed_exits,
     tests.page_count,
     tests.created_at,
+    tests.opens_at,
+    tests.closes_at,
     subjects.id   AS subject_id,
     subjects.name AS subject_name,
     (SELECT COUNT(*) FROM attempts WHERE attempts.test_id = tests.id) AS student_count
@@ -35,7 +38,7 @@ export type TestListFilter = {
 export async function listTests(
   database: Database,
   filter: TestListFilter = {},
-): Promise<TestSummary[]> {
+): Promise<TestRecord[]> {
   const { rows } = await database.execute(
     filter.subjectId === undefined
       ? `${SELECT_TEST_SUMMARY} ORDER BY subjects.name, tests.created_at DESC`
@@ -44,7 +47,7 @@ export async function listTests(
           args: [filter.subjectId],
         },
   );
-  return rows.map(toTestSummary);
+  return rows.map(toTestRecord);
 }
 
 export async function insertTestWithPages(
@@ -89,25 +92,25 @@ export async function insertTestWithPages(
 export async function findTestById(
   database: Database,
   testId: number,
-): Promise<TestSummary | undefined> {
+): Promise<TestRecord | undefined> {
   const { rows } = await database.execute({
     sql: `${SELECT_TEST_SUMMARY} WHERE tests.id = ?`,
     args: [testId],
   });
   const [row] = rows;
-  return row ? toTestSummary(row) : undefined;
+  return row ? toTestRecord(row) : undefined;
 }
 
 export async function findTestByCode(
   database: Database,
   code: string,
-): Promise<TestSummary | undefined> {
+): Promise<TestRecord | undefined> {
   const { rows } = await database.execute({
     sql: `${SELECT_TEST_SUMMARY} WHERE tests.code = ?`,
     args: [code],
   });
   const [row] = rows;
-  return row ? toTestSummary(row) : undefined;
+  return row ? toTestRecord(row) : undefined;
 }
 
 export async function listPageSizes(database: Database, testId: number): Promise<PageSize[]> {
@@ -131,6 +134,17 @@ export async function findPageImage(
   return row ? Buffer.from(row.image as ArrayBuffer) : undefined;
 }
 
+export async function saveTestSchedule(
+  database: Database,
+  testId: number,
+  schedule: TestSchedule,
+): Promise<void> {
+  await database.execute({
+    sql: 'UPDATE tests SET opens_at = ?, closes_at = ? WHERE id = ?',
+    args: [schedule.opensAt, schedule.closesAt, testId],
+  });
+}
+
 export async function isTestCodeTaken(database: Database, code: string): Promise<boolean> {
   const { rows } = await database.execute({
     sql: 'SELECT 1 FROM tests WHERE code = ?',
@@ -139,7 +153,7 @@ export async function isTestCodeTaken(database: Database, code: string): Promise
   return rows.length > 0;
 }
 
-function toTestSummary(row: Row): TestSummary {
+function toTestRecord(row: Row): TestRecord {
   return {
     id: Number(row.id),
     code: String(row.code),
@@ -150,5 +164,7 @@ function toTestSummary(row: Row): TestSummary {
     pageCount: Number(row.page_count),
     studentCount: Number(row.student_count),
     createdAt: Number(row.created_at),
+    opensAt: row.opens_at === null ? null : Number(row.opens_at),
+    closesAt: row.closes_at === null ? null : Number(row.closes_at),
   };
 }

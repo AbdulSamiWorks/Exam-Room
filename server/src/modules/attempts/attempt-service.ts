@@ -1,8 +1,10 @@
-import type { AllowedExits, StudentExitReason, TestSummary } from '@exam-room/shared';
+import type { AllowedExits, StudentExitReason } from '@exam-room/shared';
 import { randomUUID } from 'node:crypto';
 import type { Database } from '../../database/connection.js';
 import { isUniqueConstraintError } from '../../database/query-helpers.js';
-import { HttpError } from '../../lib/http-errors.js';
+import { forbidden, HttpError } from '../../lib/http-errors.js';
+import { availabilityAt } from '../tests/test-availability.js';
+import type { TestRecord } from '../tests/test-record.js';
 import type { AttemptChange, AttemptRecord, ExitEvent } from './attempt-record.js';
 import { applyTimeLimit, registerExit, resumeOnNewDevice } from './attempt-rules.js';
 import {
@@ -19,7 +21,7 @@ const MAX_SAVE_ATTEMPTS = 3;
 const MILLISECONDS_PER_MINUTE = 60_000;
 
 export type StartAttemptInput = {
-  test: TestSummary;
+  test: TestRecord;
   studentName: string;
   rollNumber: string;
   tokenHash: string;
@@ -105,7 +107,7 @@ export async function startOrResumeAttempt(
   const rollNumberKey = comparisonKey(input.rollNumber);
   const existingAttempt =
     (await findAttemptByRollNumber(database, input.test.id, rollNumberKey)) ??
-    (await tryInsertAttempt(database, input, rollNumberKey));
+    (await insertAttemptIfTestIsOpen(database, input, rollNumberKey));
 
   if (existingAttempt.tokenHash === input.tokenHash) return existingAttempt;
 
@@ -133,6 +135,21 @@ async function requireAttempt(database: Database, attemptId: number): Promise<At
   const attempt = await findAttemptById(database, attemptId);
   if (!attempt) throw new Error(`Attempt ${attemptId} is missing.`);
   return attempt;
+}
+
+function insertAttemptIfTestIsOpen(
+  database: Database,
+  input: StartAttemptInput,
+  rollNumberKey: string,
+): Promise<AttemptRecord> {
+  const availability = availabilityAt(input.test, input.currentTime);
+  if (availability === 'closed') {
+    throw forbidden('This test is closed. New students cannot start it.', 'test_closed');
+  }
+  if (availability !== 'open') {
+    throw forbidden('This test is not open yet. Wait for your teacher.', 'test_not_open');
+  }
+  return tryInsertAttempt(database, input, rollNumberKey);
 }
 
 async function tryInsertAttempt(

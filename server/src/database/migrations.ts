@@ -68,4 +68,13 @@ export const migrations: readonly Migration[] = [
     name: 'attempt version for safe concurrent updates',
     statements: [`ALTER TABLE attempts ADD COLUMN version INTEGER NOT NULL DEFAULT 0`],
   },
+  {
+    id: 3,
+    name: 'test opening and closing times',
+    statements: [
+      `ALTER TABLE tests ADD COLUMN opens_at INTEGER`,
+      `ALTER TABLE tests ADD COLUMN closes_at INTEGER`,
+      `UPDATE tests SET opens_at = created_at`,
+    ],
+  },
 ];
