@@ -2,7 +2,7 @@ import type { PageSize } from '@exam-room/shared';
 import { useState } from 'react';
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch';
 import { Button } from '../../../components/Button';
-import { usePageImage, usePrefetchPageImage } from './use-page-image';
+import { usePageImage, usePrefetchAllPageImages } from './use-page-image';
 import styles from './PaperViewer.module.css';
 
 const MAX_ZOOM = 4;
@@ -20,7 +20,7 @@ export function PaperViewer({ testCode, attemptToken, pageSizes }: PaperViewerPr
   const [pageNumber, setPageNumber] = useState(1);
   const pageCount = pageSizes.length;
   const hasNextPage = pageNumber < pageCount;
-  usePrefetchPageImage(testCode, attemptToken, hasNextPage ? pageNumber + 1 : undefined);
+  usePrefetchAllPageImages(testCode, attemptToken, pageCount);
 
   return (
     <div className={styles.viewer}>

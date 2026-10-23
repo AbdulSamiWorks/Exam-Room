@@ -18,7 +18,7 @@ function pageImageQuery(
       try {
         return URL.createObjectURL(await fetchPageImage(attemptToken, pageNumber));
       } catch (error) {
-        if (error instanceof ApiError && error.status === PAPER_CLOSED_STATUS) {
+        if (isPaperClosedError(error)) {
           void queryClient.invalidateQueries({ queryKey: studentQueryKeys.attempt(testCode) });
         }
         throw error;
@@ -29,22 +29,42 @@ function pageImageQuery(
   });
 }
 
+function isPaperClosedError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === PAPER_CLOSED_STATUS;
+}
+
 export function usePageImage(testCode: string, attemptToken: string, pageNumber: number) {
   const queryClient = useQueryClient();
   return useQuery(pageImageQuery(queryClient, testCode, attemptToken, pageNumber));
 }
 
-export function usePrefetchPageImage(
+export function usePrefetchAllPageImages(
   testCode: string,
   attemptToken: string,
-  pageNumber: number | undefined,
+  pageCount: number,
 ) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (pageNumber === undefined) return;
-    void queryClient.prefetchQuery(pageImageQuery(queryClient, testCode, attemptToken, pageNumber));
-  }, [queryClient, testCode, attemptToken, pageNumber]);
+    let isStopped = false;
+
+    async function prefetchPagesInOrder(): Promise<void> {
+      for (let pageNumber = 1; pageNumber <= pageCount && !isStopped; pageNumber++) {
+        try {
+          await queryClient.fetchQuery(
+            pageImageQuery(queryClient, testCode, attemptToken, pageNumber),
+          );
+        } catch (error) {
+          if (isPaperClosedError(error)) return;
+        }
+      }
+    }
+
+    void prefetchPagesInOrder();
+    return () => {
+      isStopped = true;
+    };
+  }, [queryClient, testCode, attemptToken, pageCount]);
 }
 
 export function forgetPageImages(queryClient: QueryClient, testCode: string): void {
