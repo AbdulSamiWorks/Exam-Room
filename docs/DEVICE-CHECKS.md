@@ -160,3 +160,12 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
       sent by itself.
 - [ ] The teacher's results show the photo count and **See the answer photos** shows them sharp
       enough to read.
+
+## 16. Marking and results
+
+- [ ] After a test with questions, open **Marks and release**: MCQs are marked; enter marks and a
+      comment for a written answer and save. The next student opens.
+- [ ] Change one answer in **Questions and answers**: the marks change for every student.
+- [ ] Before release, a student phone shows no marks. Tap **Release results**: the student home
+      shows **Marks: N of M**; tapping it shows the paper with marks and comments.
+- [ ] Release without **Show the correct MCQ answers**: the student does not see them.
