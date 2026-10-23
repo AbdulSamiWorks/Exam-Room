@@ -135,6 +135,16 @@ export async function closeExit(
   });
 }
 
+export async function deleteAttemptWithExits(database: Database, attemptId: number): Promise<void> {
+  await database.batch(
+    [
+      { sql: 'DELETE FROM exits WHERE attempt_id = ?', args: [attemptId] },
+      { sql: 'DELETE FROM attempts WHERE id = ?', args: [attemptId] },
+    ],
+    'write',
+  );
+}
+
 export async function listAttemptsOfTest(
   database: Database,
   testId: number,

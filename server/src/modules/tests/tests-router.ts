@@ -13,6 +13,7 @@ import { createUniqueTestCode } from './test-code.js';
 import { testLimits } from './test-limits.js';
 import type { TestRecord } from './test-record.js';
 import {
+  deleteTestWithResults,
   findTestById,
   insertTestWithPages,
   listTests,
@@ -138,6 +139,12 @@ export function createTestsRouter(dependencies: AppDependencies): Router {
   router.put('/:testId/schedule', async (request, response) => {
     const schedule = parseInput(scheduleSchema, request.body);
     await changeSchedule(request, response, () => schedule);
+  });
+
+  router.delete('/:testId', async (request, response) => {
+    const test = await requireTest(request);
+    await deleteTestWithResults(database, test.id);
+    response.status(204).end();
   });
 
   return router;

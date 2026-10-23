@@ -145,6 +145,21 @@ export async function saveTestSchedule(
   });
 }
 
+export async function deleteTestWithResults(database: Database, testId: number): Promise<void> {
+  await database.batch(
+    [
+      {
+        sql: 'DELETE FROM exits WHERE attempt_id IN (SELECT id FROM attempts WHERE test_id = ?)',
+        args: [testId],
+      },
+      { sql: 'DELETE FROM attempts WHERE test_id = ?', args: [testId] },
+      { sql: 'DELETE FROM test_pages WHERE test_id = ?', args: [testId] },
+      { sql: 'DELETE FROM tests WHERE id = ?', args: [testId] },
+    ],
+    'write',
+  );
+}
+
 export async function isTestCodeTaken(database: Database, code: string): Promise<boolean> {
   const { rows } = await database.execute({
     sql: 'SELECT 1 FROM tests WHERE code = ?',

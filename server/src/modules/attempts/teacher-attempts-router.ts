@@ -3,7 +3,7 @@ import type {
   AttemptResultListResponse,
   AttemptResultResponse,
 } from '@exam-room/shared';
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import { z } from 'zod';
 import type { AppDependencies } from '../../app-dependencies.js';
 import type { Database } from '../../database/connection.js';
@@ -15,7 +15,12 @@ import type { AttemptRecord } from './attempt-record.js';
 import { summarizeAttempt } from './attempt-results.js';
 import { unlockByTeacher } from './attempt-rules.js';
 import { changeAttempt } from './attempt-service.js';
-import { findAttemptById, listAttemptsOfTest, listExitsOfTest } from './attempts-repository.js';
+import {
+  deleteAttemptWithExits,
+  findAttemptById,
+  listAttemptsOfTest,
+  listExitsOfTest,
+} from './attempts-repository.js';
 
 const testIdParamsSchema = z.object({
   testId: z.coerce.number().int().positive(),
@@ -56,17 +61,27 @@ export function createTeacherAttemptsRouter(dependencies: AppDependencies): Rout
 
   router.use(requireTeacher(dependencies));
 
-  router.post('/:attemptId/unlock', async (request, response) => {
+  async function requireAttempt(request: Request): Promise<AttemptRecord> {
     const { attemptId } = parseInput(attemptIdParamsSchema, request.params);
     const attempt = await findAttemptById(database, attemptId);
     if (!attempt) throw notFound('Student attempt not found.');
+    return attempt;
+  }
 
+  router.post('/:attemptId/unlock', async (request, response) => {
+    const attempt = await requireAttempt(request);
     const unlockedAttempt = await changeAttempt(database, attempt, (current) =>
       unlockByTeacher(current, clock.now()),
     );
     response.json({
       attempt: await buildAttemptResult(database, unlockedAttempt, clock.now()),
     } satisfies AttemptResultResponse);
+  });
+
+  router.delete('/:attemptId', async (request, response) => {
+    const attempt = await requireAttempt(request);
+    await deleteAttemptWithExits(database, attempt.id);
+    response.status(204).end();
   });
 
   return router;
