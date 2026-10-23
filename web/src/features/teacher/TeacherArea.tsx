@@ -11,6 +11,7 @@ import { EditTestPage } from './edit-test/EditTestPage';
 import { ClassPage } from './manage/ClassPage';
 import { ManagePage } from './manage/ManagePage';
 import { PaperPage } from './paper/PaperPage';
+import { AnswerPhotosPage } from './results/AnswerPhotosPage';
 import { PrintResultsPage } from './results/PrintResultsPage';
 import { TeacherLayout } from './TeacherLayout';
 import { TestDetailsPage } from './test-details/TestDetailsPage';
@@ -44,6 +45,7 @@ export function TeacherArea() {
         <Route path="tests/:testId" element={<TestDetailsPage />} />
         <Route path="tests/:testId/edit" element={<EditTestPage />} />
         <Route path="tests/:testId/paper" element={<PaperPage />} />
+        <Route path="attempts/:attemptId/photos" element={<AnswerPhotosPage />} />
         <Route path="manage" element={<ManagePage />} />
         <Route path="manage/classes/:classId" element={<ClassPage />} />
         <Route path="*" element={<Navigate to="/teacher" replace />} />

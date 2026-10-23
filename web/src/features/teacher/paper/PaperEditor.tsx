@@ -4,14 +4,16 @@ import { useState, type ChangeEvent } from 'react';
 import { Button } from '../../../components/Button';
 import { TextAreaField } from '../../../components/TextAreaField';
 import { describeMarks } from '../../../lib/describe-marks';
+import { shrinkImage } from '../../../lib/shrink-image';
 import { countOf } from '../../../lib/text';
 import { PaperView } from '../../paper/PaperView';
 import { describePaperProblem, type ImportedPaper } from './imported-paper';
 import { SAMPLE_PAPER_TEXT } from './sample-paper';
-import { shrinkPicture } from './shrink-picture';
 import type { PaperDraft } from './use-paper-draft';
 import { useObjectUrls } from './use-object-urls';
 import styles from './PaperEditor.module.css';
+
+const PAPER_PICTURE = { maxSidePx: 1000, type: 'image/webp', quality: 0.8 } as const;
 
 const FORMAT_HINT =
   'Paste the paper as text or JSON. Start each question with 1. and each option with a), b), …';
@@ -123,7 +125,7 @@ function PictureControl({ question, pictureUrl, onChange }: PictureControlProps)
     if (!file) return;
     setErrorMessage(undefined);
     try {
-      onChange(await shrinkPicture(file));
+      onChange(await shrinkImage(file, PAPER_PICTURE));
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'The picture could not be used.');
     }

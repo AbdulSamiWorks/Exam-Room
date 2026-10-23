@@ -147,3 +147,9 @@
   min-width: 3em;
   color: var(--color-muted);
 }
+
+.photoLink {
+  align-self: flex-start;
+  font-size: 0.875rem;
+  font-weight: 600;
+}

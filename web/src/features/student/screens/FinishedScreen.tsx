@@ -2,6 +2,7 @@ import type { FinishReason, StudentAttempt } from '@exam-room/shared';
 import { useEffect } from 'react';
 import type { OutboxSnapshot } from '../answers/outbox-store';
 import { hasUnsentWork } from '../answers/outbox-state';
+import { PhotoAnswersPanel } from '../photos/PhotoAnswersPanel';
 import { leaveFullscreen } from '../fullscreen';
 import { StatusScreen } from './StatusScreen';
 
@@ -35,11 +36,15 @@ const FINISHED_MESSAGES: Record<FinishReason, FinishedMessage> = {
 };
 
 type FinishedScreenProps = {
+  testCode: string;
+  attemptToken: string;
   attempt: StudentAttempt;
   outbox: OutboxSnapshot | undefined;
 };
 
-export function FinishedScreen({ attempt, outbox }: FinishedScreenProps) {
+const PHOTO_ANSWERS = new Set(['photos', 'typed_and_photos']);
+
+export function FinishedScreen({ testCode, attemptToken, attempt, outbox }: FinishedScreenProps) {
   const finished = FINISHED_MESSAGES[attempt.finishReason ?? 'student'];
   const isStillSending = outbox !== undefined && hasUnsentWork(outbox.outbox);
   const tooLateCount = outbox?.outbox.tooLateCount ?? 0;
@@ -65,6 +70,9 @@ export function FinishedScreen({ attempt, outbox }: FinishedScreenProps) {
       <p>
         {attempt.studentName} · Roll no. {attempt.rollNumber}
       </p>
+      {PHOTO_ANSWERS.has(attempt.test.writtenAnswers) && (
+        <PhotoAnswersPanel testCode={testCode} attemptToken={attemptToken} />
+      )}
     </StatusScreen>
   );
 }

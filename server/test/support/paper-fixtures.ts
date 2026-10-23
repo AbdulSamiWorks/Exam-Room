@@ -1,4 +1,4 @@
-import type { AnswerKey, Paper, TestSummary } from '@exam-room/shared';
+import type { AnswerKey, Paper, TestSummary, WrittenAnswers } from '@exam-room/shared';
 import type { Express } from 'express';
 import { createClassWithSubject } from './catalog-fixtures.js';
 import { rememberTestClass } from './exam-fixtures.js';
@@ -53,6 +53,7 @@ export const SAMPLE_ANSWER_KEY: AnswerKey = {
 };
 
 type TypedTestOptions = {
+  writtenAnswers?: WrittenAnswers;
   paper?: Paper;
   answerKey?: AnswerKey;
   images?: Buffer[];
@@ -66,6 +67,7 @@ export async function publishTypedTest(
     answerKey = SAMPLE_ANSWER_KEY,
     images = [],
     isOpen = true,
+    writtenAnswers = 'typed',
   }: TypedTestOptions,
 ) {
   const teacher = await logInAsTeacher(app);
@@ -77,7 +79,7 @@ export async function publishTypedTest(
     .field('durationMinutes', '30')
     .field('allowedExits', '1')
     .field('paperKind', 'typed')
-    .field('writtenAnswers', 'typed')
+    .field('writtenAnswers', writtenAnswers)
     .field('paper', JSON.stringify(paper))
     .field('answerKey', JSON.stringify(answerKey));
   images.forEach((image, imageIndex) => {

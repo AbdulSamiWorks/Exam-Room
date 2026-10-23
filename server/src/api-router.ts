@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import type { AppDependencies } from './app-dependencies.js';
 import { notFound } from './lib/http-errors.js';
+import { createStudentPhotosRouter } from './modules/answer-photos/student-photos-router.js';
+import { createTeacherPhotosRouter } from './modules/answer-photos/teacher-photos-router.js';
 import { createAttemptRouter } from './modules/attempts/attempt-router.js';
 import { createPublicTestsRouter } from './modules/attempts/public-tests-router.js';
 import {
@@ -44,8 +46,10 @@ export function createApiRouter(dependencies: AppDependencies): Router {
   apiRouter.use('/students', createStudentsRouter(dependencies));
   apiRouter.use('/tests/:testId/attempts', createTestResultsRouter(dependencies));
   apiRouter.use('/tests', createTestsRouter(dependencies));
+  apiRouter.use('/attempts/:attemptId/photos', createTeacherPhotosRouter(dependencies));
   apiRouter.use('/attempts', createTeacherAttemptsRouter(dependencies));
   apiRouter.use('/public/tests', createPublicTestsRouter(dependencies));
+  apiRouter.use('/attempt/photos', createStudentPhotosRouter(dependencies));
   apiRouter.use('/attempt', createAttemptRouter(dependencies));
 
   apiRouter.use((_request, _response, next) => next(notFound()));

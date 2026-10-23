@@ -288,6 +288,11 @@ export async function deleteTestWithResults(database: Database, testId: number):
         sql: 'DELETE FROM answers WHERE attempt_id IN (SELECT id FROM attempts WHERE test_id = ?)',
         args: [testId],
       },
+      {
+        sql: `DELETE FROM answer_photos
+              WHERE attempt_id IN (SELECT id FROM attempts WHERE test_id = ?)`,
+        args: [testId],
+      },
       { sql: 'DELETE FROM attempts WHERE test_id = ?', args: [testId] },
       { sql: 'DELETE FROM test_pages WHERE test_id = ?', args: [testId] },
       { sql: 'DELETE FROM paper_images WHERE test_id = ?', args: [testId] },

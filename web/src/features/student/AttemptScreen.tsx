@@ -64,7 +64,16 @@ export function AttemptScreen({ testCode, attemptToken, onSessionLost }: Attempt
   }
 
   const attempt = attemptQuery.data;
-  if (attempt.status === 'submitted') return <FinishedScreen attempt={attempt} outbox={outbox} />;
+  if (attempt.status === 'submitted') {
+    return (
+      <FinishedScreen
+        testCode={testCode}
+        attemptToken={attemptToken}
+        attempt={attempt}
+        outbox={outbox}
+      />
+    );
+  }
   if (attempt.status === 'locked') return <LockedScreen />;
 
   const hasUnseenExit = attempt.exitsUsed > acknowledgedExits;

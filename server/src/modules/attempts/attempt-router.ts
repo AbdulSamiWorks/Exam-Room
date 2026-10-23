@@ -10,7 +10,6 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import type { AppDependencies } from '../../app-dependencies.js';
 import { retryTransientErrors } from '../../database/transient-errors.js';
-import { sha256 } from '../../lib/crypto.js';
 import { badRequest, HttpError, notFound } from '../../lib/http-errors.js';
 import { parseInput } from '../../lib/parse-input.js';
 import type { TestRecord } from '../tests/test-record.js';
@@ -20,9 +19,8 @@ import { findPaperForStudents, findPaperImage } from '../tests/paper-repository.
 import { findPageImage } from '../tests/tests-repository.js';
 import type { AttemptRecord } from './attempt-record.js';
 import { finishByStudent } from './attempt-rules.js';
-import { changeAttempt, enforceTimeLimit, recordExit, recordReturn } from './attempt-service.js';
-import { readBearerToken } from './attempt-token.js';
-import { findAttemptByTokenHash } from './attempts-repository.js';
+import { changeAttempt, recordExit, recordReturn } from './attempt-service.js';
+import { loadAttemptOfRequest } from './attempt-access.js';
 import { buildStudentAttempt, findTestOfAttempt } from './student-attempt-view.js';
 
 const MAX_REPORTED_AWAY_MS = 24 * 60 * 60 * 1000;
@@ -69,19 +67,8 @@ export function createAttemptRouter(dependencies: AppDependencies): Router {
   const { database, clock } = dependencies;
   const router = Router();
 
-  async function loadAttempt(request: Request): Promise<AttemptRecord> {
-    const attemptToken = readBearerToken(request.headers.authorization);
-    const attempt = attemptToken
-      ? await findAttemptByTokenHash(database, sha256(attemptToken))
-      : undefined;
-    if (!attempt) {
-      throw new HttpError(
-        401,
-        'attempt_not_found',
-        'Your test session was not found. Open the test link again.',
-      );
-    }
-    return enforceTimeLimit(database, attempt, clock.now());
+  function loadAttempt(request: Request): Promise<AttemptRecord> {
+    return loadAttemptOfRequest(dependencies, request);
   }
 
   async function respondWithAttempt(

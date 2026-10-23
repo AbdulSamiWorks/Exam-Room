@@ -1,6 +1,8 @@
 import type {
+  AnswerPhotoListResponse,
   AttemptResponse,
   PublicTestResponse,
+  SaveAnswerPhotoResponse,
   RecordExitRequest,
   RecordReturnRequest,
   SaveAnswersRequest,
@@ -9,7 +11,14 @@ import type {
   StoredAnswersResponse,
   StudentPaperResponse,
 } from '@exam-room/shared';
-import { getBlob, getJson, postJson, type RequestOptions } from '../../api/http-client';
+import {
+  deleteResource,
+  getBlob,
+  getJson,
+  postJson,
+  putBlob,
+  type RequestOptions,
+} from '../../api/http-client';
 
 function withAttemptToken(attemptToken: string, options: RequestOptions = {}): RequestOptions {
   return { ...options, headers: { Authorization: `Bearer ${attemptToken}` } };
@@ -74,4 +83,24 @@ export function reportReturn(
 
 export function finishAttempt(attemptToken: string): Promise<AttemptResponse> {
   return postJson<AttemptResponse>('/attempt/finish', undefined, withAttemptToken(attemptToken));
+}
+
+export function fetchAnswerPhotos(attemptToken: string): Promise<AnswerPhotoListResponse> {
+  return getJson<AnswerPhotoListResponse>('/attempt/photos', withAttemptToken(attemptToken));
+}
+
+export function uploadAnswerPhoto(
+  attemptToken: string,
+  clientPhotoId: string,
+  photo: Blob,
+): Promise<SaveAnswerPhotoResponse> {
+  return putBlob<SaveAnswerPhotoResponse>(
+    `/attempt/photos/${clientPhotoId}`,
+    photo,
+    withAttemptToken(attemptToken),
+  );
+}
+
+export function removeAnswerPhoto(attemptToken: string, clientPhotoId: string): Promise<void> {
+  return deleteResource(`/attempt/photos/${clientPhotoId}`, withAttemptToken(attemptToken));
 }

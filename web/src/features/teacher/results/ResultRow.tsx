@@ -1,4 +1,5 @@
 import type { AttemptExit, AttemptResult } from '@exam-room/shared';
+import { Link } from 'react-router';
 import { Button } from '../../../components/Button';
 import { classNames } from '../../../lib/class-names';
 import {
@@ -47,8 +48,18 @@ export function ResultRow({
         {questionCount > 0 && (
           <Fact label="Answered" value={`${result.answeredCount} of ${questionCount}`} />
         )}
+        {result.photoCount > 0 && <Fact label="Photos" value={String(result.photoCount)} />}
       </dl>
       {result.exits.length > 0 && <ExitHistory exits={result.exits} />}
+      {result.photoCount > 0 && (
+        <Link
+          to={`/teacher/attempts/${result.id}/photos`}
+          state={{ studentName: result.studentName, backTo: window.location.pathname }}
+          className={styles.photoLink}
+        >
+          See the answer photos
+        </Link>
+      )}
       <div className={styles.rowActions}>
         {isLocked && (
           <Button variant="danger" onClick={actions.onUnlock} disabled={actions.isUnlocking}>

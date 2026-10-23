@@ -303,4 +303,23 @@ export const migrations: readonly Migration[] = [
       ) WITHOUT ROWID`,
     ],
   },
+  {
+    id: 10,
+    name: 'photos of written answers',
+    statements: [
+      `CREATE TABLE answer_photos (
+        id               INTEGER PRIMARY KEY,
+        attempt_id       INTEGER NOT NULL REFERENCES attempts (id) ON DELETE CASCADE,
+        photo_no         INTEGER NOT NULL CHECK (photo_no >= 1),
+        client_photo_id  TEXT    NOT NULL,
+        image            BLOB    NOT NULL,
+        media_type       TEXT    NOT NULL,
+        width            INTEGER NOT NULL,
+        height           INTEGER NOT NULL,
+        created_at       INTEGER NOT NULL,
+        UNIQUE (attempt_id, photo_no),
+        UNIQUE (attempt_id, client_photo_id)
+      )`,
+    ],
+  },
 ];

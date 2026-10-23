@@ -84,6 +84,7 @@ export type AttemptResult = {
   awayMs: number;
   isAwayNow: boolean;
   answeredCount: number;
+  photoCount: number;
   exits: AttemptExit[];
 };
 

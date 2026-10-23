@@ -18,6 +18,7 @@ function attemptResult(overrides: Partial<AttemptResult> = {}): AttemptResult {
     awayMs: 65_000,
     isAwayNow: false,
     answeredCount: 0,
+    photoCount: 0,
     exits: [],
     ...overrides,
   };
