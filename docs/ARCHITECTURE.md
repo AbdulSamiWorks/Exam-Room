@@ -1,7 +1,7 @@
 # Exam Room — Architecture
 
-> Status: **approved plan, v1** (2026-10-22). Milestones M0–M16 are built (2026-10-25); the
-> real-device checks in §15 are still to do. M17–M19 are planned in §16 (2026-10-24). Update this
+> Status: **approved plan, v1** (2026-10-22). Milestones M0–M17 are built (2026-10-25); the
+> real-device checks in §15 are still to do. M18–M19 are planned in §16 (2026-10-24). Update this
 > file whenever a decision below changes.
 
 Exam Room is a small mobile-first web app. A teacher uploads a test paper (PDF), shares a link, and
@@ -154,7 +154,12 @@ question_marks (attempt_id → attempts, question_id, marks NULL, comment,
             PRIMARY KEY (attempt_id, question_id)) WITHOUT ROWID   -- teacher marks overrule auto marks
 
 attempts   + mcq_marks, written_marks, total_marks (D48), teacher_comment
-tests      + results_released_at, show_correct_answers, show_comments, show_top_scorer (D49, D50)
+tests      + results_released_at, show_correct_answers, show_comments, show_top_scorer (D49, D50),
+             bounty_note, bounty_points (D51); paper_kind may be 'none' for an offline
+             assignment (rebuilt in migration 12)
+
+points     (id PK, student_id → students, test_id NULL → tests, points, reason, created_at)
+             -- test_id set: a bounty, replaced on every release; NULL: given by hand
 
 answer_photos (id PK, attempt_id → attempts, photo_no, client_photo_id, image BLOB (as sent),
             media_type, width, height, created_at,
@@ -382,7 +387,12 @@ DELETE /api/attempts/:id              → one attempt and its exits (frees the r
 GET    /api/tests/:id/marking         → paper, key and every attempt's answers, marks and score
 PUT    /api/attempts/:id/marks        { questionMarks: { q3: { marks, comment } }, comment }
 PUT    /api/tests/:id/release         { showCorrectAnswers, showComments, showTopScorer }
-DELETE /api/tests/:id/release         → hides the results again
+DELETE /api/tests/:id/release         → hides the results again (and takes the bounty back)
+GET    /api/tests/:id/offline-marks   → the class list with the entered marks
+PUT    /api/tests/:id/offline-marks   { marks: [{ studentId, marks | null }] }
+GET    /api/classes/:id/points        → every student's points
+GET    /api/students/:id/points       → one student's points history
+POST   /api/students/:id/points       { points, reason }
 GET    /api/attempts/:id/photos       → the student's answer photos
 GET    /api/attempts/:id/photos/:n
 ```
@@ -560,8 +570,8 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 | M18 | Dashboard and progress for students and the teacher                                                    |
 | M19 | Waiting room: the teacher starts everyone at the same time                                             |
 
-Status (2026-10-25): M0–M16 are built and tested (unit tests, API tests and a smoke test of the
-production build). Still to do by hand: the real-device checks in §15. M17–M19 are planned in §16.
+Status (2026-10-25): M0–M17 are built and tested (unit tests, API tests and a smoke test of the
+production build). Still to do by hand: the real-device checks in §15. M18–M19 are planned in §16.
 
 ## 13. Decision log
 
@@ -853,6 +863,22 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 | Render hours     | One service awake all month ≈ 744 hours                               | 750 hours / month                  |
 
 ## 17. Built milestones
+
+### M17 Assignments, bounties and points (built 2026-10-25)
+
+- **Assignments** (D52) are tests with the type **Assignment**. Done in the app (PDF or typed
+  paper): no timer and no exit detection; the deadline is the closing time, or 30 days after the
+  start when no closing time is set (`deadlineFor`, pure and tested). The server ignores exit
+  reports for assignments. **No paper** makes an offline assignment: the teacher gives the total
+  marks and later types each student's marks on **Enter marks and release**; they are stored as
+  finished attempts without a device token (`token_hash` NULL since M11).
+- **Bounties** (D51): any test can have a reward note and points. Releasing the results gives the
+  points to the top scorer(s) (`points` rows with the `test_id`), replacing earlier ones, so a new
+  release after a mark change moves the points; **Hide results** takes them back.
+- **Points**: the class page has a **Points** tab with every student's points and **Give or take
+  points** with a reason. Students see their own points and the class leader on their home.
+- Migration 12 rebuilt `tests` (paper kind `none`, bounty columns, the CHECKs that tie them
+  together) and added `points`.
 
 ### M16 Marking and results (built 2026-10-25)
 

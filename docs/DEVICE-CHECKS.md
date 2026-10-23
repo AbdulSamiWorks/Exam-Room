@@ -169,3 +169,14 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
 - [ ] Before release, a student phone shows no marks. Tap **Release results**: the student home
       shows **Marks: N of M**; tapping it shows the paper with marks and comments.
 - [ ] Release without **Show the correct MCQ answers**: the student does not see them.
+
+## 17. Assignments, rewards and points
+
+- [ ] Create an **Assignment** with a typed paper and a closing time two days ahead: the student
+      sees **Due …** instead of a timer, can switch apps without a warning, and can come back
+      later to continue.
+- [ ] Create an assignment with **No paper**, enter marks for the class and release: the students
+      see their marks.
+- [ ] Give a test a reward (for example 10 points), release it: the top scorer's home shows the
+      points and the class leader. **Hide results** takes the points back.
+- [ ] On **Manage → class → Points**, give 5 points and take 2 away with a reason.
