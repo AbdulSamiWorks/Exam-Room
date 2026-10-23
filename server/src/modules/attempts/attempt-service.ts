@@ -1,4 +1,4 @@
-import type { AllowedExits, StudentExitReason } from '@exam-room/shared';
+import type { StudentExitReason } from '@exam-room/shared';
 import { randomUUID } from 'node:crypto';
 import type { Database } from '../../database/connection.js';
 import { isUniqueConstraintError } from '../../database/query-helpers.js';
@@ -6,7 +6,12 @@ import { forbidden, HttpError } from '../../lib/http-errors.js';
 import { availabilityAt } from '../tests/test-availability.js';
 import type { TestRecord } from '../tests/test-record.js';
 import type { AttemptChange, AttemptRecord, ExitEvent } from './attempt-record.js';
-import { applyTimeLimit, registerExit, resumeOnNewDevice } from './attempt-rules.js';
+import {
+  applyTimeLimit,
+  registerExit,
+  resumeOnNewDevice,
+  type ExitRules,
+} from './attempt-rules.js';
 import {
   closeExit,
   findAttemptById,
@@ -52,7 +57,7 @@ export async function changeAttempt(
 export type StudentExitInput = {
   clientExitId: string;
   reason: StudentExitReason;
-  allowedExits: AllowedExits;
+  exitRules: ExitRules;
 };
 
 export async function recordExit(
@@ -72,7 +77,7 @@ export async function recordExit(
   };
   try {
     return await changeAttempt(database, attempt, (current) =>
-      registerExit(current, input.allowedExits, exit),
+      registerExit(current, input.exitRules, exit),
     );
   } catch (error) {
     if (!isUniqueConstraintError(error)) throw error;
@@ -121,7 +126,7 @@ export async function startOrResumeAttempt(
 
   const attempt = await enforceTimeLimit(database, existingAttempt, input.currentTime);
   return changeAttempt(database, attempt, (current) =>
-    resumeOnNewDevice(current, input.tokenHash, input.test.allowedExits, {
+    resumeOnNewDevice(current, input.tokenHash, input.test, {
       clientExitId: `device-change-${randomUUID()}`,
       reason: 'device_change',
       leftAt: input.currentTime,

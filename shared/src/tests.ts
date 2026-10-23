@@ -2,6 +2,8 @@ import type { Subject } from './subjects.js';
 
 export type AllowedExits = 0 | 1 | 2;
 
+export type LeaveRule = 'lock' | 'finish';
+
 export type TestAvailability = 'not_open' | 'scheduled' | 'open' | 'closed';
 
 export type TestSchedule = {
@@ -16,6 +18,7 @@ export type TestSummary = TestSchedule & {
   subject: Subject;
   durationMinutes: number;
   allowedExits: AllowedExits;
+  leaveRule: LeaveRule;
   pageCount: number;
   studentCount: number;
   createdAt: number;
@@ -36,7 +39,12 @@ export type ScheduleTestRequest = {
 };
 
 export type CreateTestFormField =
-  'subjectId' | 'title' | 'durationMinutes' | 'allowedExits' | 'pages';
+  | 'subjectId'
+  | 'title'
+  | 'durationMinutes'
+  | 'allowedExits'
+  | 'leaveRule'
+  | 'pages';
 
 export type TestLimits = {
   maxTitleLength: 120;

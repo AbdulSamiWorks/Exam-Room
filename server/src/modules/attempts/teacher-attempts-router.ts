@@ -3,17 +3,19 @@ import type {
   AttemptResultListResponse,
   AttemptResultResponse,
 } from '@exam-room/shared';
-import { Router, type Request } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import type { AppDependencies } from '../../app-dependencies.js';
 import type { Database } from '../../database/connection.js';
 import { notFound } from '../../lib/http-errors.js';
 import { parseInput } from '../../lib/parse-input.js';
 import { requireTeacher } from '../auth/teacher-session.js';
-import { findTestById } from '../tests/tests-repository.js';
+import { closeNow } from '../tests/test-availability.js';
+import type { TestRecord } from '../tests/test-record.js';
+import { findTestById, saveTestSchedule } from '../tests/tests-repository.js';
 import type { AttemptRecord } from './attempt-record.js';
 import { summarizeAttempt } from './attempt-results.js';
-import { unlockByTeacher } from './attempt-rules.js';
+import { endByTeacher, unlockByTeacher } from './attempt-rules.js';
 import { changeAttempt } from './attempt-service.js';
 import {
   deleteAttemptWithExits,
@@ -36,10 +38,14 @@ export function createTestResultsRouter(dependencies: AppDependencies): Router {
 
   router.use(requireTeacher(dependencies));
 
-  router.get('/', async (request, response) => {
+  async function requireTest(request: Request): Promise<TestRecord> {
     const { testId } = parseInput(testIdParamsSchema, request.params);
-    if (!(await findTestById(database, testId))) throw notFound('Test not found.');
+    const test = await findTestById(database, testId);
+    if (!test) throw notFound('Test not found.');
+    return test;
+  }
 
+  async function respondWithResults(response: Response, testId: number): Promise<void> {
     const currentTime = clock.now();
     const attempts = await listAttemptsOfTest(database, testId);
     const exitsByAttemptId = await listExitsOfTest(database, testId);
@@ -50,6 +56,24 @@ export function createTestResultsRouter(dependencies: AppDependencies): Router {
       ),
       serverTime: currentTime,
     } satisfies AttemptResultListResponse);
+  }
+
+  router.get('/', async (request, response) => {
+    const test = await requireTest(request);
+    await respondWithResults(response, test.id);
+  });
+
+  router.post('/end', async (request, response) => {
+    const test = await requireTest(request);
+    const currentTime = clock.now();
+
+    for (const attempt of await listAttemptsOfTest(database, test.id)) {
+      await changeAttempt(database, attempt, (current) => endByTeacher(current, currentTime));
+    }
+    const { opensAt, closesAt } = closeNow(test, currentTime);
+    await saveTestSchedule(database, test.id, { opensAt, closesAt });
+
+    await respondWithResults(response, test.id);
   });
 
   return router;
@@ -75,6 +99,16 @@ export function createTeacherAttemptsRouter(dependencies: AppDependencies): Rout
     );
     response.json({
       attempt: await buildAttemptResult(database, unlockedAttempt, clock.now()),
+    } satisfies AttemptResultResponse);
+  });
+
+  router.post('/:attemptId/end', async (request, response) => {
+    const attempt = await requireAttempt(request);
+    const endedAttempt = await changeAttempt(database, attempt, (current) =>
+      endByTeacher(current, clock.now()),
+    );
+    response.json({
+      attempt: await buildAttemptResult(database, endedAttempt, clock.now()),
     } satisfies AttemptResultResponse);
   });
 

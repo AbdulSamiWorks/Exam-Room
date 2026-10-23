@@ -1,5 +1,10 @@
-import type { AllowedExits } from '@exam-room/shared';
+import type { AllowedExits, LeaveRule } from '@exam-room/shared';
 import type { AttemptChange, AttemptRecord, ExitEvent } from './attempt-record.js';
+
+export type ExitRules = {
+  allowedExits: AllowedExits;
+  leaveRule: LeaveRule;
+};
 
 export function exitsUsed(attempt: AttemptRecord): number {
   return attempt.exitCount - attempt.forgivenExits;
@@ -29,22 +34,46 @@ export function finishByStudent(attempt: AttemptRecord, currentTime: number): At
   };
 }
 
+export function endByTeacher(attempt: AttemptRecord, currentTime: number): AttemptChange {
+  const timeLimitChange = applyTimeLimit(attempt, currentTime);
+  if (timeLimitChange.attempt.status !== 'in_progress') return timeLimitChange;
+  return {
+    attempt: {
+      ...attempt,
+      status: 'submitted',
+      finishReason: 'teacher',
+      finishedAt: currentTime,
+    },
+  };
+}
+
 export function registerExit(
   attempt: AttemptRecord,
-  allowedExits: AllowedExits,
+  exitRules: ExitRules,
   exit: ExitEvent,
 ): AttemptChange {
   if (attempt.status !== 'in_progress') return { attempt };
 
   const attemptWithExit = { ...attempt, exitCount: attempt.exitCount + 1 };
-  const hasLeftTooOften = exitsUsed(attemptWithExit) > allowedExits;
+  const hasLeftTooOften = exitsUsed(attemptWithExit) > exitRules.allowedExits;
 
   return {
     attempt: hasLeftTooOften
-      ? { ...attemptWithExit, status: 'locked', finishedAt: exit.leftAt }
+      ? stopForLeaving(attemptWithExit, exitRules.leaveRule, exit.leftAt)
       : attemptWithExit,
     newExit: exit,
   };
+}
+
+function stopForLeaving(
+  attempt: AttemptRecord,
+  leaveRule: LeaveRule,
+  leftAt: number,
+): AttemptRecord {
+  if (leaveRule === 'finish') {
+    return { ...attempt, status: 'submitted', finishReason: 'left_test', finishedAt: leftAt };
+  }
+  return { ...attempt, status: 'locked', finishedAt: leftAt };
 }
 
 export function unlockByTeacher(attempt: AttemptRecord, currentTime: number): AttemptChange {
@@ -61,9 +90,9 @@ export function unlockByTeacher(attempt: AttemptRecord, currentTime: number): At
 export function resumeOnNewDevice(
   attempt: AttemptRecord,
   newTokenHash: string,
-  allowedExits: AllowedExits,
+  exitRules: ExitRules,
   deviceChange: ExitEvent,
 ): AttemptChange {
   const withNewToken = { ...attempt, tokenHash: newTokenHash };
-  return registerExit(withNewToken, allowedExits, deviceChange);
+  return registerExit(withNewToken, exitRules, deviceChange);
 }

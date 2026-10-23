@@ -26,6 +26,7 @@ describe('summarizeAttempt', () => {
       forgivenExits: 0,
       awayMs: 0,
       isAwayNow: false,
+      exits: [],
     });
   });
 

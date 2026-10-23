@@ -4,6 +4,10 @@ import { migrations } from '../src/database/migrations.js';
 import { runMigrations } from '../src/database/run-migrations.js';
 import { IN_MEMORY_DATABASE_URL } from './support/test-context.js';
 
+function migrationsUpTo(lastId: number) {
+  return migrations.filter((migration) => migration.id <= lastId);
+}
+
 describe('runMigrations', () => {
   let database: Database;
 
@@ -33,8 +37,7 @@ describe('runMigrations', () => {
   });
 
   it('gives existing attempts version 0 when migration 2 adds the version column', async () => {
-    const initialSchemaOnly = migrations.filter((migration) => migration.id === 1);
-    await runMigrations(database, initialSchemaOnly);
+    await runMigrations(database, migrationsUpTo(1));
     await database.batch(
       [
         "INSERT INTO subjects (id, name, created_at) VALUES (1, 'Physics', 0)",
@@ -48,15 +51,14 @@ describe('runMigrations', () => {
       'write',
     );
 
-    expect(await runMigrations(database)).toEqual([2, 3]);
+    expect(await runMigrations(database, migrationsUpTo(2))).toEqual([2]);
 
     const { rows } = await database.execute('SELECT version FROM attempts');
     expect(rows.map((row) => row.version)).toEqual([0]);
   });
 
   it('keeps tests made before migration 3 open from the time they were created', async () => {
-    const schemaBeforeSchedules = migrations.filter((migration) => migration.id < 3);
-    await runMigrations(database, schemaBeforeSchedules);
+    await runMigrations(database, migrationsUpTo(2));
     await database.batch(
       [
         "INSERT INTO subjects (id, name, created_at) VALUES (1, 'Physics', 0)",
@@ -67,10 +69,44 @@ describe('runMigrations', () => {
       'write',
     );
 
-    expect(await runMigrations(database)).toEqual([3]);
+    expect(await runMigrations(database, migrationsUpTo(3))).toEqual([3]);
 
     const { rows } = await database.execute('SELECT opens_at, closes_at FROM tests');
     expect(rows.map((row) => [row.opens_at, row.closes_at])).toEqual([[5000, null]]);
+  });
+
+  it('keeps every attempt and exit when migration 4 rebuilds the attempts table', async () => {
+    await runMigrations(database, migrationsUpTo(3));
+    await database.batch(
+      [
+        "INSERT INTO subjects (id, name, created_at) VALUES (1, 'Physics', 0)",
+        `INSERT INTO tests (id, code, subject_id, title, duration_minutes, allowed_exits,
+                            page_count, created_at, opens_at)
+         VALUES (1, 'K7M2QX', 1, 'Quiz', 30, 1, 1, 0, 0)`,
+        `INSERT INTO attempts (id, test_id, student_name, roll_no, roll_no_key, token_hash, status,
+                               started_at, deadline_at, exit_count, version)
+         VALUES (7, 1, 'Ayesha', '17', '17', 'hash', 'in_progress', 0, 1800000, 1, 3)`,
+        `INSERT INTO exits (attempt_id, client_exit_id, reason, left_at, returned_at, away_ms)
+         VALUES (7, 'exit-one-01', 'hidden', 1000, 4000, 3000)`,
+      ],
+      'write',
+    );
+
+    expect(await runMigrations(database)).toEqual([4]);
+
+    const attempts = await database.execute('SELECT id, exit_count, version FROM attempts');
+    expect(attempts.rows.map((row) => [row.id, row.exit_count, row.version])).toEqual([[7, 1, 3]]);
+    const exits = await database.execute('SELECT attempt_id, away_ms FROM exits');
+    expect(exits.rows.map((row) => [row.attempt_id, row.away_ms])).toEqual([[7, 3000]]);
+    const tests = await database.execute('SELECT leave_rule FROM tests');
+    expect(tests.rows.map((row) => row.leave_rule)).toEqual(['lock']);
+
+    await database.execute(
+      "UPDATE attempts SET status = 'submitted', finish_reason = 'left_test' WHERE id = 7",
+    );
+    await database.execute('DELETE FROM attempts WHERE id = 7');
+    const exitsAfterDelete = await database.execute('SELECT COUNT(*) AS total FROM exits');
+    expect(exitsAfterDelete.rows[0]?.total).toBe(0);
   });
 
   it('rolls back a migration that fails part-way', async () => {

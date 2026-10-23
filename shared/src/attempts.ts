@@ -1,8 +1,8 @@
-import type { AllowedExits, TestAvailability, TestSchedule } from './tests.js';
+import type { AllowedExits, LeaveRule, TestAvailability, TestSchedule } from './tests.js';
 
 export type AttemptStatus = 'in_progress' | 'submitted' | 'locked';
 
-export type FinishReason = 'student' | 'time_up';
+export type FinishReason = 'student' | 'time_up' | 'teacher' | 'left_test';
 
 export type ExitReason = 'hidden' | 'blur' | 'fullscreen' | 'device_change';
 
@@ -14,6 +14,7 @@ export type PublicTest = TestSchedule & {
   subjectName: string;
   durationMinutes: number;
   allowedExits: AllowedExits;
+  leaveRule: LeaveRule;
   pageCount: number;
   availability: TestAvailability;
 };
@@ -63,6 +64,13 @@ export type RecordReturnRequest = RecordExitRequest & {
   awayMsClient: number;
 };
 
+export type AttemptExit = {
+  reason: ExitReason;
+  leftAt: number;
+  returnedAt: number | null;
+  awayMs: number;
+};
+
 export type AttemptResult = {
   id: number;
   studentName: string;
@@ -75,6 +83,7 @@ export type AttemptResult = {
   forgivenExits: number;
   awayMs: number;
   isAwayNow: boolean;
+  exits: AttemptExit[];
 };
 
 export type AttemptResultListResponse = {

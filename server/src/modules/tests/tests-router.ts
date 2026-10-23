@@ -36,6 +36,9 @@ const createTestFieldsSchema = z.object({
       `Time limit can be at most ${testLimits.maxDurationMinutes} minutes.`,
     ),
   allowedExits: z.coerce.number().pipe(z.literal([0, 1, 2], 'Allowed exits must be 0, 1 or 2.')),
+  leaveRule: z
+    .enum(['lock', 'finish'], 'Choose what happens when a student leaves.')
+    .default('lock'),
 });
 
 const scheduleSchema = z
@@ -113,6 +116,7 @@ export function createTestsRouter(dependencies: AppDependencies): Router {
         title: fields.title,
         durationMinutes: fields.durationMinutes,
         allowedExits: fields.allowedExits,
+        leaveRule: fields.leaveRule,
         createdAt: clock.now(),
       },
       pages,

@@ -1,4 +1,4 @@
-import type { AttemptResult } from '@exam-room/shared';
+import type { AttemptExit, AttemptResult } from '@exam-room/shared';
 import type { AttemptRecord, ExitEvent } from './attempt-record.js';
 import { applyTimeLimit } from './attempt-rules.js';
 
@@ -25,5 +25,15 @@ export function summarizeAttempt(
     forgivenExits: attempt.forgivenExits,
     awayMs: closedAwayMs + openAwayMs,
     isAwayNow: attempt.status === 'in_progress' && openExit !== undefined,
+    exits: exits.map((exit) => summarizeExit(exit, awayUntil)),
+  };
+}
+
+function summarizeExit(exit: ExitEvent, awayUntil: number): AttemptExit {
+  return {
+    reason: exit.reason,
+    leftAt: exit.leftAt,
+    returnedAt: exit.returnedAt,
+    awayMs: exit.awayMs ?? Math.max(0, awayUntil - exit.leftAt),
   };
 }

@@ -13,6 +13,7 @@ export function toPublicTest(test: TestRecord, currentTime: number): PublicTest 
     subjectName: test.subject.name,
     durationMinutes: test.durationMinutes,
     allowedExits: test.allowedExits,
+    leaveRule: test.leaveRule,
     pageCount: test.pageCount,
     opensAt: test.opensAt,
     closesAt: test.closesAt,

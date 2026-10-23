@@ -77,4 +77,57 @@ export const migrations: readonly Migration[] = [
       `UPDATE tests SET opens_at = created_at`,
     ],
   },
+  {
+    id: 4,
+    name: 'teacher and leave finish reasons, waiting status and leave rule',
+    statements: [
+      `CREATE TABLE attempts_rebuilt (
+        id              INTEGER PRIMARY KEY,
+        test_id         INTEGER NOT NULL REFERENCES tests (id) ON DELETE CASCADE,
+        student_name    TEXT    NOT NULL,
+        roll_no         TEXT    NOT NULL,
+        roll_no_key     TEXT    NOT NULL,
+        token_hash      TEXT    NOT NULL UNIQUE,
+        status          TEXT    NOT NULL
+                        CHECK (status IN ('waiting', 'in_progress', 'submitted', 'locked')),
+        finish_reason   TEXT
+                        CHECK (finish_reason IN ('student', 'time_up', 'teacher', 'left_test')),
+        started_at      INTEGER NOT NULL,
+        deadline_at     INTEGER NOT NULL,
+        finished_at     INTEGER,
+        exit_count      INTEGER NOT NULL DEFAULT 0,
+        forgiven_exits  INTEGER NOT NULL DEFAULT 0,
+        version         INTEGER NOT NULL DEFAULT 0,
+        UNIQUE (test_id, roll_no_key)
+      )`,
+      `INSERT INTO attempts_rebuilt
+         (id, test_id, student_name, roll_no, roll_no_key, token_hash, status, finish_reason,
+          started_at, deadline_at, finished_at, exit_count, forgiven_exits, version)
+       SELECT id, test_id, student_name, roll_no, roll_no_key, token_hash, status, finish_reason,
+              started_at, deadline_at, finished_at, exit_count, forgiven_exits, version
+       FROM attempts`,
+      `CREATE TABLE exits_backup AS
+         SELECT id, attempt_id, client_exit_id, reason, left_at, returned_at, away_ms FROM exits`,
+      `DROP TABLE exits`,
+      `DROP TABLE attempts`,
+      `ALTER TABLE attempts_rebuilt RENAME TO attempts`,
+      `CREATE TABLE exits (
+        id              INTEGER PRIMARY KEY,
+        attempt_id      INTEGER NOT NULL REFERENCES attempts (id) ON DELETE CASCADE,
+        client_exit_id  TEXT    NOT NULL,
+        reason          TEXT    NOT NULL
+                        CHECK (reason IN ('hidden', 'blur', 'fullscreen', 'device_change')),
+        left_at         INTEGER NOT NULL,
+        returned_at     INTEGER,
+        away_ms         INTEGER,
+        UNIQUE (attempt_id, client_exit_id)
+      )`,
+      `INSERT INTO exits (id, attempt_id, client_exit_id, reason, left_at, returned_at, away_ms)
+       SELECT id, attempt_id, client_exit_id, reason, left_at, returned_at, away_ms
+       FROM exits_backup`,
+      `DROP TABLE exits_backup`,
+      `ALTER TABLE tests ADD COLUMN leave_rule TEXT NOT NULL DEFAULT 'lock'
+         CHECK (leave_rule IN ('lock', 'finish'))`,
+    ],
+  },
 ];

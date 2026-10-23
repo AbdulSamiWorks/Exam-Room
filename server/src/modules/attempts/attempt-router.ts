@@ -83,7 +83,7 @@ export function createAttemptRouter(dependencies: AppDependencies): Router {
     const updatedAttempt = await recordExit(
       database,
       attempt,
-      { ...exitReport, allowedExits: test.allowedExits },
+      { ...exitReport, exitRules: test },
       clock.now(),
     );
     await respondWithAttempt(response, updatedAttempt, test);
@@ -97,7 +97,7 @@ export function createAttemptRouter(dependencies: AppDependencies): Router {
     const updatedAttempt = await recordReturn(
       database,
       attempt,
-      { ...returnReport, allowedExits: test.allowedExits },
+      { ...returnReport, exitRules: test },
       clock.now(),
     );
     await respondWithAttempt(response, updatedAttempt, test);

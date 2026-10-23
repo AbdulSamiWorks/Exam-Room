@@ -1,5 +1,6 @@
 import type {
   AllowedExits,
+  LeaveRule,
   StartAttemptRequest,
   StartAttemptResponse,
   TestSummary,
@@ -13,6 +14,7 @@ export type TestSettings = {
   title?: string;
   durationMinutes?: number;
   allowedExits?: AllowedExits;
+  leaveRule?: LeaveRule;
   pageImages?: Buffer[];
   isOpen?: boolean;
 };
@@ -33,7 +35,8 @@ export async function publishTest(app: Express, settings: TestSettings = {}): Pr
     .field('subjectId', String(subject.body.subject.id))
     .field('title', settings.title ?? 'Chapter 3 Quiz')
     .field('durationMinutes', String(settings.durationMinutes ?? 30))
-    .field('allowedExits', String(settings.allowedExits ?? 1));
+    .field('allowedExits', String(settings.allowedExits ?? 1))
+    .field('leaveRule', settings.leaveRule ?? 'lock');
 
   const pageImages = settings.pageImages ?? [await createBlankPageImage()];
   pageImages.forEach((pageImage, pageIndex) => {

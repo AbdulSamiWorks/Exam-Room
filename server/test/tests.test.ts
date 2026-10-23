@@ -64,6 +64,7 @@ describe('tests', () => {
       subject: { id: subjectId, name: 'Physics' },
       durationMinutes: 30,
       allowedExits: 1,
+      leaveRule: 'lock',
       pageCount: 2,
       studentCount: 0,
       createdAt: TEST_START_TIME,

@@ -1,4 +1,4 @@
-import type { AllowedExits, PageSize, TestSchedule } from '@exam-room/shared';
+import type { AllowedExits, LeaveRule, PageSize, TestSchedule } from '@exam-room/shared';
 import type { Row } from '@libsql/client';
 import type { Database } from '../../database/connection.js';
 import { requireFirstRow } from '../../database/query-helpers.js';
@@ -11,6 +11,7 @@ export type NewTest = {
   title: string;
   durationMinutes: number;
   allowedExits: AllowedExits;
+  leaveRule: LeaveRule;
   createdAt: number;
 };
 
@@ -21,6 +22,7 @@ const SELECT_TEST_SUMMARY = `
     tests.title,
     tests.duration_minutes,
     tests.allowed_exits,
+    tests.leave_rule,
     tests.page_count,
     tests.created_at,
     tests.opens_at,
@@ -59,8 +61,9 @@ export async function insertTestWithPages(
   try {
     const insertedTest = await transaction.execute({
       sql: `INSERT INTO tests
-              (code, subject_id, title, duration_minutes, allowed_exits, page_count, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+              (code, subject_id, title, duration_minutes, allowed_exits, leave_rule, page_count,
+               created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id`,
       args: [
         newTest.code,
@@ -68,6 +71,7 @@ export async function insertTestWithPages(
         newTest.title,
         newTest.durationMinutes,
         newTest.allowedExits,
+        newTest.leaveRule,
         pages.length,
         newTest.createdAt,
       ],
@@ -176,6 +180,7 @@ function toTestRecord(row: Row): TestRecord {
     subject: { id: Number(row.subject_id), name: String(row.subject_name) },
     durationMinutes: Number(row.duration_minutes),
     allowedExits: Number(row.allowed_exits) as AllowedExits,
+    leaveRule: String(row.leave_rule) as LeaveRule,
     pageCount: Number(row.page_count),
     studentCount: Number(row.student_count),
     createdAt: Number(row.created_at),
