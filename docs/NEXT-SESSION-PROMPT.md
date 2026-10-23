@@ -1,7 +1,10 @@
 # Prompt for the next session (continue M10, then M11–M19)
 
-Start the new session **on the owner's computer** (`C:\Users\abdul\Desktop\Exam website`), because
-the M10 work below is **not committed yet**. Paste this one line:
+The unfinished M10 work is on the branch **`wip/m10-manage`** (pushed to GitHub), not on `main`,
+because its web part does not type-check yet. First run `git fetch` and
+`git checkout wip/m10-manage`, finish M10 there, then merge it into `main` when
+`npm run check` is green (in a cloud session: work on the session branch based on
+`wip/m10-manage`). Paste this one line to start:
 
     Read docs/NEXT-SESSION-PROMPT.md and follow it.
 
@@ -20,9 +23,9 @@ hosting only, TypeScript pinned to 6.0). The owner said: build every milestone *
 3. `git log --oneline -10` and `git status`. The last commit is
    `docs: re-plan M10-M19 with the owner's new requirements and answers`.
 
-## 2. M10 is half done and NOT committed — do not discard it
+## 2. M10 is half done on branch `wip/m10-manage`
 
-`git status` shows the M10 work in the working tree (ignore `.claude/worktrees/`, never commit
+The commit on `wip/m10-manage` holds the M10 work (ignore `.claude/worktrees/`, never commit
 it).
 
 **Done (server + shared), tested:** 248 server tests pass, ESLint and Prettier are clean for
