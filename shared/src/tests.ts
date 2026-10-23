@@ -39,12 +39,7 @@ export type ScheduleTestRequest = {
 };
 
 export type CreateTestFormField =
-  | 'subjectId'
-  | 'title'
-  | 'durationMinutes'
-  | 'allowedExits'
-  | 'leaveRule'
-  | 'pages';
+  'subjectId' | 'title' | 'durationMinutes' | 'allowedExits' | 'leaveRule' | 'pages';
 
 export type TestLimits = {
   maxTitleLength: 120;
