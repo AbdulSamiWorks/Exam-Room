@@ -10,6 +10,10 @@ type WarningScreenProps = {
 export function WarningScreen({ attempt, onContinue }: WarningScreenProps) {
   const allowedExits = attempt.test.allowedExits;
   const exitsLeft = Math.max(0, allowedExits - attempt.exitsUsed);
+  const consequence =
+    attempt.test.leaveRule === 'finish'
+      ? 'your test will be finished and you cannot come back'
+      : 'your test will be locked';
 
   return (
     <StatusScreen
@@ -27,8 +31,8 @@ export function WarningScreen({ attempt, onContinue }: WarningScreenProps) {
       </p>
       <p>
         {exitsLeft === 0
-          ? 'If you leave again, your test will be locked.'
-          : `You can leave ${describeTimes(exitsLeft)} more. After that your test will be locked.`}
+          ? `If you leave again, ${consequence}.`
+          : `You can leave ${describeTimes(exitsLeft)} more. After that ${consequence}.`}
       </p>
       <p>The timer did not stop.</p>
     </StatusScreen>

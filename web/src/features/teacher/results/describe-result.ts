@@ -1,4 +1,4 @@
-import type { AttemptResult } from '@exam-room/shared';
+import type { AttemptExit, AttemptResult, ExitReason } from '@exam-room/shared';
 
 const MILLISECONDS_PER_SECOND = 1000;
 const SECONDS_PER_MINUTE = 60;
@@ -11,16 +11,45 @@ export type ResultStatus = {
   tone: ResultTone;
 };
 
+const EXIT_REASON_LABELS: Record<ExitReason, string> = {
+  hidden: 'Left the page',
+  blur: 'Switched away',
+  fullscreen: 'Left fullscreen',
+  device_change: 'Opened on another phone',
+};
+
 export function describeResultStatus(result: AttemptResult): ResultStatus {
   if (result.status === 'locked') return { label: 'Left the test', tone: 'danger' };
-  if (result.status === 'submitted') {
-    return result.finishReason === 'time_up'
-      ? { label: 'Time up', tone: 'success' }
-      : { label: 'Submitted', tone: 'success' };
-  }
+  if (result.status === 'submitted') return describeFinishedStatus(result);
   return result.isAwayNow
     ? { label: 'Away now', tone: 'danger' }
     : { label: 'In progress', tone: 'active' };
+}
+
+function describeFinishedStatus(result: AttemptResult): ResultStatus {
+  switch (result.finishReason) {
+    case 'time_up':
+      return { label: 'Time up', tone: 'success' };
+    case 'teacher':
+      return { label: 'Ended by you', tone: 'success' };
+    case 'left_test':
+      return { label: 'Left · finished', tone: 'danger' };
+    default:
+      return { label: 'Submitted', tone: 'success' };
+  }
+}
+
+export function isStoppedForLeaving(result: AttemptResult): boolean {
+  return result.status === 'locked' || result.finishReason === 'left_test';
+}
+
+export function describeExitReason(reason: ExitReason): string {
+  return EXIT_REASON_LABELS[reason];
+}
+
+export function describeExitPeriod(exit: AttemptExit): string {
+  const returnTime = exit.returnedAt === null ? 'still away' : describeClockTime(exit.returnedAt);
+  return `${describeClockTime(exit.leftAt)} → ${returnTime}`;
 }
 
 export function describeClockTime(timestamp: number | null): string {

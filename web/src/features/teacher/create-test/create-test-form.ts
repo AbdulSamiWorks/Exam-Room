@@ -1,4 +1,4 @@
-import type { AllowedExits, CreateTestFormField } from '@exam-room/shared';
+import type { AllowedExits, CreateTestFormField, LeaveRule } from '@exam-room/shared';
 import type { RenderedPage } from './render-pdf-pages';
 import { testLimits } from './test-limits';
 import type { PdfPagesState } from './use-pdf-pages';
@@ -8,6 +8,7 @@ export type CreateTestFormValues = {
   title: string;
   durationMinutes: string;
   allowedExits: AllowedExits;
+  leaveRule: LeaveRule;
 };
 
 export type CreateTestFormErrors = Partial<
@@ -66,6 +67,7 @@ export function buildCreateTestFormData(
   appendText('title', values.title.trim());
   appendText('durationMinutes', values.durationMinutes);
   appendText('allowedExits', String(values.allowedExits));
+  appendText('leaveRule', values.leaveRule);
   pages.forEach((page, pageIndex) => {
     const extension = FILE_EXTENSION_BY_IMAGE_TYPE[page.image.type] ?? 'bin';
     appendFile('pages', page.image, `page-${pageIndex + 1}.${extension}`);

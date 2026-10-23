@@ -88,7 +88,7 @@ function JoinForm({ test, testCode, onStarted, isResuming }: JoinFormProps) {
                 You can start until <strong>{describeDateTime(test.closesAt)}</strong>.
               </li>
             )}
-            <li>{describeExitRule(test.allowedExits)}</li>
+            <li>{describeExitRule(test)}</li>
             <li>Answer on your own paper. When you are done, tap Finish.</li>
           </ul>
         </Panel>
@@ -132,10 +132,14 @@ function describeStartButton(isPending: boolean, isResuming: boolean): string {
   return isPending ? 'Starting…' : 'Start test';
 }
 
-function describeExitRule(allowedExits: PublicTest['allowedExits']): string {
+function describeExitRule({ allowedExits, leaveRule }: PublicTest): string {
+  const consequence =
+    leaveRule === 'finish'
+      ? 'your test is finished and you cannot come back'
+      : 'your test is locked';
   if (allowedExits === 0) {
-    return 'Do not leave this page or switch apps. If you do, your test is locked at once.';
+    return `Do not leave this page or switch apps. If you do, ${consequence} at once.`;
   }
   const times = allowedExits === 1 ? 'once' : 'twice';
-  return `Do not leave this page or switch apps. You may leave ${times} by accident; after that your test is locked.`;
+  return `Do not leave this page or switch apps. You may leave ${times} by accident; after that ${consequence}.`;
 }

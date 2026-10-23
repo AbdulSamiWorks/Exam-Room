@@ -1,28 +1,59 @@
 import type { AttemptResult } from '@exam-room/shared';
-import { useState } from 'react';
 import { Button } from '../../../components/Button';
-import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { FormError } from '../../../components/FormError';
 import { Panel } from '../../../components/Panel';
-import { classNames } from '../../../lib/class-names';
+import { useConfirmation } from '../../../components/use-confirmation';
+import { ResultRow } from './ResultRow';
 import {
-  describeAwayTime,
-  describeClockTime,
-  describeExits,
-  describeResultStatus,
-} from './describe-result';
-import { useDeleteAttempt, useTestResults, useUnlockAttempt } from './use-results';
+  useDeleteAttempt,
+  useEndAttempt,
+  useEndExamForEveryone,
+  useTestResults,
+  useUnlockAttempt,
+} from './use-results';
 import styles from './ResultsPanel.module.css';
 
 export function ResultsPanel({ testId }: { testId: number }) {
   const resultsQuery = useTestResults(testId);
   const unlockAttempt = useUnlockAttempt(testId);
+  const endAttempt = useEndAttempt(testId);
+  const endExamForEveryone = useEndExamForEveryone(testId);
   const deleteAttempt = useDeleteAttempt(testId);
-  const [attemptToRemove, setAttemptToRemove] = useState<AttemptResult>();
+  const { askToConfirm, confirmationDialog } = useConfirmation();
 
-  function closeRemoveDialog() {
-    setAttemptToRemove(undefined);
-    deleteAttempt.reset();
+  const attempts = resultsQuery.data?.attempts ?? [];
+  const isAnyoneWriting = attempts.some((attempt) => attempt.status === 'in_progress');
+
+  function confirmEnd(attempt: AttemptResult) {
+    askToConfirm({
+      title: `End ${attempt.studentName}'s test?`,
+      message: 'Their paper closes now and the test is submitted.',
+      confirmLabel: 'End test',
+      busyLabel: 'Ending…',
+      onConfirm: () => endAttempt.mutateAsync(attempt.id),
+    });
+  }
+
+  function confirmRemove(attempt: AttemptResult) {
+    askToConfirm({
+      title: `Remove ${attempt.studentName}?`,
+      message:
+        'Their start time and exits are deleted. While the test is open, they can start again with the full time.',
+      confirmLabel: 'Remove',
+      busyLabel: 'Removing…',
+      onConfirm: () => deleteAttempt.mutateAsync(attempt.id),
+    });
+  }
+
+  function confirmEndForEveryone() {
+    askToConfirm({
+      title: 'End the exam for everyone?',
+      message:
+        'Every student who is still writing is submitted now, and the test is closed so nobody new can start.',
+      confirmLabel: 'End exam',
+      busyLabel: 'Ending…',
+      onConfirm: () => endExamForEveryone.mutateAsync(),
+    });
   }
 
   return (
@@ -31,20 +62,28 @@ export function ResultsPanel({ testId }: { testId: number }) {
       {resultsQuery.isError && <FormError>{resultsQuery.error.message}</FormError>}
       {unlockAttempt.error && <FormError>{unlockAttempt.error.message}</FormError>}
 
-      {resultsQuery.data && resultsQuery.data.attempts.length === 0 && (
+      {resultsQuery.data && attempts.length === 0 && (
         <p className={styles.note}>Students who start the test will appear here.</p>
       )}
 
-      {resultsQuery.data && resultsQuery.data.attempts.length > 0 && (
+      {attempts.length > 0 && (
         <>
+          {isAnyoneWriting && (
+            <Button variant="danger" onClick={confirmEndForEveryone}>
+              End exam for everyone
+            </Button>
+          )}
           <ul className={styles.results}>
-            {resultsQuery.data.attempts.map((result) => (
+            {attempts.map((attempt) => (
               <ResultRow
-                key={result.id}
-                result={result}
-                isUnlocking={unlockAttempt.isPending && unlockAttempt.variables === result.id}
-                onUnlock={() => unlockAttempt.mutate(result.id)}
-                onRemove={() => setAttemptToRemove(result)}
+                key={attempt.id}
+                result={attempt}
+                actions={{
+                  isUnlocking: unlockAttempt.isPending && unlockAttempt.variables === attempt.id,
+                  onUnlock: () => unlockAttempt.mutate(attempt.id),
+                  onEnd: () => confirmEnd(attempt),
+                  onRemove: () => confirmRemove(attempt),
+                }}
               />
             ))}
           </ul>
@@ -52,67 +91,7 @@ export function ResultsPanel({ testId }: { testId: number }) {
         </>
       )}
 
-      {attemptToRemove && (
-        <ConfirmDialog
-          title={`Remove ${attemptToRemove.studentName}?`}
-          message="Their start time and exits are deleted. While the test is open, they can start again with the full time."
-          confirmLabel="Remove"
-          busyLabel="Removing…"
-          isBusy={deleteAttempt.isPending}
-          errorMessage={deleteAttempt.error?.message}
-          onCancel={closeRemoveDialog}
-          onConfirm={() =>
-            deleteAttempt.mutate(attemptToRemove.id, { onSuccess: closeRemoveDialog })
-          }
-        />
-      )}
+      {confirmationDialog}
     </Panel>
-  );
-}
-
-type ResultRowProps = {
-  result: AttemptResult;
-  isUnlocking: boolean;
-  onUnlock: () => void;
-  onRemove: () => void;
-};
-
-function ResultRow({ result, isUnlocking, onUnlock, onRemove }: ResultRowProps) {
-  const status = describeResultStatus(result);
-  const isLocked = result.status === 'locked';
-
-  return (
-    <li className={classNames(styles.row, isLocked && styles.lockedRow)}>
-      <div className={styles.rowHeader}>
-        <span className={styles.studentName}>{result.studentName}</span>
-        <span className={classNames(styles.status, styles[status.tone])}>{status.label}</span>
-      </div>
-      <dl className={styles.facts}>
-        <Fact label="Roll no." value={result.rollNumber} />
-        <Fact label="Started" value={describeClockTime(result.startedAt)} />
-        <Fact label="Finished" value={describeClockTime(result.finishedAt)} />
-        <Fact label="Exits" value={describeExits(result)} />
-        <Fact label="Away" value={describeAwayTime(result.awayMs)} />
-      </dl>
-      <div className={styles.rowActions}>
-        {isLocked && (
-          <Button variant="danger" onClick={onUnlock} disabled={isUnlocking}>
-            {isUnlocking ? 'Unlocking…' : 'Unlock'}
-          </Button>
-        )}
-        <Button variant="secondary" onClick={onRemove}>
-          Remove
-        </Button>
-      </div>
-    </li>
-  );
-}
-
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className={styles.fact}>
-      <dt>{label}</dt>
-      <dd>{value}</dd>
-    </div>
   );
 }

@@ -30,6 +30,28 @@ export function useUnlockAttempt(testId: number) {
   });
 }
 
+export function useEndAttempt(testId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (attemptId: number) =>
+      postJson<AttemptResultResponse>(`/attempts/${attemptId}/end`),
+    onSuccess: ({ attempt }) => {
+      updateResults(queryClient, testId, (attempts) => replaceAttempt(attempts, attempt));
+    },
+  });
+}
+
+export function useEndExamForEveryone(testId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => postJson<AttemptResultListResponse>(`/tests/${testId}/attempts/end`),
+    onSuccess: (results) => {
+      queryClient.setQueryData(resultsQueryKey(testId), results);
+      return queryClient.invalidateQueries({ queryKey: testQueryKeys.everything });
+    },
+  });
+}
+
 export function useDeleteAttempt(testId: number) {
   const queryClient = useQueryClient();
   return useMutation({

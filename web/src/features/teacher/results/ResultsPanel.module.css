@@ -72,6 +72,32 @@
   flex: 1 1 120px;
 }
 
+.exitHistory summary {
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.exitList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.exitItem {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 8px;
+  font-size: 0.875rem;
+}
+
+.exitDetails {
+  color: var(--color-muted);
+}
+
 .facts {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));

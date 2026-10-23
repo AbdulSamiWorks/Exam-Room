@@ -1,4 +1,4 @@
-import type { AllowedExits } from '@exam-room/shared';
+import type { AllowedExits, LeaveRule } from '@exam-room/shared';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '../../../components/Button';
@@ -26,11 +26,17 @@ const ALLOWED_EXITS_CHOICES: Choice<AllowedExits>[] = [
   { value: 2, label: '2' },
 ];
 
+const LEAVE_RULE_CHOICES: Choice<LeaveRule>[] = [
+  { value: 'lock', label: 'Lock (I can unlock)' },
+  { value: 'finish', label: 'Finish the test' },
+];
+
 const INITIAL_VALUES: CreateTestFormValues = {
   subjectId: '',
   title: '',
   durationMinutes: '30',
   allowedExits: 1,
+  leaveRule: 'lock',
 };
 
 export function CreateTestPage() {
@@ -101,6 +107,14 @@ export function CreateTestPage() {
           choices={ALLOWED_EXITS_CHOICES}
           selectedValue={values.allowedExits}
           onChange={(allowedExits) => updateValue('allowedExits', allowedExits)}
+        />
+
+        <ChoiceGroup
+          label="When a student leaves too often"
+          hint="Finish the test means the student cannot come back, and you cannot unlock it."
+          choices={LEAVE_RULE_CHOICES}
+          selectedValue={values.leaveRule}
+          onChange={(leaveRule) => updateValue('leaveRule', leaveRule)}
         />
 
         {createTest.error && <FormError>{createTest.error.message}</FormError>}

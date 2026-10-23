@@ -1,0 +1,91 @@
+import type { AttemptExit, AttemptResult } from '@exam-room/shared';
+import { Button } from '../../../components/Button';
+import { classNames } from '../../../lib/class-names';
+import {
+  describeAwayTime,
+  describeClockTime,
+  describeExitPeriod,
+  describeExitReason,
+  describeExits,
+  describeResultStatus,
+  isStoppedForLeaving,
+} from './describe-result';
+import styles from './ResultsPanel.module.css';
+
+export type ResultRowActions = {
+  isUnlocking: boolean;
+  onUnlock: () => void;
+  onEnd: () => void;
+  onRemove: () => void;
+};
+
+export function ResultRow({
+  result,
+  actions,
+}: {
+  result: AttemptResult;
+  actions: ResultRowActions;
+}) {
+  const status = describeResultStatus(result);
+  const isLocked = result.status === 'locked';
+  const isWriting = result.status === 'in_progress';
+
+  return (
+    <li className={classNames(styles.row, isStoppedForLeaving(result) && styles.lockedRow)}>
+      <div className={styles.rowHeader}>
+        <span className={styles.studentName}>{result.studentName}</span>
+        <span className={classNames(styles.status, styles[status.tone])}>{status.label}</span>
+      </div>
+      <dl className={styles.facts}>
+        <Fact label="Roll no." value={result.rollNumber} />
+        <Fact label="Started" value={describeClockTime(result.startedAt)} />
+        <Fact label="Finished" value={describeClockTime(result.finishedAt)} />
+        <Fact label="Exits" value={describeExits(result)} />
+        <Fact label="Away" value={describeAwayTime(result.awayMs)} />
+      </dl>
+      {result.exits.length > 0 && <ExitHistory exits={result.exits} />}
+      <div className={styles.rowActions}>
+        {isLocked && (
+          <Button variant="danger" onClick={actions.onUnlock} disabled={actions.isUnlocking}>
+            {actions.isUnlocking ? 'Unlocking…' : 'Unlock'}
+          </Button>
+        )}
+        {isWriting && (
+          <Button variant="secondary" onClick={actions.onEnd}>
+            End test
+          </Button>
+        )}
+        <Button variant="secondary" onClick={actions.onRemove}>
+          Remove
+        </Button>
+      </div>
+    </li>
+  );
+}
+
+function ExitHistory({ exits }: { exits: AttemptExit[] }) {
+  return (
+    <details className={styles.exitHistory}>
+      <summary>Exit history ({exits.length})</summary>
+      <ol className={styles.exitList}>
+        {exits.map((exit) => (
+          <li key={exit.leftAt} className={styles.exitItem}>
+            <span>{describeExitPeriod(exit)}</span>
+            <span className={styles.exitDetails}>
+              {describeExitReason(exit.reason)} · {describeAwayTime(exit.awayMs)}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </details>
+  );
+}
+
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className={styles.fact}>
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  );
+}
