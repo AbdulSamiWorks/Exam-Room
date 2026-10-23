@@ -1,11 +1,10 @@
 # Exam Room — Architecture
 
-> Status: **approved plan, v1** (2026-10-22). Milestones M0–M7 are built (2026-10-23); the
+> Status: **approved plan, v1** (2026-10-22). Milestones M0–M8 are built (2026-10-23); the
 > real-device checks in §15 are still to do. Update this file whenever a decision below changes.
 
 Exam Room is a small mobile-first web app. A teacher uploads a test paper (PDF), shares a link, and
-students read the paper on their phones inside the website — with a timer, exit detection and a
-traceable watermark. Expected scale: **one teacher, 5–10 students per test.**
+students read the paper on their phones inside the website — with a timer and exit detection. Expected scale: **one teacher, 5–10 students per test.**
 
 ---
 
@@ -57,7 +56,6 @@ Locally, the same code uses a plain SQLite file (`data/exam-room.db`) — no acc
 | PDF → images | `pdfjs-dist` **in the teacher's browser**                      | Free server has little CPU; the PDF never reaches the server at all             |
 | Backend      | Express 5, zod, helmet, express-rate-limit, multer             | Mature, minimal, well understood                                                |
 | Database     | SQLite via `@libsql/client` (local file in dev, Turso in prod) | Same SQL everywhere; switching is one env var                                   |
-| Watermark    | SVG pattern drawn by the browser over each page (see D5)       | No image work on the tiny server at exam time; it shows in every screenshot     |
 | Tests        | Vitest + supertest                                             | Unit tests for rules, integration tests for the API                             |
 | Repo         | npm workspaces: `shared`, `server`, `web`                      | One repo, one install, shared types                                             |
 | Hosting      | Render (free) + Turso (free)                                   | $0, deploy on `git push` — see §10                                              |
@@ -124,7 +122,8 @@ subjects   (id PK, name UNIQUE COLLATE NOCASE, created_at)
 
 tests      (id PK, code UNIQUE,            -- 6-char share code, e.g. K7M2QX (no 0/O/1/I)
             subject_id → subjects, title, duration_minutes,
-            allowed_exits CHECK (0..2), page_count, created_at)
+            allowed_exits CHECK (0..2), page_count, created_at,
+            opens_at NULL, closes_at NULL)   -- NULL opens_at = not open yet (see 6.8)
 
 test_pages (test_id → tests ON DELETE CASCADE, page_no,
             image BLOB, width, height,
@@ -136,6 +135,7 @@ attempts   (id PK, test_id → tests, student_name, roll_no, roll_no_key,  -- ke
             finish_reason CHECK IN ('student','time_up') NULL,
             started_at, deadline_at, finished_at NULL,
             exit_count DEFAULT 0, forgiven_exits DEFAULT 0,
+            version DEFAULT 0,              -- optimistic locking for concurrent updates
             UNIQUE (test_id, roll_no_key))  -- one attempt per roll number per test
 
 exits      (id PK, attempt_id → attempts, client_exit_id UNIQUE,   -- idempotency key from the phone
@@ -166,9 +166,11 @@ Size check: a page is ~150–250 KB as WebP, so Turso's 5 GB free storage holds 
 ### 6.2 Starting / resuming (student)
 
 1. Student opens `/t/<code>`, sees title + subject + time limit, enters name and roll number.
+   If the test is not open, a waiting or closed screen shows instead (see 6.8).
 2. Tapping **Start Test** requests fullscreen _first_ (browsers only allow it inside a tap), then
    calls the server.
-3. Server creates the attempt: `deadline_at = now + duration`, generates a random secret token,
+3. For a new roll number the server first checks that the test is open (6.8). It creates the
+   attempt: `deadline_at = now + duration`, generates a random secret token,
    stores only its hash, returns the token. The phone keeps it in `localStorage` (per test code)
    and sends it as `Authorization: Bearer <token>`.
 4. **Same roll number again:**
@@ -188,9 +190,8 @@ wrong phone clock.
 - `GET /api/attempt/pages/:n` returns a page **only while the attempt is in progress**.
 - The server sends the stored WebP as it is (`Cache-Control: no-store`) — no image work at exam
   time.
-- The browser draws a light diagonal watermark (name + roll number) as a repeating SVG pattern
-  over each page, in page pixels so it zooms with the page. A transparent layer covers the image,
-  so a long-press never reaches the `<img>` and cannot offer "Save image".
+- A transparent layer covers the image, so a long-press never reaches the `<img>` and cannot
+  offer "Save image". There is no watermark (removed, see D5).
 - The phone fetches images with JS and shows them via `blob:` URLs — there is no image link to copy
   or open in another app. The next page is prefetched; all page images are dropped (and their
   `blob:` URLs revoked) as soon as the paper closes.
@@ -221,6 +222,11 @@ wrong phone clock.
   red warning screen ("You left the test (X of Y allowed)…" → **Continue**) or the locked screen.
 - The Finish confirmation is a custom in-page modal, never `window.confirm()` — native dialogs can
   fire `blur` and would count as a false exit.
+- **The screen stays on.** While the attempt is in progress the page holds a Screen Wake Lock
+  (`web/src/features/student/use-screen-wake-lock.ts`). Without it the phone screen turns off after
+  30–60 s without a touch, the page becomes hidden, and that counts as an exit. Phones drop the lock
+  whenever the page is hidden, so it is requested again when the page is visible, and on the next
+  touch if the phone refused (for example in battery saver). It needs HTTPS.
 
 ### 6.6 The rules (pure functions in `attempts/rules.ts`)
 
@@ -241,6 +247,28 @@ again (pure `summarizeAttempt` in `attempts/attempt-results.ts`). The page polls
 `submitted → Submitted` / `Time up`, `locked → Left the test` (row in red, with an **Unlock**
 button). No WebSockets — not needed at this scale.
 
+The teacher can also **Remove** one student (their attempt and exits are deleted, so the roll
+number can start again with full time) or **Delete** the whole test. Both ask first in a custom
+confirm dialog.
+
+### 6.8 Opening and closing a test
+
+- A test has `opens_at` and `closes_at`; both may be NULL. The pure rule `availabilityAt` in
+  `tests/test-availability.ts` gives `not_open` (no opening time), `scheduled` (before
+  `opens_at`), `open`, or `closed` (from `closes_at`). It always uses the server clock, and every
+  test response includes the result as `availability`.
+- **New tests start closed** (`opens_at` NULL), so the link can be shared early without anyone
+  seeing the paper. Tests created before this change got `opens_at = created_at` (migration 3).
+- **Open now** sets `opens_at = now` and keeps a closing time that is still ahead. **Close now**
+  sets `closes_at = now`; on a scheduled test it cancels the opening instead. **Set times** saves
+  both times; the closing time must be after the opening time.
+- **Closing only stops new students.** A new roll number gets `403 test_not_open` or
+  `403 test_closed`. Students who already started keep their full time, can still load pages, and
+  can resume on another phone with the same name and roll number.
+- A student on the start page while the test is not open sees a waiting screen that asks the server
+  again every 5 s, so it turns into the start form as soon as the test opens. The teacher's test
+  page checks again every 10 s while a scheduled change is coming.
+
 ## 7. API
 
 Teacher (session cookie required, except login):
@@ -256,15 +284,21 @@ POST   /api/tests                 multipart: subjectId, title, durationMinutes, 
 GET    /api/tests/:id
 GET    /api/tests/:id/attempts
 POST   /api/attempts/:id/unlock
+POST   /api/tests/:id/open
+POST   /api/tests/:id/close
+PUT    /api/tests/:id/schedule        { opensAt, closesAt | null }
+DELETE /api/tests/:id                 → test, pages, attempts and exits
+DELETE /api/attempts/:id              → one attempt and its exits (frees the roll number)
 ```
 
 Student (public by test code, then `Authorization: Bearer <token>`):
 
 ```
-GET    /api/public/tests/:code             → title, subject, durationMinutes, pageCount, allowedExits
+GET    /api/public/tests/:code             → title, subject, durationMinutes, pageCount, allowedExits,
+                                              availability, opensAt, closesAt
 POST   /api/public/tests/:code/attempts    { name, rollNo }  → token + state
 GET    /api/attempt                        → state (status, deadlineAt, serverNow, exits, pageCount…)
-GET    /api/attempt/pages/:n               → watermarked image (in progress only)
+GET    /api/attempt/pages/:n               → page image (in progress only)
 POST   /api/attempt/exits                  { clientExitId, reason }
 POST   /api/attempt/return                 { clientExitId, reason, awayMsClient }
 POST   /api/attempt/finish
@@ -285,12 +319,12 @@ Other: `GET /api/health`. Errors always use one JSON shape: `{ error: { code, me
 - **Proxy:** `trust proxy` enabled so rate limiting sees real IPs behind Render.
 - **Client deterrents:** no text selection, copy, cut, right-click, drag or long-press save
   (`-webkit-touch-callout: none` + a transparent layer over the images); `@media print` hides the
-  page; no download/print buttons anywhere. The watermark is drawn over every page (D5).
+  page; no download/print buttons anywhere.
 
 ## 9. What a browser cannot do (honest limits)
 
-- It cannot block screenshots or a second phone photographing the screen → the watermark makes any
-  leak traceable.
+- It cannot block screenshots or a second phone photographing the screen. Without a watermark
+  (removed, D5) a leaked screenshot cannot be traced back to a student.
 - It cannot block switching apps → it detects it and makes leaving costly.
 - Some exits are accidents (incoming call, notification shade, low-battery popup) → **Unlock**.
 - iPhone Safari does not support the Fullscreen API for web pages → on iPhone, detection uses
@@ -384,45 +418,49 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 | M5  | Anti-cheating: exit detection, warning/lock screens, server rules, copy/select/long-press blocking     |
 | M6  | Live results table (red rows) + Unlock                                                                 |
 | M7  | Hardening, real-device testing, `render.yaml`, README run + deploy guide                               |
+| M8  | Exam-day safety: screen stays on, open/close/schedule tests, delete tests and attempts, no watermark   |
 
-Status (2026-10-23): M0–M7 are built and tested (unit tests, API tests and a smoke test of the
+Status (2026-10-23): M0–M8 are built and tested (unit tests, API tests and a smoke test of the
 production build). Still to do by hand: the real-device checks in §15.
 
 ## 13. Decision log
 
-| #   | Decision                                                                                                                                              | Reason                                                                                                                                               | Revisit when                                                           |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| D1  | Single process serves API + SPA                                                                                                                       | Same origin, one deploy unit                                                                                                                         | Never at this scale                                                    |
-| D2  | SQLite via libSQL (file locally, Turso in prod)                                                                                                       | Free, simple, same SQL in both places                                                                                                                | > hundreds of concurrent users                                         |
-| D3  | Page images stored in the DB                                                                                                                          | Host has no persistent disk; tiny data volume                                                                                                        | Storage > ~3 GB → move to object storage (R2)                          |
-| D4  | PDF → images in the teacher's browser                                                                                                                 | Free server CPU is tiny; PDF never leaves the teacher's device                                                                                       | Never                                                                  |
-| D5  | Watermark drawn by the browser as an SVG overlay (changed 2026-10-22; was: burned in with sharp)                                                      | Burning in would re-encode ~100 images at exam start on ~0.1 vCPU; the overlay is in every screenshot or photo of the screen, which is the real leak | Raw page images leak → burn a mark in once at upload                   |
-| D6  | Server-authoritative timer and status                                                                                                                 | Client can't be trusted                                                                                                                              | —                                                                      |
-| D7  | Refresh counts as an exit                                                                                                                             | Browser can't distinguish refresh from leaving                                                                                                       | Teacher feedback                                                       |
-| D8  | Timer never pauses (away, locked, unlocked)                                                                                                           | Simple and fair                                                                                                                                      | Teacher feedback                                                       |
-| D9  | Resume on another device allowed but counts as an exit                                                                                                | Dead-battery case without a free pass                                                                                                                | Teacher feedback                                                       |
-| D10 | Teacher results by 5 s polling, no WebSockets                                                                                                         | Simpler; enough for 10 students                                                                                                                      | Many concurrent tests                                                  |
-| D11 | Single teacher password, no user table                                                                                                                | Spec: one teacher                                                                                                                                    | Multiple teachers needed → add `teachers` table behind the auth module |
-| D12 | Original PDF never stored                                                                                                                             | Can't leak what we don't keep                                                                                                                        | —                                                                      |
-| D13 | TypeScript pinned to 6.0                                                                                                                              | typescript-eslint does not support TS 7 yet                                                                                                          | typescript-eslint supports TS 7                                        |
-| D14 | Server bundled with esbuild; `tsc` only type-checks                                                                                                   | One output file, no `rootDir`/workspace build issues                                                                                                 | —                                                                      |
-| D15 | `shared/` is types-only                                                                                                                               | Erased at build → nothing to build or deploy for it                                                                                                  | Runtime sharing needed (e.g. zod schemas on both sides)                |
-| D16 | Stateless HMAC session cookie (no sessions table)                                                                                                     | One teacher; nothing to store                                                                                                                        | Need to revoke sessions → rotate `SESSION_SECRET` or add a table       |
-| D17 | A return can record a lost exit; exits are idempotent by `clientExitId`                                                                               | Phones often drop the request sent while the page goes to the background                                                                             | —                                                                      |
-| D18 | Teacher results apply the time rule for display, without writing                                                                                      | Reads stay cheap; the student's next request writes it                                                                                               | —                                                                      |
-| D19 | pdf.js wasm decoders, fonts and CMaps are shipped as static files (`web/public/pdfjs`, copied at build start) and the CSP allows `'wasm-unsafe-eval'` | Scanned PDFs often use JBIG2 / JPEG 2000 images, which pdf.js can only decode with these files                                                       | pdf.js stops needing them                                              |
-| D20 | One page at a time in the viewer                                                                                                                      | Zoom and pan stay simple and "Page X of Y" is exact                                                                                                  | Teacher feedback                                                       |
-| D21 | Unlock forgives exactly one exit, so the next exit locks again                                                                                        | Simple and fair; the teacher decides each time                                                                                                       | Teacher feedback                                                       |
+| #   | Decision                                                                                                                                              | Reason                                                                                         | Revisit when                                                           |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| D1  | Single process serves API + SPA                                                                                                                       | Same origin, one deploy unit                                                                   | Never at this scale                                                    |
+| D2  | SQLite via libSQL (file locally, Turso in prod)                                                                                                       | Free, simple, same SQL in both places                                                          | > hundreds of concurrent users                                         |
+| D3  | Page images stored in the DB                                                                                                                          | Host has no persistent disk; tiny data volume                                                  | Storage > ~3 GB → move to object storage (R2)                          |
+| D4  | PDF → images in the teacher's browser                                                                                                                 | Free server CPU is tiny; PDF never leaves the teacher's device                                 | Never                                                                  |
+| D5  | No watermark (changed 2026-10-23; was: an SVG overlay drawn by the browser, and before that burned in with sharp)                                     | The project owner decided it is not needed                                                     | Papers leak → bring back the browser overlay                           |
+| D6  | Server-authoritative timer and status                                                                                                                 | Client can't be trusted                                                                        | —                                                                      |
+| D7  | Refresh counts as an exit                                                                                                                             | Browser can't distinguish refresh from leaving                                                 | Teacher feedback                                                       |
+| D8  | Timer never pauses (away, locked, unlocked)                                                                                                           | Simple and fair                                                                                | Teacher feedback                                                       |
+| D9  | Resume on another device allowed but counts as an exit                                                                                                | Dead-battery case without a free pass                                                          | Teacher feedback                                                       |
+| D10 | Teacher results by 5 s polling, no WebSockets                                                                                                         | Simpler; enough for 10 students                                                                | Many concurrent tests                                                  |
+| D11 | Single teacher password, no user table                                                                                                                | Spec: one teacher                                                                              | Multiple teachers needed → add `teachers` table behind the auth module |
+| D12 | Original PDF never stored                                                                                                                             | Can't leak what we don't keep                                                                  | —                                                                      |
+| D13 | TypeScript pinned to 6.0                                                                                                                              | typescript-eslint does not support TS 7 yet                                                    | typescript-eslint supports TS 7                                        |
+| D14 | Server bundled with esbuild; `tsc` only type-checks                                                                                                   | One output file, no `rootDir`/workspace build issues                                           | —                                                                      |
+| D15 | `shared/` is types-only                                                                                                                               | Erased at build → nothing to build or deploy for it                                            | Runtime sharing needed (e.g. zod schemas on both sides)                |
+| D16 | Stateless HMAC session cookie (no sessions table)                                                                                                     | One teacher; nothing to store                                                                  | Need to revoke sessions → rotate `SESSION_SECRET` or add a table       |
+| D17 | A return can record a lost exit; exits are idempotent by `clientExitId`                                                                               | Phones often drop the request sent while the page goes to the background                       | —                                                                      |
+| D18 | Teacher results apply the time rule for display, without writing                                                                                      | Reads stay cheap; the student's next request writes it                                         | —                                                                      |
+| D19 | pdf.js wasm decoders, fonts and CMaps are shipped as static files (`web/public/pdfjs`, copied at build start) and the CSP allows `'wasm-unsafe-eval'` | Scanned PDFs often use JBIG2 / JPEG 2000 images, which pdf.js can only decode with these files | pdf.js stops needing them                                              |
+| D20 | One page at a time in the viewer                                                                                                                      | Zoom and pan stay simple and "Page X of Y" is exact                                            | Teacher feedback                                                       |
+| D21 | Unlock forgives exactly one exit, so the next exit locks again                                                                                        | Simple and fair; the teacher decides each time                                                 | Teacher feedback                                                       |
+| D22 | Hold a Screen Wake Lock during the exam                                                                                                               | A screen that turns off makes the page hidden, which would count as an exit                    | Browsers change the API                                                |
+| D23 | New tests start closed; `opens_at` / `closes_at` on `tests` serve both the buttons and the schedule                                                   | The link can be shared early without showing the paper; one pair of columns, one pure rule     | —                                                                      |
+| D24 | Closing only stops new students; students who started keep their full time                                                                            | "Who may start" and "end everyone's exam" are different actions                                | An "end the exam now" feature is added                                 |
+| D25 | Deletes remove dependent rows explicitly in one batch                                                                                                 | SQLite only follows `ON DELETE CASCADE` when `PRAGMA foreign_keys` is on                       | —                                                                      |
 
 ## 14. Future extension points (not built now)
 
 - Multiple teachers → `teachers` table + `teacher_id` on subjects/tests; only the auth module changes.
-- Delete/archive tests, CSV export of results → small additions to `tests` / `attempts` modules.
+- Archive tests, CSV export of results → small additions to `tests` / `attempts` modules.
 - Larger storage → swap page storage to Cloudflare R2 behind the same `tests` module interface.
-- Delete a single student attempt (e.g. a wrong roll number) → small addition to the attempts module.
 
 ## 15. Release checklist (to verify before first deploy)
 
-- Production build + CSP: create a test from a scanned PDF and from a Word-exported PDF; confirm
-  pdf.js renders both (worker, fonts, and image decoders allowed by the Content Security Policy).
-- Real devices: Android Chrome and iPhone Safari for every student screen.
+Follow [DEVICE-CHECKS.md](DEVICE-CHECKS.md) on a real Android phone (Chrome) and a real iPhone
+(Safari), on the HTTPS site, before the first real exam and after big changes. It also covers the
+production build + CSP check: pdf.js must render a scanned PDF and a Word-exported PDF.

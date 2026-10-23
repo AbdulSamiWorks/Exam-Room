@@ -34,6 +34,7 @@ npm run dev
 - Web app: http://localhost:5173 (API calls are proxied to the server)
 - API server: http://localhost:3000
 - On a phone on the same Wi-Fi: use the "Network" address Vite prints, e.g. `http://192.168.x.x:5173`
+  (keeping the screen on and fullscreen need HTTPS, so check those on the Render site)
 - Teacher password: the `TEACHER_PASSWORD` value in `.env`
 
 ## Scripts
@@ -94,8 +95,5 @@ Every push to `main` deploys again automatically.
 
 ### Test on real phones before the first real exam
 
-- Create a test from a scanned PDF and from a PDF exported from Word; check that every page looks
-  right.
-- On Android Chrome and on iPhone Safari: start, zoom a page, switch to another app and back
-  (warning), leave again (locked), unlock from the teacher page, finish.
-- On iPhone, Safari does not allow fullscreen for websites; exit detection still works.
+Follow the step-by-step list in [docs/DEVICE-CHECKS.md](docs/DEVICE-CHECKS.md) on an Android
+phone (Chrome) and an iPhone (Safari), on the Render HTTPS address.
