@@ -89,7 +89,6 @@ function JoinForm({ test, testCode, onStarted, isResuming }: JoinFormProps) {
               </li>
             )}
             <li>{describeExitRule(test.allowedExits)}</li>
-            <li>Your name and roll number are printed on every page.</li>
             <li>Answer on your own paper. When you are done, tap Finish.</li>
           </ul>
         </Panel>

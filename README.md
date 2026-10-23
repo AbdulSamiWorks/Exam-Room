@@ -2,7 +2,7 @@
 
 A simple, mobile-first web app for showing test papers to students on their phones.
 The teacher uploads a PDF, shares a link, and students read the paper inside the website with a
-timer, exit detection and a watermark.
+timer and exit detection.
 
 Architecture, decisions and roadmap: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 

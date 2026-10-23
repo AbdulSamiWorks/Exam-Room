@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch';
 import { Button } from '../../../components/Button';
 import { usePageImage, usePrefetchPageImage } from './use-page-image';
-import { Watermark } from './Watermark';
 import styles from './PaperViewer.module.css';
 
 const MAX_ZOOM = 4;
@@ -15,15 +14,9 @@ type PaperViewerProps = {
   testCode: string;
   attemptToken: string;
   pageSizes: PageSize[];
-  watermarkText: string;
 };
 
-export function PaperViewer({
-  testCode,
-  attemptToken,
-  pageSizes,
-  watermarkText,
-}: PaperViewerProps) {
+export function PaperViewer({ testCode, attemptToken, pageSizes }: PaperViewerProps) {
   const [pageNumber, setPageNumber] = useState(1);
   const pageCount = pageSizes.length;
   const hasNextPage = pageNumber < pageCount;
@@ -48,7 +41,6 @@ export function PaperViewer({
               attemptToken={attemptToken}
               pageNumber={pageNumber}
               pageSize={pageSizes[pageNumber - 1] ?? FALLBACK_PAGE_SIZE}
-              watermarkText={watermarkText}
             />
           </TransformComponent>
         </TransformWrapper>
@@ -82,16 +74,9 @@ type PaperPageProps = {
   attemptToken: string;
   pageNumber: number;
   pageSize: PageSize;
-  watermarkText: string;
 };
 
-function PaperPage({
-  testCode,
-  attemptToken,
-  pageNumber,
-  pageSize,
-  watermarkText,
-}: PaperPageProps) {
+function PaperPage({ testCode, attemptToken, pageNumber, pageSize }: PaperPageProps) {
   const pageImage = usePageImage(testCode, attemptToken, pageNumber);
 
   return (
@@ -104,7 +89,6 @@ function PaperPage({
           draggable={false}
         />
       )}
-      <Watermark text={watermarkText} pageWidth={pageSize.width} pageHeight={pageSize.height} />
       <div className={styles.shield} />
       {pageImage.isPending && <p className={styles.pageMessage}>Loading page {pageNumber}…</p>}
       {pageImage.isError && (

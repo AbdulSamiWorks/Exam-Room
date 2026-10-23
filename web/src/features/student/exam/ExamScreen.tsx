@@ -56,12 +56,7 @@ export function ExamScreen({ testCode, attemptToken, attempt, onTimeUp }: ExamSc
         <Button onClick={() => setIsFinishDialogOpen(true)}>Finish</Button>
       </header>
 
-      <PaperViewer
-        testCode={testCode}
-        attemptToken={attemptToken}
-        pageSizes={attempt.pageSizes}
-        watermarkText={`${attempt.studentName} · Roll no. ${attempt.rollNumber}`}
-      />
+      <PaperViewer testCode={testCode} attemptToken={attemptToken} pageSizes={attempt.pageSizes} />
 
       {isFinishDialogOpen && (
         <FinishDialog
