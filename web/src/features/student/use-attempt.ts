@@ -1,10 +1,11 @@
-import type { AttemptResponse, StartAttemptRequest } from '@exam-room/shared';
+import type { AttemptResponse, AttemptStatus, StartAttemptRequest } from '@exam-room/shared';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { ApiError } from '../../api/http-client';
 import { saveStoredAttempt } from './attempt-storage';
 import { fetchAttempt, fetchPublicTest, finishAttempt, startAttempt } from './student-api';
 
 const LOCKED_REFRESH_INTERVAL_MS = 5000;
+const IN_PROGRESS_REFRESH_INTERVAL_MS = 30_000;
 const UNAUTHORIZED_STATUS = 401;
 
 export const studentQueryKeys = {
@@ -32,9 +33,14 @@ export function useAttempt(testCode: string, attemptToken: string) {
     queryKey: studentQueryKeys.attempt(testCode),
     queryFn: () => fetchAttempt(attemptToken),
     select: (response) => response.attempt,
-    refetchInterval: (query) =>
-      query.state.data?.attempt.status === 'locked' ? LOCKED_REFRESH_INTERVAL_MS : false,
+    refetchInterval: (query) => refreshIntervalFor(query.state.data?.attempt.status),
   });
+}
+
+function refreshIntervalFor(status: AttemptStatus | undefined): number | false {
+  if (status === 'locked') return LOCKED_REFRESH_INTERVAL_MS;
+  if (status === 'in_progress') return IN_PROGRESS_REFRESH_INTERVAL_MS;
+  return false;
 }
 
 export function setAttemptData(
