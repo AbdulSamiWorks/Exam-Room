@@ -2,9 +2,9 @@ import { useParams } from 'react-router';
 import { FormError } from '../../../components/FormError';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { Page } from '../../../components/Page';
-import { Panel } from '../../../components/Panel';
 import { describeDuration, describePageCount } from '../../../lib/describe-test-length';
 import { describeAllowedExits } from '../tests/describe-test';
+import { ResultsPanel } from '../results/ResultsPanel';
 import { useTest } from '../tests/use-tests';
 import { ShareTestPanel } from './ShareTestPanel';
 import styles from './TestDetailsPage.module.css';
@@ -37,9 +37,7 @@ export function TestDetailsPage() {
     <Page title={test.title} subtitle={subtitle} backLink={BACK_TO_TESTS}>
       <div className={styles.sections}>
         <ShareTestPanel test={test} />
-        <Panel title="Results">
-          <p className={styles.emptyResults}>Students who start the test will appear here.</p>
-        </Panel>
+        <ResultsPanel testId={test.id} />
       </div>
     </Page>
   );

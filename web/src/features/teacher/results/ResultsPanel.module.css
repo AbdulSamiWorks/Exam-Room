@@ -1,0 +1,87 @@
+.note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.lockedRow {
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.rowHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.studentName {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.status {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.active {
+  background: #eff6ff;
+  color: var(--color-primary);
+}
+
+.success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.danger {
+  background: var(--color-danger);
+  color: #ffffff;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 6px 12px;
+  margin: 0;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fact dt {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+.fact dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
