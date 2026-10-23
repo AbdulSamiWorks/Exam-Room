@@ -13,10 +13,19 @@ export type StudentTestCard = TestSchedule & {
   finishReason: FinishReason | null;
   maxMarks: number | null;
   releasedMarks: number | null;
+  bountyNote: string;
+  bountyPoints: number;
+};
+
+export type ClassLeader = {
+  name: string;
+  points: number;
 };
 
 export type StudentHomeResponse = {
   student: StudentProfile;
   tests: StudentTestCard[];
+  points: number;
+  classLeaders: ClassLeader[];
   serverTime: number;
 };

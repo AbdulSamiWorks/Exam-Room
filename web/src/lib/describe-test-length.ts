@@ -12,12 +12,13 @@ export function describePageCount(pageCount: number): string {
 }
 
 type PaperSize = {
-  paperKind: 'pages' | 'typed';
+  paperKind: 'pages' | 'typed' | 'none';
   pageCount: number;
   questionCount: number;
 };
 
 export function describePaperSize({ paperKind, pageCount, questionCount }: PaperSize): string {
+  if (paperKind === 'none') return 'No paper';
   if (paperKind === 'pages') return describePageCount(pageCount);
   return questionCount === 1 ? '1 question' : `${questionCount} questions`;
 }

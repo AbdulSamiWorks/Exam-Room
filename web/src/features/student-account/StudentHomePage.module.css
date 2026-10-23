@@ -73,3 +73,9 @@
   margin: 0;
   padding-left: 20px;
 }
+
+.points {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}

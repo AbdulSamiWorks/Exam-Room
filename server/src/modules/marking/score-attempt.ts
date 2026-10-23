@@ -39,16 +39,18 @@ export function scoreAttempt(
   return score;
 }
 
-export function topScorerNames(
-  totals: ReadonlyArray<{ studentName: string; totalMarks: number | null }>,
-): string[] {
-  const scored = totals.filter(
-    (entry): entry is { studentName: string; totalMarks: number } => entry.totalMarks !== null,
-  );
-  if (scored.length === 0) return [];
-  const best = Math.max(...scored.map((entry) => entry.totalMarks));
+export function topScorers<Entry extends { totalMarks: number | null }>(
+  entries: readonly Entry[],
+): Entry[] {
+  const best = Math.max(0, ...entries.map((entry) => entry.totalMarks ?? 0));
   if (best <= 0) return [];
-  return scored.filter((entry) => entry.totalMarks === best).map((entry) => entry.studentName);
+  return entries.filter((entry) => entry.totalMarks === best);
+}
+
+export function topScorerNames(
+  entries: ReadonlyArray<{ studentName: string; totalMarks: number | null }>,
+): string[] {
+  return topScorers(entries).map((entry) => entry.studentName);
 }
 
 export function marksProblem(

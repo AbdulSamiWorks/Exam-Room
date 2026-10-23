@@ -12,12 +12,15 @@ import {
 import styles from './TestCard.module.css';
 
 export function TestCard({ test }: { test: TestSummary }) {
+  const isAssignment = test.kind === 'assignment';
   const testDetails = [
     describeTestKind(test.kind),
     describePaperSize(test),
-    describeDuration(test.durationMinutes),
-    describeAllowedExits(test.allowedExits),
-  ].join(' · ');
+    isAssignment ? 'No timer' : describeDuration(test.durationMinutes),
+    isAssignment ? undefined : describeAllowedExits(test.allowedExits),
+  ]
+    .filter(Boolean)
+    .join(' · ');
   const chapters = describeChapters(test.chapters);
   const activity = [
     describeStudentCount(test.studentCount),

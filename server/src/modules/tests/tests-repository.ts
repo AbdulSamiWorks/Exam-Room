@@ -34,7 +34,8 @@ export type NewTest = StoredTestSettings & {
 
 export type TestContent =
   | { paperKind: 'pages'; pages: PageImage[]; answerSheet: StoredPaper | undefined }
-  | { paperKind: 'typed'; typedPaper: StoredPaper; paperImages: PageImage[] };
+  | { paperKind: 'typed'; typedPaper: StoredPaper; paperImages: PageImage[] }
+  | { paperKind: 'none'; maxMarks: number };
 
 const SELECT_TEST_SUMMARY = `
   SELECT
@@ -50,6 +51,8 @@ const SELECT_TEST_SUMMARY = `
     tests.question_count,
     tests.max_marks,
     tests.written_answers,
+    tests.bounty_note,
+    tests.bounty_points,
     tests.results_released_at,
     tests.created_at,
     tests.opens_at,
@@ -110,17 +113,19 @@ export async function insertTest(
   content: TestContent,
 ): Promise<number> {
   const pages = content.paperKind === 'pages' ? content.pages : [];
-  const storedPaper = content.paperKind === 'pages' ? content.answerSheet : content.typedPaper;
-  const paperColumns = paperColumnValues(storedPaper);
+  const paperColumns =
+    content.paperKind === 'none'
+      ? { ...paperColumnValues(undefined), maxMarks: content.maxMarks }
+      : paperColumnValues(content.paperKind === 'pages' ? content.answerSheet : content.typedPaper);
 
   const transaction = await database.transaction('write');
   try {
     const insertedTest = await transaction.execute({
       sql: `INSERT INTO tests
               (code, subject_id, kind, title, duration_minutes, allowed_exits, leave_rule,
-               written_answers, paper_kind, page_count, paper, answer_key, question_count,
-               max_marks, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               written_answers, bounty_note, bounty_points, paper_kind, page_count, paper,
+               answer_key, question_count, max_marks, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id`,
       args: [
         newTest.code,
@@ -131,6 +136,8 @@ export async function insertTest(
         newTest.allowedExits,
         newTest.leaveRule,
         newTest.writtenAnswers,
+        newTest.bountyNote,
+        newTest.bountyPoints,
         content.paperKind,
         pages.length,
         paperColumns.paper,
@@ -203,7 +210,7 @@ export async function saveTestSettings(
       {
         sql: `UPDATE tests
               SET subject_id = ?, kind = ?, title = ?, duration_minutes = ?, allowed_exits = ?,
-                  leave_rule = ?, written_answers = ?
+                  leave_rule = ?, written_answers = ?, bounty_note = ?, bounty_points = ?
               WHERE id = ?`,
         args: [
           settings.subjectId,
@@ -213,6 +220,8 @@ export async function saveTestSettings(
           settings.allowedExits,
           settings.leaveRule,
           settings.writtenAnswers,
+          settings.bountyNote,
+          settings.bountyPoints,
           testId,
         ],
       },
@@ -303,6 +312,7 @@ export async function deleteTestWithResults(database: Database, testId: number):
       { sql: 'DELETE FROM test_pages WHERE test_id = ?', args: [testId] },
       { sql: 'DELETE FROM paper_images WHERE test_id = ?', args: [testId] },
       { sql: 'DELETE FROM test_chapters WHERE test_id = ?', args: [testId] },
+      { sql: 'DELETE FROM points WHERE test_id = ?', args: [testId] },
       { sql: 'DELETE FROM tests WHERE id = ?', args: [testId] },
     ],
     'write',
@@ -342,6 +352,8 @@ function toTestRecord(row: Row): TestRecord {
     questionCount: Number(row.question_count),
     maxMarks: row.max_marks === null ? null : Number(row.max_marks),
     writtenAnswers: String(row.written_answers) as WrittenAnswers,
+    bountyNote: String(row.bounty_note),
+    bountyPoints: Number(row.bounty_points),
     resultsReleasedAt: row.results_released_at === null ? null : Number(row.results_released_at),
     studentCount: Number(row.student_count),
     createdAt: Number(row.created_at),

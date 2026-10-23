@@ -23,6 +23,7 @@ export function studentTestLink(testCode: string): string {
 const TEST_KIND_LABELS: Record<TestKind, string> = {
   test: 'Test',
   quiz: 'Quiz',
+  assignment: 'Assignment',
 };
 
 export function describeTestKind(kind: TestKind): string {

@@ -1,4 +1,9 @@
-import type { AttemptMarking, MarkingResponse, TeacherPaperResponse } from '@exam-room/shared';
+import type {
+  AttemptMarking,
+  AttemptScore,
+  MarkingResponse,
+  TeacherPaperResponse,
+} from '@exam-room/shared';
 import type { Database } from '../../database/connection.js';
 import type { AttemptRecord } from '../attempts/attempt-record.js';
 import { applyTimeLimit } from '../attempts/attempt-rules.js';
@@ -21,10 +26,12 @@ export async function markTest(
   const markings = attempts.map((attempt) =>
     buildAttemptMarking(attempt, storedPaper, rows, currentTime),
   );
-  await saveScores(
-    database,
-    markings.map((marking) => ({ attemptId: marking.attemptId, score: marking.score })),
-  );
+  if (storedPaper.paper) {
+    await saveScores(
+      database,
+      markings.map((marking) => ({ attemptId: marking.attemptId, score: marking.score })),
+    );
+  }
 
   return {
     paper: storedPaper.paper,
@@ -46,7 +53,9 @@ export async function markAttempt(
     readMarkingRows(database, attempt.testId, attempt.id),
   ]);
   const marking = buildAttemptMarking(attempt, storedPaper, rows, currentTime);
-  await saveScores(database, [{ attemptId: attempt.id, score: marking.score }]);
+  if (storedPaper.paper) {
+    await saveScores(database, [{ attemptId: attempt.id, score: marking.score }]);
+  }
   return marking;
 }
 
@@ -74,6 +83,20 @@ function buildAttemptMarking(
     ),
     comment: rows.commentsByAttemptId.get(attempt.id) ?? '',
     photoCount: rows.photoCountsByAttemptId.get(attempt.id) ?? 0,
-    score: scoreAttempt(paper, answerKey, answers, questionMarks),
+    score: paper
+      ? scoreAttempt(paper, answerKey, answers, questionMarks)
+      : enteredScore(attempt.totalMarks),
+  };
+}
+
+function enteredScore(totalMarks: number | null): AttemptScore {
+  return {
+    mcqMarks: 0,
+    writtenMarks: totalMarks ?? 0,
+    totalMarks: totalMarks ?? 0,
+    correctCount: 0,
+    mcqCount: 0,
+    markedWrittenCount: totalMarks === null ? 0 : 1,
+    writtenCount: 1,
   };
 }

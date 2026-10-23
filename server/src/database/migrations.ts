@@ -343,4 +343,68 @@ export const migrations: readonly Migration[] = [
       `ALTER TABLE tests ADD COLUMN show_top_scorer INTEGER NOT NULL DEFAULT 1`,
     ],
   },
+  {
+    id: 12,
+    name: 'assignments without a paper, bounties and points',
+    rebuildsTables: true,
+    statements: [
+      `CREATE TABLE tests_rebuilt (
+        id                    INTEGER PRIMARY KEY,
+        code                  TEXT    NOT NULL UNIQUE,
+        subject_id            INTEGER NOT NULL REFERENCES subjects (id),
+        kind                  TEXT    NOT NULL DEFAULT 'test'
+                              CHECK (kind IN ('test', 'quiz', 'assignment')),
+        title                 TEXT    NOT NULL,
+        duration_minutes      INTEGER NOT NULL CHECK (duration_minutes >= 1),
+        allowed_exits         INTEGER NOT NULL CHECK (allowed_exits BETWEEN 0 AND 2),
+        leave_rule            TEXT    NOT NULL DEFAULT 'lock'
+                              CHECK (leave_rule IN ('lock', 'finish')),
+        paper_kind            TEXT    NOT NULL DEFAULT 'pages'
+                              CHECK (paper_kind IN ('pages', 'typed', 'none')),
+        page_count            INTEGER NOT NULL CHECK (page_count >= 0),
+        paper                 TEXT,
+        answer_key            TEXT    NOT NULL DEFAULT '{}',
+        question_count        INTEGER NOT NULL DEFAULT 0,
+        max_marks             REAL,
+        written_answers       TEXT    NOT NULL DEFAULT 'on_paper'
+                              CHECK (written_answers IN ('on_paper', 'typed', 'photos',
+                                                         'typed_and_photos')),
+        bounty_note           TEXT    NOT NULL DEFAULT '',
+        bounty_points         INTEGER NOT NULL DEFAULT 0 CHECK (bounty_points >= 0),
+        created_at            INTEGER NOT NULL,
+        opens_at              INTEGER,
+        closes_at             INTEGER,
+        results_released_at   INTEGER,
+        show_correct_answers  INTEGER NOT NULL DEFAULT 1,
+        show_comments         INTEGER NOT NULL DEFAULT 1,
+        show_top_scorer       INTEGER NOT NULL DEFAULT 1,
+        CHECK (paper_kind <> 'pages' OR page_count >= 1),
+        CHECK (paper_kind <> 'typed' OR paper IS NOT NULL),
+        CHECK (paper_kind <> 'none' OR kind = 'assignment')
+      )`,
+      `INSERT INTO tests_rebuilt
+         (id, code, subject_id, kind, title, duration_minutes, allowed_exits, leave_rule,
+          paper_kind, page_count, paper, answer_key, question_count, max_marks, written_answers,
+          created_at, opens_at, closes_at, results_released_at, show_correct_answers,
+          show_comments, show_top_scorer)
+       SELECT id, code, subject_id, kind, title, duration_minutes, allowed_exits, leave_rule,
+              paper_kind, page_count, paper, answer_key, question_count, max_marks,
+              written_answers, created_at, opens_at, closes_at, results_released_at,
+              show_correct_answers, show_comments, show_top_scorer
+       FROM tests`,
+      `DROP TABLE tests`,
+      `ALTER TABLE tests_rebuilt RENAME TO tests`,
+      `CREATE INDEX tests_subject_id ON tests (subject_id)`,
+      `CREATE TABLE points (
+        id          INTEGER PRIMARY KEY,
+        student_id  INTEGER NOT NULL REFERENCES students (id),
+        test_id     INTEGER REFERENCES tests (id),
+        points      INTEGER NOT NULL,
+        reason      TEXT    NOT NULL,
+        created_at  INTEGER NOT NULL
+      )`,
+      `CREATE INDEX points_student_id ON points (student_id)`,
+      `CREATE INDEX points_test_id ON points (test_id)`,
+    ],
+  },
 ];

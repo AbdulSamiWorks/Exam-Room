@@ -7,7 +7,7 @@ export type AllowedExits = 0 | 1 | 2;
 
 export type LeaveRule = 'lock' | 'finish';
 
-export type TestKind = 'test' | 'quiz';
+export type TestKind = 'test' | 'quiz' | 'assignment';
 
 export type TestAvailability = 'not_open' | 'scheduled' | 'open' | 'closed';
 
@@ -32,6 +32,8 @@ export type TestSummary = TestSchedule & {
   questionCount: number;
   maxMarks: number | null;
   writtenAnswers: WrittenAnswers;
+  bountyNote: string;
+  bountyPoints: number;
   resultsReleasedAt: number | null;
   studentCount: number;
   createdAt: number;
@@ -55,6 +57,8 @@ export type TestSettings = {
   allowedExits: AllowedExits;
   leaveRule: LeaveRule;
   writtenAnswers: WrittenAnswers;
+  bountyNote: string;
+  bountyPoints: number;
 };
 
 export type UpdateTestRequest = Partial<TestSettings>;
@@ -65,7 +69,7 @@ export type ScheduleTestRequest = {
 };
 
 export type CreateTestFormField =
-  keyof TestSettings | 'paperKind' | 'pages' | 'paper' | 'answerKey' | 'paperImages';
+  keyof TestSettings | 'paperKind' | 'maxMarks' | 'pages' | 'paper' | 'answerKey' | 'paperImages';
 
 export type PaperFormField = 'paper' | 'answerKey' | 'paperImages';
 
@@ -76,4 +80,7 @@ export type TestLimits = {
   maxPages: 30;
   maxPageImageBytes: 3_000_000;
   maxChaptersPerTest: 20;
+  maxBountyNoteLength: 200;
+  maxBountyPoints: 1000;
+  maxOfflineMarks: 1000;
 };

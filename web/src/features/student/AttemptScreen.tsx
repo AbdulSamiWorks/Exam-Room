@@ -37,14 +37,15 @@ export function AttemptScreen({ testCode, attemptToken, onSessionLost }: Attempt
     attemptQuery.dataUpdatedAt,
   );
   const isFinishing = outbox?.outbox.finishRequested ?? false;
+  const isTimedExam = attemptQuery.data?.test.kind !== 'assignment';
   const isOutboxSettled = outbox !== undefined && !hasUnsentWork(outbox.outbox);
 
   useExitReporting({
     testCode,
     attemptToken,
-    isWatching: status === 'in_progress' && !isFinishing,
+    isWatching: status === 'in_progress' && !isFinishing && isTimedExam,
   });
-  useScreenWakeLock(status === 'in_progress');
+  useScreenWakeLock(status === 'in_progress' && isTimedExam);
 
   useEffect(() => {
     if (status && status !== 'in_progress') forgetPaper(queryClient, testCode);

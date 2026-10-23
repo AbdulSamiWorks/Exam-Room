@@ -19,6 +19,8 @@ export function settingsOf(test: TestRecord): StoredTestSettings {
     allowedExits: test.allowedExits,
     leaveRule: test.leaveRule,
     writtenAnswers: test.writtenAnswers,
+    bountyNote: test.bountyNote,
+    bountyPoints: test.bountyPoints,
   };
 }
 
@@ -35,6 +37,8 @@ export function applySettingChanges(
     allowedExits: changes.allowedExits ?? current.allowedExits,
     leaveRule: changes.leaveRule ?? current.leaveRule,
     writtenAnswers: changes.writtenAnswers ?? current.writtenAnswers,
+    bountyNote: changes.bountyNote ?? current.bountyNote,
+    bountyPoints: changes.bountyPoints ?? current.bountyPoints,
   };
 }
 

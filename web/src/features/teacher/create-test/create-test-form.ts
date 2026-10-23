@@ -10,7 +10,11 @@ import {
   type TestSettingsFormValues,
 } from './test-settings-form';
 
-export type CreateTestFormErrors = TestSettingsFormErrors & { pdf?: string; paper?: string };
+export type CreateTestFormErrors = TestSettingsFormErrors & {
+  pdf?: string;
+  paper?: string;
+  maxMarks?: string;
+};
 
 const FILE_EXTENSION_BY_IMAGE_TYPE: Record<string, string> = {
   'image/webp': 'webp',
@@ -27,6 +31,8 @@ export function validateCreateTestForm(
   return {
     ...validateTestSettings(values),
     pdf: paperKind === 'pages' ? describePdfProblem(pdfPages, true) : undefined,
+    durationMinutes:
+      paperKind === 'none' ? undefined : validateTestSettings(values).durationMinutes,
     paper:
       paperKind === 'typed' && !isTypedPaperReady
         ? 'Paste the questions and fix the problems shown.'
@@ -49,6 +55,16 @@ export function buildCreateTestFormData(
   pages: RenderedPage[],
 ): FormData {
   return appendSettings(buildPagesFormData(pages), values, 'pages');
+}
+
+export function buildOfflineAssignmentFormData(
+  values: TestSettingsFormValues,
+  maxMarks: number,
+): FormData {
+  const formData = new FormData();
+  const field: CreateTestFormField = 'maxMarks';
+  formData.append(field, String(maxMarks));
+  return appendSettings(formData, values, 'none');
 }
 
 export function buildTypedTestFormData(
@@ -75,6 +91,8 @@ function appendSettings(
   appendText('allowedExits', String(settings.allowedExits));
   appendText('leaveRule', settings.leaveRule);
   appendText('writtenAnswers', settings.writtenAnswers);
+  appendText('bountyNote', settings.bountyNote);
+  appendText('bountyPoints', String(settings.bountyPoints));
   return formData;
 }
 

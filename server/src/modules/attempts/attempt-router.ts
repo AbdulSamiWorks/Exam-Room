@@ -19,7 +19,7 @@ import { listAnswersOfAttempt, saveAnswers } from '../answers/answers-repository
 import { findPaperForStudents, findPaperImage } from '../tests/paper-repository.js';
 import { findPageImage } from '../tests/tests-repository.js';
 import type { AttemptRecord } from './attempt-record.js';
-import { finishByStudent } from './attempt-rules.js';
+import { finishByStudent, watchesExits } from './attempt-rules.js';
 import { changeAttempt, recordExit, recordReturn } from './attempt-service.js';
 import { loadAttemptOfRequest } from './attempt-access.js';
 import { buildStudentAttempt, findTestOfAttempt } from './student-attempt-view.js';
@@ -173,6 +173,10 @@ export function createAttemptRouter(dependencies: AppDependencies): Router {
     const attempt = await loadAttempt(request);
     const exitReport = parseInput(exitReportSchema, request.body);
     const test = await findTestOfAttempt(database, attempt);
+    if (!watchesExits(test)) {
+      await respondWithAttempt(response, attempt, test);
+      return;
+    }
 
     const updatedAttempt = await recordExit(
       database,
@@ -187,6 +191,10 @@ export function createAttemptRouter(dependencies: AppDependencies): Router {
     const attempt = await loadAttempt(request);
     const returnReport = parseInput(returnReportSchema, request.body);
     const test = await findTestOfAttempt(database, attempt);
+    if (!watchesExits(test)) {
+      await respondWithAttempt(response, attempt, test);
+      return;
+    }
 
     const updatedAttempt = await recordReturn(
       database,

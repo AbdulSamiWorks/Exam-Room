@@ -1,4 +1,4 @@
-import type { StudentProfile, StudentTestCard } from '@exam-room/shared';
+import type { ClassLeader, StudentProfile, StudentTestCard } from '@exam-room/shared';
 import { Link } from 'react-router';
 import { Button } from '../../components/Button';
 import { FormError } from '../../components/FormError';
@@ -6,8 +6,10 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { Page } from '../../components/Page';
 import { Panel } from '../../components/Panel';
 import { ThemeToggle } from '../../components/ThemeToggle';
+import { describeBounty } from '../../lib/describe-bounty';
 import { describeDateTime } from '../../lib/describe-date-time';
 import { describeDuration } from '../../lib/describe-test-length';
+import { countOf, joinWithAnd } from '../../lib/text';
 import { FingerprintOffer } from './FingerprintOffer';
 import { InstallAppPanel } from './InstallAppPanel';
 import {
@@ -40,9 +42,25 @@ export function StudentHomePage({ student }: { student: StudentProfile }) {
         <InstallAppPanel />
         {home.isPending && <LoadingScreen message="Loading your tests…" />}
         {home.isError && <FormError>{home.error.message}</FormError>}
+        {home.data && <PointsPanel points={home.data.points} leaders={home.data.classLeaders} />}
         {home.data && <TestSections tests={home.data.tests} />}
       </div>
     </Page>
+  );
+}
+
+function PointsPanel({ points, leaders }: { points: number; leaders: ClassLeader[] }) {
+  if (points === 0 && leaders.length === 0) return null;
+  return (
+    <Panel>
+      <p className={styles.points}>{countOf(points, 'point')}</p>
+      {leaders.length > 0 && (
+        <p className={styles.emptyMessage}>
+          Class leader: {joinWithAnd(leaders.map((leader) => leader.name))} (
+          {countOf(leaders[0]?.points ?? 0, 'point')})
+        </p>
+      )}
+    </Panel>
   );
 }
 
@@ -84,11 +102,17 @@ function TestSection({ title, emptyMessage, tests }: TestSectionProps) {
   );
 }
 
+function describeLength(test: StudentTestCard): string {
+  if (test.kind !== 'assignment') return describeDuration(test.durationMinutes);
+  return test.closesAt === null ? 'No timer' : `Due ${describeDateTime(test.closesAt)}`;
+}
+
 function StudentTestLink({ test }: { test: StudentTestCard }) {
+  const bounty = describeBounty(test.bountyNote, test.bountyPoints);
   const timing =
     test.availability === 'scheduled'
       ? `Opens ${describeDateTime(test.opensAt)}`
-      : describeDuration(test.durationMinutes);
+      : describeLength(test);
 
   return (
     <Link to={studentTestPath(test)} className={styles.testCard}>
@@ -97,6 +121,7 @@ function StudentTestLink({ test }: { test: StudentTestCard }) {
         {test.subjectName} · {timing}
       </span>
       <span className={styles.testState}>{describeStudentTestState(test)}</span>
+      {bounty && <span className={styles.testDetails}>{bounty}</span>}
     </Link>
   );
 }

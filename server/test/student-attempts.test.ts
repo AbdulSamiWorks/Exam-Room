@@ -53,6 +53,7 @@ describe('student attempts', () => {
       expect(response.body).toEqual({
         test: {
           code: test.code,
+          kind: 'test',
           title: 'Chapter 3 Quiz',
           subjectName: test.subject.name,
           durationMinutes: 45,
@@ -63,6 +64,8 @@ describe('student attempts', () => {
           questionCount: 0,
           maxMarks: null,
           writtenAnswers: 'on_paper',
+          bountyNote: '',
+          bountyPoints: 0,
           opensAt: TEST_START_TIME,
           closesAt: null,
           availability: 'open',
@@ -110,6 +113,7 @@ describe('student attempts', () => {
         rollNumber: '17',
         test: {
           code: test.code,
+          kind: 'test',
           title: test.title,
           subjectName: test.subject.name,
           durationMinutes: 30,
@@ -120,6 +124,8 @@ describe('student attempts', () => {
           questionCount: 0,
           maxMarks: null,
           writtenAnswers: 'on_paper',
+          bountyNote: '',
+          bountyPoints: 0,
           opensAt: TEST_START_TIME,
           closesAt: null,
           availability: 'open',

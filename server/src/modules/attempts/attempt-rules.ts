@@ -96,3 +96,21 @@ export function resumeOnNewDevice(
   const withNewToken = { ...attempt, tokenHash: newTokenHash };
   return registerExit(withNewToken, exitRules, deviceChange);
 }
+
+const MILLISECONDS_PER_MINUTE = 60_000;
+export const LONGEST_ASSIGNMENT_MS = 30 * 24 * 60 * MILLISECONDS_PER_MINUTE;
+
+export type DeadlineRules = {
+  kind: 'test' | 'quiz' | 'assignment';
+  durationMinutes: number;
+  closesAt: number | null;
+};
+
+export function deadlineFor(test: DeadlineRules, startedAt: number): number {
+  if (test.kind !== 'assignment') return startedAt + test.durationMinutes * MILLISECONDS_PER_MINUTE;
+  return test.closesAt ?? startedAt + LONGEST_ASSIGNMENT_MS;
+}
+
+export function watchesExits(test: Pick<DeadlineRules, 'kind'>): boolean {
+  return test.kind !== 'assignment';
+}

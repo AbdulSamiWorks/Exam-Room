@@ -12,6 +12,7 @@ import { classLimits } from './manage-limits';
 import { classSectionOf, MANAGE_PATH, manageClassPath } from './manage-paths';
 import { classDeletionBlocker, describeClassContents } from './manage-rules';
 import { NameForm } from './NameForm';
+import { PointsSection } from './PointsSection';
 import { StudentsSection } from './StudentsSection';
 import { SubjectsSection } from './SubjectsSection';
 import { useClassTree, useDeleteClass, useRenameClass } from './use-classes';
@@ -85,6 +86,7 @@ function ClassView({ schoolClass, classes }: ClassViewProps) {
       to: manageClassPath(schoolClass.id, 'students'),
       label: `Students (${schoolClass.studentCount})`,
     },
+    { to: manageClassPath(schoolClass.id, 'points'), label: 'Points' },
   ];
 
   return (
@@ -132,11 +134,9 @@ function ClassView({ schoolClass, classes }: ClassViewProps) {
           className={styles.sectionTabs}
         />
 
-        {section === 'subjects' ? (
-          <SubjectsSection schoolClass={schoolClass} classes={classes} />
-        ) : (
-          <StudentsSection schoolClass={schoolClass} classes={classes} />
-        )}
+        {section === 'subjects' && <SubjectsSection schoolClass={schoolClass} classes={classes} />}
+        {section === 'students' && <StudentsSection schoolClass={schoolClass} classes={classes} />}
+        {section === 'points' && <PointsSection schoolClass={schoolClass} />}
       </div>
       {confirmationDialog}
     </Page>

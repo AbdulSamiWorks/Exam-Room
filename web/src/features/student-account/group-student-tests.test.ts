@@ -16,6 +16,8 @@ function card(overrides: Partial<StudentTestCard>): StudentTestCard {
     finishReason: null,
     maxMarks: null,
     releasedMarks: null,
+    bountyNote: '',
+    bountyPoints: 0,
     ...overrides,
   };
 }

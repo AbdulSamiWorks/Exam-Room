@@ -16,7 +16,7 @@ import styles from './DashboardPage.module.css';
 const SUBJECT_FILTER_PARAM = 'subject';
 const KIND_FILTER_PARAM = 'type';
 const NEW_TEST_PATH = '/teacher/tests/new';
-const TEST_KINDS: readonly TestKind[] = ['test', 'quiz'];
+const TEST_KINDS: readonly TestKind[] = ['test', 'quiz', 'assignment'];
 
 export function DashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();

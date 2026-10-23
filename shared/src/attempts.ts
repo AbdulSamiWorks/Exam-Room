@@ -1,5 +1,5 @@
 import type { PaperKind, WrittenAnswers } from './paper.js';
-import type { AllowedExits, LeaveRule, TestAvailability, TestSchedule } from './tests.js';
+import type { AllowedExits, LeaveRule, TestAvailability, TestKind, TestSchedule } from './tests.js';
 
 export type AttemptStatus = 'in_progress' | 'submitted' | 'locked';
 
@@ -11,6 +11,7 @@ export type StudentExitReason = Exclude<ExitReason, 'device_change'>;
 
 export type PublicTest = TestSchedule & {
   code: string;
+  kind: TestKind;
   title: string;
   subjectName: string;
   durationMinutes: number;
@@ -21,6 +22,8 @@ export type PublicTest = TestSchedule & {
   questionCount: number;
   maxMarks: number | null;
   writtenAnswers: WrittenAnswers;
+  bountyNote: string;
+  bountyPoints: number;
   availability: TestAvailability;
 };
 

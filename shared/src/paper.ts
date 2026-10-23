@@ -27,7 +27,7 @@ export type QuestionAnswer = {
 
 export type AnswerKey = Record<string, QuestionAnswer>;
 
-export type PaperKind = 'pages' | 'typed';
+export type PaperKind = 'pages' | 'typed' | 'none';
 
 export type WrittenAnswers = 'on_paper' | 'typed' | 'photos' | 'typed_and_photos';
 

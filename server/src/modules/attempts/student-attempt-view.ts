@@ -9,6 +9,7 @@ import { exitsUsed } from './attempt-rules.js';
 export function toPublicTest(test: TestRecord, currentTime: number): PublicTest {
   return {
     code: test.code,
+    kind: test.kind,
     title: test.title,
     subjectName: test.subject.name,
     durationMinutes: test.durationMinutes,
@@ -19,6 +20,8 @@ export function toPublicTest(test: TestRecord, currentTime: number): PublicTest 
     questionCount: test.questionCount,
     maxMarks: test.maxMarks,
     writtenAnswers: test.writtenAnswers,
+    bountyNote: test.bountyNote,
+    bountyPoints: test.bountyPoints,
     opensAt: test.opensAt,
     closesAt: test.closesAt,
     availability: availabilityAt(test, currentTime),

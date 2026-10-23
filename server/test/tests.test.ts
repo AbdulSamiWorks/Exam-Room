@@ -74,6 +74,8 @@ describe('tests', () => {
       questionCount: 0,
       maxMarks: null,
       writtenAnswers: 'on_paper',
+      bountyNote: '',
+      bountyPoints: 0,
       resultsReleasedAt: null,
       studentCount: 0,
       createdAt: TEST_START_TIME,

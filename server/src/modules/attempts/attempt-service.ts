@@ -8,6 +8,7 @@ import type { TestRecord } from '../tests/test-record.js';
 import type { AttemptChange, AttemptRecord, ExitEvent } from './attempt-record.js';
 import {
   applyTimeLimit,
+  deadlineFor,
   registerExit,
   resumeOnNewDevice,
   type ExitRules,
@@ -23,7 +24,6 @@ import {
 import { comparisonKey } from '../../lib/text.js';
 
 const MAX_SAVE_ATTEMPTS = 3;
-const MILLISECONDS_PER_MINUTE = 60_000;
 
 export type StartAttemptInput = {
   test: TestRecord;
@@ -136,6 +136,12 @@ function insertAttemptIfTestIsOpen(
   database: Database,
   input: StartAttemptInput,
 ): Promise<AttemptRecord> {
+  if (input.test.paperKind === 'none') {
+    throw forbidden(
+      'This assignment is done on paper. Your teacher enters the marks.',
+      'offline_assignment',
+    );
+  }
   const availability = availabilityAt(input.test, input.currentTime);
   if (availability === 'closed') {
     throw forbidden('This test is closed. New students cannot start it.', 'test_closed');
@@ -159,7 +165,7 @@ async function tryInsertAttempt(
       rollNumberKey: comparisonKey(student.rollNumber),
       tokenHash,
       startedAt: currentTime,
-      deadlineAt: currentTime + test.durationMinutes * MILLISECONDS_PER_MINUTE,
+      deadlineAt: deadlineFor(test, currentTime),
     });
   } catch (error) {
     if (!isUniqueConstraintError(error)) throw error;

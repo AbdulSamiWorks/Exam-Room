@@ -13,6 +13,8 @@ export type StudentTestRow = {
   finishReason: FinishReason | null;
   maxMarks: number | null;
   releasedMarks: number | null;
+  bountyNote: string;
+  bountyPoints: number;
 };
 
 export async function listTestsOfStudent(
@@ -23,6 +25,7 @@ export async function listTestsOfStudent(
   const { rows } = await database.execute({
     sql: `SELECT tests.code, tests.title, tests.kind, tests.duration_minutes, tests.opens_at,
                  tests.closes_at, tests.max_marks, tests.results_released_at,
+                 tests.bounty_note, tests.bounty_points,
                  subjects.name AS subject_name, attempts.status AS attempt_status,
                  attempts.finish_reason, attempts.total_marks
           FROM tests
@@ -45,5 +48,7 @@ export async function listTestsOfStudent(
     maxMarks: row.max_marks === null ? null : Number(row.max_marks),
     releasedMarks:
       row.results_released_at === null || row.total_marks === null ? null : Number(row.total_marks),
+    bountyNote: String(row.bounty_note),
+    bountyPoints: Number(row.bounty_points),
   }));
 }

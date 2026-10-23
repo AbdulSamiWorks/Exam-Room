@@ -1,6 +1,7 @@
 import type {
   AttemptMarkingResponse,
   MarkingResponse,
+  OfflineMarksResponse,
   ReleaseResultsResponse,
 } from '@exam-room/shared';
 import { Router, type Request } from 'express';
@@ -11,11 +12,13 @@ import { idParams } from '../../lib/input-fields.js';
 import { parseInput } from '../../lib/parse-input.js';
 import { requireTeacher } from '../auth/teacher-session.js';
 import { findAttemptById } from '../attempts/attempts-repository.js';
+import { awardBounty } from '../points/bounty.js';
 import { findPaperForStudents } from '../tests/paper-repository.js';
 import type { TestRecord } from '../tests/test-record.js';
 import { findTestById } from '../tests/tests-repository.js';
 import { replaceQuestionMarks, saveRelease } from './marking-repository.js';
 import { markAttempt, markTest } from './marking-service.js';
+import { listOfflineMarks, saveOfflineMarks } from './offline-marks-repository.js';
 import { marksProblem } from './score-attempt.js';
 
 const MAX_COMMENT_LENGTH = 2000;
@@ -29,6 +32,17 @@ const saveMarksSchema = z.object({
     }),
   ),
   comment: z.string().trim().max(MAX_COMMENT_LENGTH),
+});
+
+const offlineMarksSchema = z.object({
+  marks: z
+    .array(
+      z.object({
+        studentId: z.number().int().positive(),
+        marks: z.number().min(0).multipleOf(0.5, 'Marks can be whole or half marks.').nullable(),
+      }),
+    )
+    .max(500),
 });
 
 const releaseSchema = z.object({
@@ -58,12 +72,51 @@ export function createTestMarkingRouter(dependencies: AppDependencies): Router {
     response.json((await markTest(database, test, clock.now())) satisfies MarkingResponse);
   });
 
+  router.get('/offline-marks', async (request, response) => {
+    const test = await requireTest(request);
+    response.json({
+      maxMarks: test.maxMarks ?? 0,
+      students: await listOfflineMarks(database, test.schoolClass.id, test.id),
+    } satisfies OfflineMarksResponse);
+  });
+
+  router.put('/offline-marks', async (request, response) => {
+    const test = await requireTest(request);
+    if (test.paperKind !== 'none') {
+      throw badRequest('Marks are entered this way only for offline assignments.', 'not_offline');
+    }
+    const { marks } = parseInput(offlineMarksSchema, request.body);
+    const students = await listOfflineMarks(database, test.schoolClass.id, test.id);
+    const studentsById = new Map(students.map((student) => [student.studentId, student]));
+    const maxMarks = test.maxMarks ?? 0;
+    const toSave = marks.map((mark) => {
+      const student = studentsById.get(mark.studentId);
+      if (!student) throw badRequest('Choose students of this class.', 'student_not_found');
+      if (mark.marks !== null && mark.marks > maxMarks) {
+        throw badRequest(`Marks can be at most ${maxMarks}.`, 'invalid_marks');
+      }
+      return {
+        studentId: student.studentId,
+        studentName: student.name,
+        rollNumber: student.rollNumber,
+        marks: mark.marks,
+      };
+    });
+    await saveOfflineMarks(database, test.id, toSave, clock.now());
+    if (test.resultsReleasedAt !== null) await awardBounty(database, test, true, clock.now());
+    response.json({
+      maxMarks,
+      students: await listOfflineMarks(database, test.schoolClass.id, test.id),
+    } satisfies OfflineMarksResponse);
+  });
+
   router.put('/release', async (request, response) => {
     const test = await requireTest(request);
     const releaseOptions = parseInput(releaseSchema, request.body);
     await markTest(database, test, clock.now());
     const releasedAt = test.resultsReleasedAt ?? clock.now();
     await saveRelease(database, test.id, releasedAt, releaseOptions);
+    await awardBounty(database, test, true, clock.now());
     response.json({ releasedAt, releaseOptions } satisfies ReleaseResultsResponse);
   });
 
@@ -71,6 +124,7 @@ export function createTestMarkingRouter(dependencies: AppDependencies): Router {
     const test = await requireTest(request);
     const marking = await markTest(database, test, clock.now());
     await saveRelease(database, test.id, null, marking.releaseOptions);
+    await awardBounty(database, test, false, clock.now());
     response.json({
       releasedAt: null,
       releaseOptions: marking.releaseOptions,

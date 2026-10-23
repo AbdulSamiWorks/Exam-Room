@@ -17,6 +17,8 @@ const test: TestRecord = {
   allowedExits: 1,
   leaveRule: 'lock',
   writtenAnswers: 'on_paper',
+  bountyNote: '',
+  bountyPoints: 0,
   resultsReleasedAt: null,
   paperKind: 'pages',
   pageCount: 2,
@@ -38,6 +40,8 @@ describe('applySettingChanges', () => {
       allowedExits: 1,
       leaveRule: 'lock',
       writtenAnswers: 'on_paper',
+      bountyNote: '',
+      bountyPoints: 0,
     });
   });
 });

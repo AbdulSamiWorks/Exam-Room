@@ -18,6 +18,20 @@ export function PaperPanel({ test }: { test: TestSummary }) {
     </ButtonLink>
   );
 
+  if (test.paperKind === 'none') {
+    return (
+      <Panel title="Offline assignment">
+        <p className={styles.note}>
+          Done on paper, out of {describeMarks(test.maxMarks ?? 0)}. Type the marks of each student
+          here.
+        </p>
+        <ButtonLink to={`/teacher/tests/${test.id}/offline-marks`}>
+          {test.resultsReleasedAt === null ? 'Enter marks and release' : 'Marks (released)'}
+        </ButtonLink>
+      </Panel>
+    );
+  }
+
   if (test.paperKind === 'typed') {
     return (
       <Panel title="Questions">

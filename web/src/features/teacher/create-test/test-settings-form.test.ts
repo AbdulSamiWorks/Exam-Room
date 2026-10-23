@@ -58,6 +58,17 @@ describe('validateTestSettings', () => {
   });
 });
 
+describe('assignments and rewards', () => {
+  it('needs no time limit for an assignment and checks the reward points', () => {
+    expect(
+      validateTestSettings({ ...filledValues, kind: 'assignment', durationMinutes: '' }),
+    ).toEqual({});
+    expect(validateTestSettings({ ...filledValues, bountyPoints: '2.5' })).toEqual({
+      bountyPoints: 'Enter whole points from 0 to 1000.',
+    });
+  });
+});
+
 describe('toUpdateTestRequest', () => {
   it('leaves out the exam rules once a student has started', () => {
     expect(toUpdateTestRequest(filledValues, true)).toEqual({
@@ -65,6 +76,8 @@ describe('toUpdateTestRequest', () => {
       kind: 'test',
       chapterIds: [3, 4],
       title: 'Chapter 3 Quiz',
+      bountyNote: '',
+      bountyPoints: 0,
     });
     expect(toUpdateTestRequest(filledValues, false)).toMatchObject({
       durationMinutes: 30,

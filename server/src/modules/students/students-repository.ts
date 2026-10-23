@@ -159,6 +159,7 @@ export async function deleteStudent(database: Database, studentId: number): Prom
     [
       { sql: 'UPDATE attempts SET student_id = NULL WHERE student_id = ?', args: [studentId] },
       { sql: 'DELETE FROM student_passkeys WHERE student_id = ?', args: [studentId] },
+      { sql: 'DELETE FROM points WHERE student_id = ?', args: [studentId] },
       { sql: 'DELETE FROM students WHERE id = ?', args: [studentId] },
     ],
     'write',

@@ -3,6 +3,7 @@ import { ButtonLink } from '../../../components/Button';
 import { FormError } from '../../../components/FormError';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { Page } from '../../../components/Page';
+import { describeBounty } from '../../../lib/describe-bounty';
 import { describeDuration, describePaperSize } from '../../../lib/describe-test-length';
 import { describeAllowedExits, describeChapters, describeTestKind } from '../tests/describe-test';
 import { ResultsPanel } from '../results/ResultsPanel';
@@ -35,8 +36,9 @@ export function TestDetailsPage() {
     `${test.schoolClass.name} · ${test.subject.name}`,
     describeChapters(test.chapters),
     describePaperSize(test),
-    describeDuration(test.durationMinutes),
-    describeAllowedExits(test.allowedExits),
+    test.kind === 'assignment' ? 'No timer' : describeDuration(test.durationMinutes),
+    test.kind === 'assignment' ? undefined : describeAllowedExits(test.allowedExits),
+    describeBounty(test.bountyNote, test.bountyPoints),
   ]
     .filter(Boolean)
     .join(' · ');
@@ -54,7 +56,7 @@ export function TestDetailsPage() {
     >
       <div className={styles.sections}>
         <TestAvailabilityPanel test={test} />
-        <ShareTestPanel test={test} />
+        {test.paperKind !== 'none' && <ShareTestPanel test={test} />}
         <PaperPanel test={test} />
         <ResultsPanel test={test} />
         <DeleteTestPanel test={test} />

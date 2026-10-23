@@ -33,6 +33,7 @@ const KIND_CHOICES: Array<{ kind: TestKind | undefined; label: string }> = [
   { kind: undefined, label: 'All types' },
   { kind: 'test', label: 'Tests' },
   { kind: 'quiz', label: 'Quizzes' },
+  { kind: 'assignment', label: 'Assignments' },
 ];
 
 type KindFilterProps = {

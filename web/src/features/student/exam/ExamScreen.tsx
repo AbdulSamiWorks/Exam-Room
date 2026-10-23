@@ -2,6 +2,7 @@ import type { StudentAttempt } from '@exam-room/shared';
 import { useEffect, useState, type SyntheticEvent } from 'react';
 import { Button } from '../../../components/Button';
 import { classNames } from '../../../lib/class-names';
+import { describeDateTime } from '../../../lib/describe-date-time';
 import { AnswerStatus } from '../answers/AnswerStatus';
 import { requestFinish, type OutboxSnapshot } from '../answers/outbox-store';
 import { useSavedAnswersRestore } from '../answers/use-answer-outbox';
@@ -51,13 +52,20 @@ export function ExamScreen({ testCode, attemptToken, attempt, outbox, onTimeUp }
             {attempt.studentName} · {attempt.rollNumber}
           </span>
         </div>
-        <span
-          className={classNames(styles.timer, remainingMs <= LAST_MINUTES_MS && styles.timerEnding)}
-          role="timer"
-          aria-label="Time left"
-        >
-          {formatRemainingTime(remainingMs)}
-        </span>
+        {attempt.test.kind === 'assignment' ? (
+          <span className={styles.dueDate}>Due {describeDateTime(attempt.deadlineAt)}</span>
+        ) : (
+          <span
+            className={classNames(
+              styles.timer,
+              remainingMs <= LAST_MINUTES_MS && styles.timerEnding,
+            )}
+            role="timer"
+            aria-label="Time left"
+          >
+            {formatRemainingTime(remainingMs)}
+          </span>
+        )}
         <Button onClick={() => setIsFinishDialogOpen(true)}>Finish</Button>
       </header>
 

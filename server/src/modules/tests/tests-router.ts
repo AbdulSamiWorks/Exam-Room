@@ -61,7 +61,7 @@ const chapterIdsField = z
 
 const testSettingsFields = {
   subjectId: z.coerce.number().int().positive('Choose a subject.'),
-  kind: z.enum(['test', 'quiz'], 'Choose test or quiz.'),
+  kind: z.enum(['test', 'quiz', 'assignment'], 'Choose test, quiz or assignment.'),
   chapterIds: chapterIdsField,
   title: z
     .string()
@@ -82,6 +82,18 @@ const testSettingsFields = {
     ['on_paper', 'typed', 'photos', 'typed_and_photos'],
     'Choose how students answer written questions.',
   ),
+  bountyNote: z
+    .string()
+    .trim()
+    .max(
+      testLimits.maxBountyNoteLength,
+      `Use at most ${testLimits.maxBountyNoteLength} characters.`,
+    ),
+  bountyPoints: z.coerce
+    .number()
+    .int('Points must be a whole number.')
+    .min(0)
+    .max(testLimits.maxBountyPoints, `At most ${testLimits.maxBountyPoints} points.`),
 };
 
 function jsonText<Schema extends z.ZodType>(schema: Schema, unreadableMessage: string) {
@@ -107,7 +119,15 @@ const createTestFieldsSchema = z.object({
   chapterIds: testSettingsFields.chapterIds.default([]),
   leaveRule: testSettingsFields.leaveRule.default('lock'),
   writtenAnswers: testSettingsFields.writtenAnswers.default('on_paper'),
-  paperKind: z.enum(['pages', 'typed']).default('pages'),
+  bountyNote: testSettingsFields.bountyNote.default(''),
+  bountyPoints: testSettingsFields.bountyPoints.default(0),
+  paperKind: z.enum(['pages', 'typed', 'none']).default('pages'),
+  maxMarks: z.coerce
+    .number()
+    .positive('Enter the total marks.')
+    .max(testLimits.maxOfflineMarks)
+    .multipleOf(0.5, 'Marks can be whole or half marks.')
+    .optional(),
   paper: paperFields.paper.optional(),
   answerKey: paperFields.answerKey,
 });
@@ -132,7 +152,7 @@ const STARTED_TEST_PAPER_MESSAGE =
 
 function settingsOfNewTest(fields: CreateTestFields) {
   const { subjectId, kind, chapterIds, title, durationMinutes, allowedExits } = fields;
-  const { leaveRule, writtenAnswers } = fields;
+  const { leaveRule, writtenAnswers, bountyNote, bountyPoints } = fields;
   return {
     subjectId,
     kind,
@@ -142,10 +162,19 @@ function settingsOfNewTest(fields: CreateTestFields) {
     allowedExits,
     leaveRule,
     writtenAnswers,
+    bountyNote,
+    bountyPoints,
   };
 }
 
 async function testContentOf(fields: CreateTestFields, files: unknown): Promise<TestContent> {
+  if (fields.paperKind === 'none') {
+    if (fields.kind !== 'assignment') {
+      throw badRequest('Only an assignment can be done without a paper.', 'paper_required');
+    }
+    if (fields.maxMarks === undefined) throw badRequest('Enter the total marks.', 'marks_required');
+    return { paperKind: 'none', maxMarks: fields.maxMarks };
+  }
   if (fields.paperKind === 'typed') {
     if (!fields.paper) throw badRequest('Add the questions of the paper.', 'paper_required');
     const images = uploadedImages(files, 'paperImages');
@@ -265,6 +294,9 @@ export function createTestsRouter(dependencies: AppDependencies): Router {
       throw conflict(STARTED_TEST_SETTINGS_MESSAGE, 'test_already_started');
     }
 
+    if (test.paperKind === 'none' && changes.kind !== undefined && changes.kind !== 'assignment') {
+      throw badRequest('A test without a paper must stay an assignment.', 'paper_required');
+    }
     const settings = applySettingChanges(test, changes);
     const chapterIds = chapterIdsAfterChange(test, changes);
     await requireSubjectWithChapters(database, settings.subjectId, chapterIds ?? []);

@@ -114,3 +114,14 @@
   margin: 0;
   font-weight: 600;
 }
+
+.pointsForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pointsValue {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

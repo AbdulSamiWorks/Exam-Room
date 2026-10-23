@@ -8,6 +8,7 @@ import type {
 import { ButtonLink } from '../../../components/Button';
 import { ChoiceGroup, type Choice } from '../../../components/ChoiceGroup';
 import { FormError } from '../../../components/FormError';
+import fieldStyles from '../../../components/FormField.module.css';
 import { Panel } from '../../../components/Panel';
 import { SelectField } from '../../../components/SelectField';
 import { TextField } from '../../../components/TextField';
@@ -28,6 +29,7 @@ import type { UpdateTestSettings } from './use-test-settings-form';
 const KIND_CHOICES: Choice<TestKind>[] = [
   { value: 'test', label: 'Test' },
   { value: 'quiz', label: 'Quiz' },
+  { value: 'assignment', label: 'Assignment' },
 ];
 
 const ALLOWED_EXITS_CHOICES: Choice<AllowedExits>[] = [
@@ -84,38 +86,47 @@ export function TestSettingsFields({
         errorMessage={errors.title}
       />
 
-      <TextField
-        label="Time limit (minutes)"
-        type="number"
-        inputMode="numeric"
-        min={testLimits.minDurationMinutes}
-        max={testLimits.maxDurationMinutes}
-        value={values.durationMinutes}
-        disabled={areRulesFixed}
-        onChange={(event) => {
-          const durationMinutes = event.target.value;
-          onChange((current) => ({ ...current, durationMinutes }), 'durationMinutes');
-        }}
-        errorMessage={errors.durationMinutes}
-      />
+      {values.kind === 'assignment' ? (
+        <p className={fieldStyles.hint}>
+          Assignments have no timer and no exit detection. Students work until the closing time you
+          set on the test page (at most 30 days).
+        </p>
+      ) : (
+        <>
+          <TextField
+            label="Time limit (minutes)"
+            type="number"
+            inputMode="numeric"
+            min={testLimits.minDurationMinutes}
+            max={testLimits.maxDurationMinutes}
+            value={values.durationMinutes}
+            disabled={areRulesFixed}
+            onChange={(event) => {
+              const durationMinutes = event.target.value;
+              onChange((current) => ({ ...current, durationMinutes }), 'durationMinutes');
+            }}
+            errorMessage={errors.durationMinutes}
+          />
 
-      <ChoiceGroup
-        label="Allowed exits"
-        hint="How many times a student may leave the test before the rule below applies."
-        choices={ALLOWED_EXITS_CHOICES}
-        selectedValue={values.allowedExits}
-        disabled={areRulesFixed}
-        onChange={(allowedExits) => onChange((current) => ({ ...current, allowedExits }))}
-      />
+          <ChoiceGroup
+            label="Allowed exits"
+            hint="How many times a student may leave the test before the rule below applies."
+            choices={ALLOWED_EXITS_CHOICES}
+            selectedValue={values.allowedExits}
+            disabled={areRulesFixed}
+            onChange={(allowedExits) => onChange((current) => ({ ...current, allowedExits }))}
+          />
 
-      <ChoiceGroup
-        label="When a student leaves too often"
-        hint="Finish the test means the student cannot come back, and you cannot unlock it."
-        choices={LEAVE_RULE_CHOICES}
-        selectedValue={values.leaveRule}
-        disabled={areRulesFixed}
-        onChange={(leaveRule) => onChange((current) => ({ ...current, leaveRule }))}
-      />
+          <ChoiceGroup
+            label="When a student leaves too often"
+            hint="Finish the test means the student cannot come back, and you cannot unlock it."
+            choices={LEAVE_RULE_CHOICES}
+            selectedValue={values.leaveRule}
+            disabled={areRulesFixed}
+            onChange={(leaveRule) => onChange((current) => ({ ...current, leaveRule }))}
+          />
+        </>
+      )}
 
       <SelectField
         label="Written answers"
@@ -133,6 +144,34 @@ export function TestSettingsFields({
           </option>
         ))}
       </SelectField>
+
+      <details className={fieldStyles.field} open={Boolean(values.bountyNote)}>
+        <summary className={fieldStyles.label}>Reward for the top scorer (optional)</summary>
+        <TextField
+          label="Reward"
+          placeholder="e.g. A book for the best score"
+          value={values.bountyNote}
+          maxLength={testLimits.maxBountyNoteLength}
+          onChange={(event) => {
+            const bountyNote = event.target.value;
+            onChange((current) => ({ ...current, bountyNote }));
+          }}
+        />
+        <TextField
+          label="Points for the top scorer"
+          hint="Given when you release the results; ties share the top place."
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={testLimits.maxBountyPoints}
+          value={values.bountyPoints}
+          onChange={(event) => {
+            const bountyPoints = event.target.value;
+            onChange((current) => ({ ...current, bountyPoints }), 'bountyPoints');
+          }}
+          errorMessage={errors.bountyPoints}
+        />
+      </details>
     </>
   );
 }

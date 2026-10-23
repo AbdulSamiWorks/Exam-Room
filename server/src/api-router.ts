@@ -21,6 +21,10 @@ import {
   createTestMarkingRouter,
 } from './modules/marking/marking-router.js';
 import { createStudentResultsRouter } from './modules/marking/student-results-router.js';
+import {
+  createClassPointsRouter,
+  createStudentPointsRouter,
+} from './modules/points/points-router.js';
 import { createPasskeysRouter } from './modules/passkeys/passkeys-router.js';
 import { createStudentAuthRouter } from './modules/student-auth/student-auth-router.js';
 import { createStudentHomeRouter } from './modules/student-home/student-home-router.js';
@@ -45,10 +49,12 @@ export function createApiRouter(dependencies: AppDependencies): Router {
   apiRouter.use('/student', createStudentHomeRouter(dependencies));
   apiRouter.use('/classes/:classId/subjects', createClassSubjectsRouter(dependencies));
   apiRouter.use('/classes/:classId/students', createClassStudentsRouter(dependencies));
+  apiRouter.use('/classes/:classId/points', createClassPointsRouter(dependencies));
   apiRouter.use('/classes', createClassesRouter(dependencies));
   apiRouter.use('/subjects/:subjectId/chapters', createSubjectChaptersRouter(dependencies));
   apiRouter.use('/subjects', createSubjectsRouter(dependencies));
   apiRouter.use('/chapters', createChaptersRouter(dependencies));
+  apiRouter.use('/students/:studentId/points', createStudentPointsRouter(dependencies));
   apiRouter.use('/students', createStudentsRouter(dependencies));
   apiRouter.use('/tests/:testId/attempts', createTestResultsRouter(dependencies));
   apiRouter.use('/tests/:testId', createTestMarkingRouter(dependencies));

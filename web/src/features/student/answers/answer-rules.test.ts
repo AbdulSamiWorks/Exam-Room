@@ -5,6 +5,7 @@ import { describeHowToAnswer } from './answer-rules';
 function publicTest(overrides: Partial<PublicTest>): PublicTest {
   return {
     code: 'K7M2QX',
+    kind: 'test',
     title: 'Quiz',
     subjectName: 'Physics',
     durationMinutes: 30,
@@ -15,6 +16,8 @@ function publicTest(overrides: Partial<PublicTest>): PublicTest {
     questionCount: 10,
     maxMarks: 10,
     writtenAnswers: 'typed',
+    bountyNote: '',
+    bountyPoints: 0,
     opensAt: null,
     closesAt: null,
     availability: 'open',

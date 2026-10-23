@@ -14,6 +14,7 @@ import { TestNotOpenScreen } from '../screens/TestNotOpenScreen';
 import { usePublicTest, useStartAttempt } from '../use-attempt';
 import { studentLoginPath, studentTestPath } from '../../student-account/student-paths';
 import { useStudentSession } from '../../student-account/use-student-account';
+import { describeBounty } from '../../../lib/describe-bounty';
 import { describeHowToAnswer } from '../answers/answer-rules';
 import { PhoneLockSteps } from './PhoneLockSteps';
 import styles from './JoinScreen.module.css';
@@ -69,21 +70,37 @@ function JoinForm({ test, testCode, onStarted, isResuming }: JoinFormProps) {
       <div className={styles.sections}>
         <Panel title="Before you start">
           <ul className={styles.rules}>
-            <li>
-              Time limit: <strong>{describeDuration(test.durationMinutes)}</strong> (
-              {describePaperSize(test)}). The timer starts when you tap Start test and never stops.
-            </li>
-            {test.closesAt !== null && !isResuming && (
+            {test.kind === 'assignment' ? (
+              <li>
+                No time limit ({describePaperSize(test)}). You can leave and come back.
+                {test.closesAt !== null && (
+                  <>
+                    {' '}
+                    Hand it in before <strong>{describeDateTime(test.closesAt)}</strong>.
+                  </>
+                )}
+              </li>
+            ) : (
+              <li>
+                Time limit: <strong>{describeDuration(test.durationMinutes)}</strong> (
+                {describePaperSize(test)}). The timer starts when you tap Start test and never
+                stops.
+              </li>
+            )}
+            {test.closesAt !== null && !isResuming && test.kind !== 'assignment' && (
               <li>
                 You can start until <strong>{describeDateTime(test.closesAt)}</strong>.
               </li>
             )}
-            <li>{describeExitRule(test)}</li>
+            {test.kind !== 'assignment' && <li>{describeExitRule(test)}</li>}
+            {describeBounty(test.bountyNote, test.bountyPoints) && (
+              <li>{describeBounty(test.bountyNote, test.bountyPoints)}</li>
+            )}
             <li>{describeHowToAnswer(test)}</li>
           </ul>
         </Panel>
 
-        <PhoneLockSteps />
+        {test.kind !== 'assignment' && <PhoneLockSteps />}
 
         {student ? (
           <div className={styles.form}>
