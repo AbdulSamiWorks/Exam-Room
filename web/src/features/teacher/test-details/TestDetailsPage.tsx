@@ -4,7 +4,7 @@ import { FormError } from '../../../components/FormError';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { Page } from '../../../components/Page';
 import { describeDuration, describePageCount } from '../../../lib/describe-test-length';
-import { describeAllowedExits } from '../tests/describe-test';
+import { describeAllowedExits, describeChapters, describeTestKind } from '../tests/describe-test';
 import { ResultsPanel } from '../results/ResultsPanel';
 import { useTest } from '../tests/use-tests';
 import { DeleteTestPanel } from './DeleteTestPanel';
@@ -30,11 +30,15 @@ export function TestDetailsPage() {
 
   const test = testQuery.data;
   const subtitle = [
-    test.subject.name,
+    describeTestKind(test.kind),
+    `${test.schoolClass.name} · ${test.subject.name}`,
+    describeChapters(test.chapters),
     describePageCount(test.pageCount),
     describeDuration(test.durationMinutes),
     describeAllowedExits(test.allowedExits),
-  ].join(' · ');
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <Page

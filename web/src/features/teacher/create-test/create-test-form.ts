@@ -42,6 +42,8 @@ export function buildCreateTestFormData(
   const appendText = (field: CreateTestFormField, text: string) => formData.append(field, text);
 
   appendText('subjectId', String(settings.subjectId));
+  appendText('kind', settings.kind);
+  appendText('chapterIds', settings.chapterIds.join(','));
   appendText('title', settings.title);
   appendText('durationMinutes', String(settings.durationMinutes));
   appendText('allowedExits', String(settings.allowedExits));

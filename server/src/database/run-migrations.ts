@@ -1,5 +1,15 @@
+import type { InStatement } from '@libsql/client';
 import type { Database } from './connection.js';
 import { migrations as allMigrations, type Migration } from './migrations.js';
+
+const FOREIGN_KEY_GUARD_STATEMENTS = [
+  `CREATE TABLE migration_foreign_key_guard (
+    broken_references INTEGER NOT NULL CHECK (broken_references = 0)
+  )`,
+  `INSERT INTO migration_foreign_key_guard
+     SELECT COUNT(*) FROM pragma_foreign_key_check`,
+  'DROP TABLE migration_foreign_key_guard',
+];
 
 export async function runMigrations(
   database: Database,
@@ -20,17 +30,26 @@ export async function runMigrations(
     .filter((migration) => !alreadyAppliedIds.has(migration.id));
 
   for (const migration of pendingMigrations) {
-    await database.batch(
-      [
-        ...migration.statements,
-        {
-          sql: 'INSERT INTO schema_migrations (id, name, applied_at) VALUES (?, ?, ?)',
-          args: [migration.id, migration.name, getCurrentTime()],
-        },
-      ],
-      'write',
-    );
+    await applyMigration(database, migration, getCurrentTime());
   }
 
   return pendingMigrations.map((migration) => migration.id);
+}
+
+async function applyMigration(
+  database: Database,
+  migration: Migration,
+  appliedAt: number,
+): Promise<void> {
+  const bookkeeping: InStatement = {
+    sql: 'INSERT INTO schema_migrations (id, name, applied_at) VALUES (?, ?, ?)',
+    args: [migration.id, migration.name, appliedAt],
+  };
+
+  if (migration.rebuildsTables) {
+    await database.migrate([...migration.statements, ...FOREIGN_KEY_GUARD_STATEMENTS, bookkeeping]);
+    return;
+  }
+
+  await database.batch([...migration.statements, bookkeeping], 'write');
 }

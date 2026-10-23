@@ -13,7 +13,7 @@ import { enterFullscreen } from '../fullscreen';
 import { ErrorScreen } from '../screens/ErrorScreen';
 import { TestNotOpenScreen } from '../screens/TestNotOpenScreen';
 import { usePublicTest, useStartAttempt } from '../use-attempt';
-import { studentLimits } from './student-limits';
+import { studentLimits } from '../../../lib/student-limits';
 import styles from './JoinScreen.module.css';
 
 type JoinErrors = Partial<Record<'studentName' | 'rollNumber', string>>;

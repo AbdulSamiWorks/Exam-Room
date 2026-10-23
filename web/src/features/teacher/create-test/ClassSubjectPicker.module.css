@@ -1,8 +1,13 @@
+.picker,
 .chooseSubject,
 .addSubject {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.picker {
+  gap: 16px;
 }
 
 .actions {

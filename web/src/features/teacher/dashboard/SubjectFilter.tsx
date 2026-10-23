@@ -1,48 +1,56 @@
-import type { Subject } from '@exam-room/shared';
-import { classNames } from '../../../lib/class-names';
+import type { TestKind } from '@exam-room/shared';
+import { Chip } from '../../../components/Chip';
+import type { SubjectOption } from './group-tests-by-subject';
 import styles from './SubjectFilter.module.css';
 
 type SubjectFilterProps = {
-  subjects: Subject[];
+  options: SubjectOption[];
   selectedSubjectId: number | undefined;
   onSelect: (subjectId: number | undefined) => void;
 };
 
-export function SubjectFilter({ subjects, selectedSubjectId, onSelect }: SubjectFilterProps) {
+export function SubjectFilter({ options, selectedSubjectId, onSelect }: SubjectFilterProps) {
   return (
     <nav aria-label="Filter tests by subject" className={styles.filter}>
-      <FilterChip
+      <Chip
         label="All subjects"
         isSelected={selectedSubjectId === undefined}
         onClick={() => onSelect(undefined)}
       />
-      {subjects.map((subject) => (
-        <FilterChip
-          key={subject.id}
-          label={subject.name}
-          isSelected={subject.id === selectedSubjectId}
-          onClick={() => onSelect(subject.id)}
+      {options.map((option) => (
+        <Chip
+          key={option.subjectId}
+          label={option.label}
+          isSelected={option.subjectId === selectedSubjectId}
+          onClick={() => onSelect(option.subjectId)}
         />
       ))}
     </nav>
   );
 }
 
-type FilterChipProps = {
-  label: string;
-  isSelected: boolean;
-  onClick: () => void;
+const KIND_CHOICES: Array<{ kind: TestKind | undefined; label: string }> = [
+  { kind: undefined, label: 'All types' },
+  { kind: 'test', label: 'Tests' },
+  { kind: 'quiz', label: 'Quizzes' },
+];
+
+type KindFilterProps = {
+  selectedKind: TestKind | undefined;
+  onSelect: (kind: TestKind | undefined) => void;
 };
 
-function FilterChip({ label, isSelected, onClick }: FilterChipProps) {
+export function KindFilter({ selectedKind, onSelect }: KindFilterProps) {
   return (
-    <button
-      type="button"
-      aria-pressed={isSelected}
-      className={classNames(styles.chip, isSelected && styles.selected)}
-      onClick={onClick}
-    >
-      {label}
-    </button>
+    <nav aria-label="Filter tests by type" className={styles.filter}>
+      {KIND_CHOICES.map((choice) => (
+        <Chip
+          key={choice.label}
+          label={choice.label}
+          isSelected={choice.kind === selectedKind}
+          onClick={() => onSelect(choice.kind)}
+        />
+      ))}
+    </nav>
   );
 }

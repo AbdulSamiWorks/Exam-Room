@@ -1,5 +1,5 @@
 import type { TestSummary } from '@exam-room/shared';
-import { useState, type FormEvent } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { Button } from '../../../components/Button';
 import { FormError } from '../../../components/FormError';
@@ -17,8 +17,9 @@ import {
   toUpdateTestRequest,
   validateTestSettings,
 } from '../create-test/test-settings-form';
-import { TestSettingsFields, type ChangeTestSetting } from '../create-test/TestSettingsFields';
+import { TestSettingsFields } from '../create-test/TestSettingsFields';
 import { usePdfPages } from '../create-test/use-pdf-pages';
+import { useTestSettingsForm } from '../create-test/use-test-settings-form';
 import { useReplacePaper, useTest, useUpdateTest } from '../tests/use-tests';
 import styles from './EditTestPage.module.css';
 
@@ -48,16 +49,12 @@ function EditTestForm({ test }: { test: TestSummary }) {
   const updateTest = useUpdateTest(test.id);
   const replacePaper = useReplacePaper(test.id);
   const { pdfPages, choosePdf } = usePdfPages();
-  const [values, setValues] = useState(() => settingsFormValuesOf(test));
-  const [errors, setErrors] = useState<CreateTestFormErrors>({});
+  const { values, errors, setErrors, updateValues } = useTestSettingsForm<CreateTestFormErrors>(
+    () => settingsFormValuesOf(test),
+  );
   const hasStudents = test.studentCount > 0;
   const isSaving = updateTest.isPending || replacePaper.isPending;
   const saveError = updateTest.error ?? replacePaper.error;
-
-  const updateValue: ChangeTestSetting = (field, value) => {
-    setValues((currentValues) => ({ ...currentValues, [field]: value }));
-    setErrors((currentErrors) => ({ ...currentErrors, [field]: undefined }));
-  };
 
   function choosePdfFile(pdfFile: File) {
     setErrors((currentErrors) => ({ ...currentErrors, pdf: undefined }));
@@ -87,15 +84,15 @@ function EditTestForm({ test }: { test: TestSummary }) {
     <form className={styles.form} onSubmit={handleSubmit} noValidate>
       {hasStudents && (
         <p className={styles.note}>
-          Students have already started this test. You can change the title and subject; the time
-          limit, exits, leave rule and paper stay as they are.
+          Students have already started this test. You can change the title, type, subject and
+          chapters; the time limit, exits, leave rule and paper stay as they are.
         </p>
       )}
 
       <TestSettingsFields
         values={values}
         errors={errors}
-        onChange={updateValue}
+        onChange={updateValues}
         areRulesFixed={hasStudents}
       />
 

@@ -2,6 +2,7 @@ export type Migration = {
   id: number;
   name: string;
   statements: string[];
+  rebuildsTables?: boolean;
 };
 
 export const migrations: readonly Migration[] = [
@@ -128,6 +129,58 @@ export const migrations: readonly Migration[] = [
       `DROP TABLE exits_backup`,
       `ALTER TABLE tests ADD COLUMN leave_rule TEXT NOT NULL DEFAULT 'lock'
          CHECK (leave_rule IN ('lock', 'finish'))`,
+    ],
+  },
+  {
+    id: 5,
+    name: 'classes, subjects per class, chapters, students and test types',
+    rebuildsTables: true,
+    statements: [
+      `CREATE TABLE classes (
+        id          INTEGER PRIMARY KEY,
+        name        TEXT    NOT NULL COLLATE NOCASE UNIQUE,
+        created_at  INTEGER NOT NULL
+      )`,
+      `INSERT INTO classes (name, created_at)
+       SELECT 'My class', created_at FROM subjects ORDER BY created_at LIMIT 1`,
+      `CREATE TABLE subjects_rebuilt (
+        id          INTEGER PRIMARY KEY,
+        class_id    INTEGER NOT NULL REFERENCES classes (id),
+        name        TEXT    NOT NULL COLLATE NOCASE,
+        created_at  INTEGER NOT NULL,
+        UNIQUE (class_id, name)
+      )`,
+      `INSERT INTO subjects_rebuilt (id, class_id, name, created_at)
+       SELECT id, (SELECT MIN(id) FROM classes), name, created_at FROM subjects`,
+      `DROP TABLE subjects`,
+      `ALTER TABLE subjects_rebuilt RENAME TO subjects`,
+      `CREATE TABLE chapters (
+        id          INTEGER PRIMARY KEY,
+        subject_id  INTEGER NOT NULL REFERENCES subjects (id),
+        name        TEXT    NOT NULL COLLATE NOCASE,
+        position    INTEGER NOT NULL,
+        created_at  INTEGER NOT NULL,
+        UNIQUE (subject_id, name)
+      )`,
+      `CREATE TABLE students (
+        id               INTEGER PRIMARY KEY,
+        class_id         INTEGER NOT NULL REFERENCES classes (id),
+        name             TEXT    NOT NULL,
+        roll_no          TEXT    NOT NULL,
+        roll_no_key      TEXT    NOT NULL,
+        pin_hash         TEXT    NOT NULL,
+        session_version  INTEGER NOT NULL DEFAULT 0,
+        created_at       INTEGER NOT NULL,
+        UNIQUE (class_id, roll_no_key)
+      )`,
+      `ALTER TABLE tests ADD COLUMN kind TEXT NOT NULL DEFAULT 'test'
+         CHECK (kind IN ('test', 'quiz', 'assignment'))`,
+      `CREATE TABLE test_chapters (
+        test_id     INTEGER NOT NULL REFERENCES tests (id) ON DELETE CASCADE,
+        chapter_id  INTEGER NOT NULL REFERENCES chapters (id) ON DELETE CASCADE,
+        PRIMARY KEY (test_id, chapter_id)
+      ) WITHOUT ROWID`,
+      `CREATE INDEX test_chapters_chapter_id ON test_chapters (chapter_id)`,
     ],
   },
 ];

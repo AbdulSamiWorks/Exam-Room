@@ -2,6 +2,7 @@ import type { ApiErrorBody } from '@exam-room/shared';
 
 const API_BASE_PATH = '/api';
 const NETWORK_ERROR_STATUS = 0;
+const NO_CONTENT_STATUS = 204;
 
 export class ApiError extends Error {
   readonly status: number;
@@ -78,6 +79,7 @@ export function putForm<ResponseBody>(path: string, formData: FormData): Promise
 async function requestJson<ResponseBody>(path: string, init: RequestInit): Promise<ResponseBody> {
   const response = await sendRequest(path, init);
   if (!response.ok) throw await readApiError(response);
+  if (response.status === NO_CONTENT_STATUS) return undefined as ResponseBody;
   return (await response.json()) as ResponseBody;
 }
 

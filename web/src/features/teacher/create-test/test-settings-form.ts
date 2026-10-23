@@ -1,6 +1,7 @@
 import type {
   AllowedExits,
   LeaveRule,
+  TestKind,
   TestSettings,
   TestSummary,
   UpdateTestRequest,
@@ -8,7 +9,10 @@ import type {
 import { testLimits } from './test-limits';
 
 export type TestSettingsFormValues = {
+  classId: string;
   subjectId: string;
+  kind: TestKind;
+  chapterIds: number[];
   title: string;
   durationMinutes: string;
   allowedExits: AllowedExits;
@@ -16,11 +20,14 @@ export type TestSettingsFormValues = {
 };
 
 export type TestSettingsFormErrors = Partial<
-  Record<'subjectId' | 'title' | 'durationMinutes', string>
+  Record<'subjectId' | 'chapterIds' | 'title' | 'durationMinutes', string>
 >;
 
 export const NEW_TEST_SETTINGS: TestSettingsFormValues = {
+  classId: '',
   subjectId: '',
+  kind: 'test',
+  chapterIds: [],
   title: '',
   durationMinutes: '30',
   allowedExits: 1,
@@ -29,7 +36,10 @@ export const NEW_TEST_SETTINGS: TestSettingsFormValues = {
 
 export function settingsFormValuesOf(test: TestSummary): TestSettingsFormValues {
   return {
+    classId: String(test.schoolClass.id),
     subjectId: String(test.subject.id),
+    kind: test.kind,
+    chapterIds: test.chapters.map((chapter) => chapter.id),
     title: test.title,
     durationMinutes: String(test.durationMinutes),
     allowedExits: test.allowedExits,
@@ -37,10 +47,37 @@ export function settingsFormValuesOf(test: TestSummary): TestSettingsFormValues 
   };
 }
 
+export function withClass(values: TestSettingsFormValues, classId: string): TestSettingsFormValues {
+  if (classId === values.classId) return values;
+  return { ...values, classId, subjectId: '', chapterIds: [] };
+}
+
+export function withSubject(
+  values: TestSettingsFormValues,
+  subjectId: string,
+): TestSettingsFormValues {
+  if (subjectId === values.subjectId) return values;
+  return { ...values, subjectId, chapterIds: [] };
+}
+
+export function withChapterToggled(
+  values: TestSettingsFormValues,
+  chapterId: number,
+): TestSettingsFormValues {
+  const chapterIds = values.chapterIds.includes(chapterId)
+    ? values.chapterIds.filter((selectedId) => selectedId !== chapterId)
+    : [...values.chapterIds, chapterId];
+  return { ...values, chapterIds };
+}
+
 export function validateTestSettings(values: TestSettingsFormValues): TestSettingsFormErrors {
   const errors: TestSettingsFormErrors = {};
 
   if (!values.subjectId) errors.subjectId = 'Choose a subject.';
+
+  if (values.chapterIds.length > testLimits.maxChaptersPerTest) {
+    errors.chapterIds = `Choose at most ${testLimits.maxChaptersPerTest} chapters.`;
+  }
 
   const title = values.title.trim();
   if (!title) errors.title = 'Enter a title for the test.';
@@ -63,6 +100,8 @@ export function validateTestSettings(values: TestSettingsFormValues): TestSettin
 export function toTestSettings(values: TestSettingsFormValues): TestSettings {
   return {
     subjectId: Number(values.subjectId),
+    kind: values.kind,
+    chapterIds: values.chapterIds,
     title: values.title.trim(),
     durationMinutes: Number(values.durationMinutes),
     allowedExits: values.allowedExits,
@@ -76,7 +115,8 @@ export function toUpdateTestRequest(
 ): UpdateTestRequest {
   const settings = toTestSettings(values);
   if (!areRulesFixed) return settings;
-  return { subjectId: settings.subjectId, title: settings.title };
+  const { subjectId, kind, chapterIds, title } = settings;
+  return { subjectId, kind, chapterIds, title };
 }
 
 export function hasErrors(errors: object): boolean {

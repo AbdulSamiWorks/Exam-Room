@@ -50,6 +50,7 @@ type PrintableResultsProps = {
 
 function PrintableResults({ test, results, printedAt }: PrintableResultsProps) {
   const details = [
+    test.schoolClass.name,
     test.subject.name,
     describeDuration(test.durationMinutes),
     `Printed ${describeDateTime(printedAt)}`,

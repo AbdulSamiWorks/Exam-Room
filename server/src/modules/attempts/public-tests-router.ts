@@ -10,7 +10,7 @@ import { findTestByCode } from '../tests/tests-repository.js';
 import { startOrResumeAttempt } from './attempt-service.js';
 import { createAttemptToken } from './attempt-token.js';
 import { buildStudentAttempt, toPublicTest } from './student-attempt-view.js';
-import { studentLimits } from './student-identity.js';
+import { studentLimits } from '../students/student-limits.js';
 
 const START_WINDOW_MS = 5 * 60 * 1000;
 const MAX_STARTS_PER_WINDOW = 60;

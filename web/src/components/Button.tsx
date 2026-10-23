@@ -4,7 +4,7 @@ import { classNames } from '../lib/class-names';
 import styles from './Button.module.css';
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger';
-type ButtonSize = 'medium' | 'large';
+type ButtonSize = 'small' | 'medium' | 'large';
 
 type ButtonStyleProps = {
   variant?: ButtonVariant;
@@ -66,7 +66,7 @@ function buttonClassNames(
   return classNames(
     styles.button,
     styles[variant],
-    size === 'large' && styles.large,
+    size !== 'medium' && styles[size],
     fullWidth && styles.fullWidth,
     extraClassName,
   );

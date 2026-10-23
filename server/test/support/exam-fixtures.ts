@@ -7,6 +7,7 @@ import type {
 } from '@exam-room/shared';
 import type { Express } from 'express';
 import request from 'supertest';
+import { createClassWithSubject } from './catalog-fixtures.js';
 import { createBlankPageImage } from './page-image-fixtures.js';
 import { logInAsTeacher } from './teacher-agent.js';
 
@@ -21,18 +22,13 @@ export type TestSettings = {
 
 export const STUDENT: StartAttemptRequest = { studentName: 'Ayesha Khan', rollNumber: '17' };
 
-let createdSubjectCount = 0;
-
 export async function publishTest(app: Express, settings: TestSettings = {}): Promise<TestSummary> {
   const teacher = await logInAsTeacher(app);
-  createdSubjectCount += 1;
-  const subject = await teacher
-    .post('/api/subjects')
-    .send({ name: `Subject ${createdSubjectCount}` });
+  const subject = await createClassWithSubject(teacher);
 
   const upload = teacher
     .post('/api/tests')
-    .field('subjectId', String(subject.body.subject.id))
+    .field('subjectId', String(subject.id))
     .field('title', settings.title ?? 'Chapter 3 Quiz')
     .field('durationMinutes', String(settings.durationMinutes ?? 30))
     .field('allowedExits', String(settings.allowedExits ?? 1))
