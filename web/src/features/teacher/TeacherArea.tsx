@@ -8,6 +8,7 @@ import { useTeacherSession } from './auth/use-teacher-session';
 import { CreateTestPage } from './create-test/CreateTestPage';
 import { DashboardPage } from './dashboard/DashboardPage';
 import { EditTestPage } from './edit-test/EditTestPage';
+import { PrintResultsPage } from './results/PrintResultsPage';
 import { TeacherLayout } from './TeacherLayout';
 import { TestDetailsPage } from './test-details/TestDetailsPage';
 
@@ -33,6 +34,7 @@ export function TeacherArea() {
 
   return (
     <Routes>
+      <Route path="tests/:testId/print" element={<PrintResultsPage />} />
       <Route element={<TeacherLayout />}>
         <Route index element={<DashboardPage />} />
         <Route path="tests/new" element={<CreateTestPage />} />

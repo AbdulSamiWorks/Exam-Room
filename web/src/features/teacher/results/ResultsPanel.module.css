@@ -121,3 +121,9 @@
   font-size: 0.9375rem;
   overflow-wrap: anywhere;
 }
+
+.exportActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}

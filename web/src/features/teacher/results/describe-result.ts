@@ -39,6 +39,12 @@ function describeFinishedStatus(result: AttemptResult): ResultStatus {
   }
 }
 
+export function sortByRollNumber(results: readonly AttemptResult[]): AttemptResult[] {
+  return [...results].sort((first, second) =>
+    first.rollNumber.localeCompare(second.rollNumber, undefined, { numeric: true }),
+  );
+}
+
 export function isStoppedForLeaving(result: AttemptResult): boolean {
   return result.status === 'locked' || result.finishReason === 'left_test';
 }

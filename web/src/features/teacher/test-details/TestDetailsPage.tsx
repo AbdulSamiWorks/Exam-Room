@@ -50,7 +50,7 @@ export function TestDetailsPage() {
       <div className={styles.sections}>
         <TestAvailabilityPanel test={test} />
         <ShareTestPanel test={test} />
-        <ResultsPanel testId={test.id} />
+        <ResultsPanel test={test} />
         <DeleteTestPanel test={test} />
       </div>
     </Page>

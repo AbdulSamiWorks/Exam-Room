@@ -1,8 +1,10 @@
-import type { AttemptResult } from '@exam-room/shared';
-import { Button } from '../../../components/Button';
+import type { AttemptResult, TestSummary } from '@exam-room/shared';
+import { Button, ButtonLink } from '../../../components/Button';
 import { FormError } from '../../../components/FormError';
 import { Panel } from '../../../components/Panel';
 import { useConfirmation } from '../../../components/use-confirmation';
+import { downloadTextFile } from '../../../lib/download-file';
+import { buildResultsCsv, resultsFileName } from './results-csv';
 import { ResultRow } from './ResultRow';
 import {
   useDeleteAttempt,
@@ -13,7 +15,10 @@ import {
 } from './use-results';
 import styles from './ResultsPanel.module.css';
 
-export function ResultsPanel({ testId }: { testId: number }) {
+const CSV_MEDIA_TYPE = 'text/csv;charset=utf-8';
+
+export function ResultsPanel({ test }: { test: TestSummary }) {
+  const testId = test.id;
   const resultsQuery = useTestResults(testId);
   const unlockAttempt = useUnlockAttempt(testId);
   const endAttempt = useEndAttempt(testId);
@@ -23,6 +28,10 @@ export function ResultsPanel({ testId }: { testId: number }) {
 
   const attempts = resultsQuery.data?.attempts ?? [];
   const isAnyoneWriting = attempts.some((attempt) => attempt.status === 'in_progress');
+
+  function downloadCsv() {
+    downloadTextFile(resultsFileName(test.title), buildResultsCsv(attempts), CSV_MEDIA_TYPE);
+  }
 
   function confirmEnd(attempt: AttemptResult) {
     askToConfirm({
@@ -88,6 +97,14 @@ export function ResultsPanel({ testId }: { testId: number }) {
             ))}
           </ul>
           <p className={styles.note}>Updates every 5 seconds.</p>
+          <div className={styles.exportActions}>
+            <Button variant="secondary" onClick={downloadCsv}>
+              Download CSV
+            </Button>
+            <ButtonLink variant="secondary" to={`/teacher/tests/${testId}/print`}>
+              Print
+            </ButtonLink>
+          </div>
         </>
       )}
 
