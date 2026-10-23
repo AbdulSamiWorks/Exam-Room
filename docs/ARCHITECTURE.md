@@ -1,8 +1,7 @@
 # Exam Room — Architecture
 
-> Status: **approved plan, v1** (2026-10-22). Milestones M0–M18 are built (2026-10-25); the
-> real-device checks in §15 are still to do. M19 is planned in §16 (2026-10-24). Update this
-> file whenever a decision below changes.
+> Status: **approved plan, v1** (2026-10-22). Milestones M0–M19 are all built (2026-10-25); the
+> real-device checks in §15 are still to do. Update this file whenever a decision below changes.
 
 Exam Room is a small mobile-first web app. A teacher uploads a test paper (PDF), shares a link, and
 students read the paper on their phones inside the website — with a timer and exit detection. Expected scale: **one teacher, 5–10 students per test.**
@@ -156,7 +155,7 @@ question_marks (attempt_id → attempts, question_id, marks NULL, comment,
 attempts   + mcq_marks, written_marks, total_marks (D48), teacher_comment
 tests      + results_released_at, show_correct_answers, show_comments, show_top_scorer (D49, D50),
              bounty_note, bounty_points (D51); paper_kind may be 'none' for an offline
-             assignment (rebuilt in migration 12)
+             assignment (rebuilt in migration 12), waiting_room 0/1 (migration 13, D58)
 
 points     (id PK, student_id → students, test_id NULL → tests, points, reason, created_at)
              -- test_id set: a bounty, replaced on every release; NULL: given by hand
@@ -376,7 +375,8 @@ PUT    /api/tests/:id/paper           multipart: paper, answerKey, paperImages[]
 PUT    /api/tests/:id/answer-key      { answerKey } (any time)
 GET    /api/tests/:id/paper-images/:n
 GET    /api/tests/:id/attempts        → results with exit history
-POST   /api/tests/:id/attempts/end    → ends every running attempt and closes the test
+POST   /api/tests/:id/attempts/start  → starts every waiting student at the same moment (D58)
+POST   /api/tests/:id/attempts/end    → ends every running or waiting attempt and closes the test
 POST   /api/attempts/:id/unlock
 POST   /api/attempts/:id/end
 POST   /api/tests/:id/open
@@ -572,8 +572,8 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 | M18 | Dashboard and progress for students and the teacher                                                    |
 | M19 | Waiting room: the teacher starts everyone at the same time                                             |
 
-Status (2026-10-25): M0–M18 are built and tested (unit tests, API tests and a smoke test of the
-production build). Still to do by hand: the real-device checks in §15. M19 is planned in §16.
+Status (2026-10-25): M0–M19 are built and tested (unit tests, API tests and a smoke test of the
+production build). Still to do by hand: the real-device checks in §15.
 
 ## 13. Decision log
 
@@ -636,6 +636,8 @@ production build). Still to do by hand: the real-device checks in §15. M19 is p
 | D55 | Progress statistics are computed in the browser from the student's released results (pure functions)                                                                                                                                                                                                                                                    | No server CPU; the data is small                                                                                                                                  | Hundreds of results per student                                        |
 | D56 | Short, transient database errors are retried (3 tries within about 1 s) around idempotent writes only; the phone hears "saved" only after the commit                                                                                                                                                                                                    | A Turso hiccup must not lose an answer or count it twice                                                                                                          | —                                                                      |
 | D57 | Before a test the app shows how to lock the phone to the app (Android App pinning, iPhone Guided Access)                                                                                                                                                                                                                                                | A website cannot block other apps (§9)                                                                                                                            | Browsers offer a lock API                                              |
+
+| D58 | Waiting room: **Start for everyone** is one `UPDATE` of all waiting attempts of the test with the same `started_at` and `deadline_at`. A student who arrives after it waits for the next tap; ending the exam also submits anyone still waiting. Only tests and quizzes use it, and the switch is fixed once a student has started | One write, exactly equal times for everyone, nothing runs on the server while students wait (phones ask every 3 s); the teacher decides about late students | Teacher wants late students to join at once with the shared deadline |
 
 ## 14. Future extension points (not built now)
 
@@ -865,6 +867,18 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 | Render hours     | One service awake all month ≈ 744 hours                               | 750 hours / month                  |
 
 ## 17. Built milestones
+
+### M19 Waiting room (built 2026-10-25)
+
+- A test or quiz can be set to **Students start: Together, when I start everyone** (migration 13
+  adds `tests.waiting_room`). A student who taps **Start test** gets status `waiting` and sees
+  "Waiting for your teacher"; the phone asks the server every 3 s and keeps the screen on.
+- While waiting there is no paper and no answers (409 `not_started`), and exits and Finish do
+  nothing. The time has not started.
+- The results show each waiting student and a **Start for everyone (N waiting)** button. One tap
+  gives all of them the same start and deadline (D58); their phones open the paper within 3 s.
+  Students who come later wait for the next tap. **End exam for everyone** also submits waiting
+  students.
 
 ### M18 Dashboard and progress (built 2026-10-25)
 

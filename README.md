@@ -15,7 +15,9 @@ Architecture, decisions and roadmap: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md
 3. The test page shows a link and a code. Send the link with **Copy link** or **Send on WhatsApp**.
 4. **Student** logs in once with class, roll number and PIN (the phone stays logged in for 60
    days), opens the test from the student home or the link and taps **Start test**. The timer
-   starts and never stops.
+   starts and never stops. If the teacher chose **Students start: Together**, the students wait
+   until the teacher taps **Start for everyone** in the results, and then all start at the same
+   moment.
 5. If the student leaves the page or switches apps, a red warning appears. After the allowed
    exits the test locks. The teacher can tap **Unlock** in the results.
 6. The student taps **Finish**, or the test is submitted when the time is up. After that the paper

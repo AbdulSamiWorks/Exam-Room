@@ -189,3 +189,13 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
 - [ ] A subject page shows the chapters with their bars.
 - [ ] In **Manage → class → Students**, tap a name: the teacher sees that student's progress and
       points.
+
+## 19. Waiting room
+
+- [ ] Make a test with **Students start: Together, when I start everyone** and open it.
+- [ ] On two phones, tap **Start test**: both show "Waiting for your teacher" and the screen stays
+      on.
+- [ ] Switching apps while waiting gives no warning and uses no exit.
+- [ ] The teacher's results show **Start for everyone (2 waiting)**. After the tap, both phones
+      open the paper within a few seconds and show the same time left.
+- [ ] A third phone that starts later waits until the teacher taps the button again.
