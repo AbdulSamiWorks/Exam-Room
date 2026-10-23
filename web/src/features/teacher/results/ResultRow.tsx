@@ -32,6 +32,7 @@ export function ResultRow({
   const status = describeResultStatus(result);
   const isLocked = result.status === 'locked';
   const isWriting = result.status === 'in_progress';
+  const isWaiting = result.status === 'waiting';
 
   return (
     <li className={classNames(styles.row, isStoppedForLeaving(result) && styles.lockedRow)}>
@@ -41,7 +42,7 @@ export function ResultRow({
       </div>
       <dl className={styles.facts}>
         <Fact label="Roll no." value={result.rollNumber} />
-        <Fact label="Started" value={describeClockTime(result.startedAt)} />
+        <Fact label="Started" value={describeClockTime(isWaiting ? null : result.startedAt)} />
         <Fact label="Finished" value={describeClockTime(result.finishedAt)} />
         <Fact label="Exits" value={describeExits(result)} />
         <Fact label="Away" value={describeAwayTime(result.awayMs)} />
@@ -67,7 +68,7 @@ export function ResultRow({
             {actions.isUnlocking ? 'Unlocking…' : 'Unlock'}
           </Button>
         )}
-        {isWriting && (
+        {(isWriting || isWaiting) && (
           <Button variant="secondary" onClick={actions.onEnd}>
             End test
           </Button>

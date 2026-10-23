@@ -19,6 +19,7 @@ const test: TestRecord = {
   writtenAnswers: 'on_paper',
   bountyNote: '',
   bountyPoints: 0,
+  waitingRoom: false,
   resultsReleasedAt: null,
   paperKind: 'pages',
   pageCount: 2,
@@ -42,6 +43,7 @@ describe('applySettingChanges', () => {
       writtenAnswers: 'on_paper',
       bountyNote: '',
       bountyPoints: 0,
+      waitingRoom: false,
     });
   });
 });

@@ -76,6 +76,7 @@ describe('tests', () => {
       writtenAnswers: 'on_paper',
       bountyNote: '',
       bountyPoints: 0,
+      waitingRoom: false,
       resultsReleasedAt: null,
       studentCount: 0,
       createdAt: TEST_START_TIME,

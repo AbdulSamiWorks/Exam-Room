@@ -8,6 +8,7 @@ const SETTINGS_FIXED_ONCE_STARTED = [
   'allowedExits',
   'leaveRule',
   'writtenAnswers',
+  'waitingRoom',
 ] as const;
 
 export function settingsOf(test: TestRecord): StoredTestSettings {
@@ -21,6 +22,7 @@ export function settingsOf(test: TestRecord): StoredTestSettings {
     writtenAnswers: test.writtenAnswers,
     bountyNote: test.bountyNote,
     bountyPoints: test.bountyPoints,
+    waitingRoom: test.waitingRoom,
   };
 }
 
@@ -39,6 +41,7 @@ export function applySettingChanges(
     writtenAnswers: changes.writtenAnswers ?? current.writtenAnswers,
     bountyNote: changes.bountyNote ?? current.bountyNote,
     bountyPoints: changes.bountyPoints ?? current.bountyPoints,
+    waitingRoom: changes.waitingRoom ?? current.waitingRoom,
   };
 }
 

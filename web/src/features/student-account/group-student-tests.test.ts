@@ -44,6 +44,9 @@ describe('groupStudentTests', () => {
 describe('describeStudentTestState', () => {
   it('says what the student can do', () => {
     expect(describeStudentTestState(card({}))).toBe('Open now');
+    expect(describeStudentTestState(card({ attemptStatus: 'waiting' }))).toBe(
+      'Waiting for your teacher – tap to open',
+    );
     expect(describeStudentTestState(card({ attemptStatus: 'in_progress' }))).toBe(
       'Started – tap to continue',
     );

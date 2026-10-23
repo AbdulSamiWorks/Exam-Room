@@ -93,6 +93,7 @@ function appendSettings(
   appendText('writtenAnswers', settings.writtenAnswers);
   appendText('bountyNote', settings.bountyNote);
   appendText('bountyPoints', String(settings.bountyPoints));
+  appendText('waitingRoom', String(settings.waitingRoom));
   return formData;
 }
 

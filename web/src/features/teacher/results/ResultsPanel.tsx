@@ -4,6 +4,7 @@ import { FormError } from '../../../components/FormError';
 import { Panel } from '../../../components/Panel';
 import { useConfirmation } from '../../../components/use-confirmation';
 import { downloadTextFile } from '../../../lib/download-file';
+import { countWaiting } from './describe-result';
 import { buildResultsCsv, resultsFileName } from './results-csv';
 import { NotStartedList } from './NotStartedList';
 import { ResultRow } from './ResultRow';
@@ -11,6 +12,7 @@ import {
   useDeleteAttempt,
   useEndAttempt,
   useEndExamForEveryone,
+  useStartEveryone,
   useTestResults,
   useUnlockAttempt,
 } from './use-results';
@@ -25,11 +27,13 @@ export function ResultsPanel({ test }: { test: TestSummary }) {
   const endAttempt = useEndAttempt(testId);
   const endExamForEveryone = useEndExamForEveryone(testId);
   const deleteAttempt = useDeleteAttempt(testId);
+  const startEveryone = useStartEveryone(testId);
   const { askToConfirm, confirmationDialog } = useConfirmation();
 
   const attempts = resultsQuery.data?.attempts ?? [];
   const notStarted = resultsQuery.data?.notStarted ?? [];
   const isAnyoneWriting = attempts.some((attempt) => attempt.status === 'in_progress');
+  const waitingCount = countWaiting(attempts);
 
   function downloadCsv() {
     downloadTextFile(
@@ -64,7 +68,7 @@ export function ResultsPanel({ test }: { test: TestSummary }) {
     askToConfirm({
       title: 'End the exam for everyone?',
       message:
-        'Every student who is still writing is submitted now, and the test is closed so nobody new can start.',
+        'Every student who is still writing or waiting is submitted now, and the test is closed so nobody new can start.',
       confirmLabel: 'End exam',
       busyLabel: 'Ending…',
       onConfirm: () => endExamForEveryone.mutateAsync(),
@@ -76,6 +80,7 @@ export function ResultsPanel({ test }: { test: TestSummary }) {
       {resultsQuery.isPending && <p className={styles.note}>Loading results…</p>}
       {resultsQuery.isError && <FormError>{resultsQuery.error.message}</FormError>}
       {unlockAttempt.error && <FormError>{unlockAttempt.error.message}</FormError>}
+      {startEveryone.error && <FormError>{startEveryone.error.message}</FormError>}
 
       {resultsQuery.data && attempts.length === 0 && (
         <p className={styles.note}>Students who start the test will appear here.</p>
@@ -84,7 +89,18 @@ export function ResultsPanel({ test }: { test: TestSummary }) {
 
       {attempts.length > 0 && (
         <>
-          {isAnyoneWriting && (
+          {waitingCount > 0 && (
+            <Button
+              size="large"
+              onClick={() => startEveryone.mutate()}
+              disabled={startEveryone.isPending}
+            >
+              {startEveryone.isPending
+                ? 'Starting…'
+                : `Start for everyone (${waitingCount} waiting)`}
+            </Button>
+          )}
+          {(isAnyoneWriting || waitingCount > 0) && (
             <Button variant="danger" onClick={confirmEndForEveryone}>
               End exam for everyone
             </Button>

@@ -94,6 +94,10 @@ const testSettingsFields = {
     .int('Points must be a whole number.')
     .min(0)
     .max(testLimits.maxBountyPoints, `At most ${testLimits.maxBountyPoints} points.`),
+  waitingRoom: z.preprocess(
+    (value) => (value === 'true' ? true : value === 'false' ? false : value),
+    z.boolean('Choose whether students wait for you to start.'),
+  ),
 };
 
 function jsonText<Schema extends z.ZodType>(schema: Schema, unreadableMessage: string) {
@@ -121,6 +125,7 @@ const createTestFieldsSchema = z.object({
   writtenAnswers: testSettingsFields.writtenAnswers.default('on_paper'),
   bountyNote: testSettingsFields.bountyNote.default(''),
   bountyPoints: testSettingsFields.bountyPoints.default(0),
+  waitingRoom: testSettingsFields.waitingRoom.default(false),
   paperKind: z.enum(['pages', 'typed', 'none']).default('pages'),
   maxMarks: z.coerce
     .number()
@@ -146,13 +151,13 @@ const updateTestSchema = z
   .refine(atLeastOneChange, 'Nothing to change.');
 
 const STARTED_TEST_SETTINGS_MESSAGE =
-  'Students have already started this test. Now you can only change the title, type, subject and chapters.';
+  'Students have already started this test. Now you can only change the title, type, subject, chapters and bounty.';
 const STARTED_TEST_PAPER_MESSAGE =
   'Students have already started this test, so the paper cannot be replaced.';
 
 function settingsOfNewTest(fields: CreateTestFields) {
   const { subjectId, kind, chapterIds, title, durationMinutes, allowedExits } = fields;
-  const { leaveRule, writtenAnswers, bountyNote, bountyPoints } = fields;
+  const { leaveRule, writtenAnswers, bountyNote, bountyPoints, waitingRoom } = fields;
   return {
     subjectId,
     kind,
@@ -164,6 +169,7 @@ function settingsOfNewTest(fields: CreateTestFields) {
     writtenAnswers,
     bountyNote,
     bountyPoints,
+    waitingRoom,
   };
 }
 

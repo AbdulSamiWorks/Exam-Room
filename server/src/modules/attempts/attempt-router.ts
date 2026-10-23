@@ -10,7 +10,7 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import type { AppDependencies } from '../../app-dependencies.js';
 import { retryTransientErrors } from '../../database/transient-errors.js';
-import { badRequest, HttpError, notFound } from '../../lib/http-errors.js';
+import { badRequest, conflict, HttpError, notFound } from '../../lib/http-errors.js';
 import { parseInput } from '../../lib/parse-input.js';
 import type { TestRecord } from '../tests/test-record.js';
 import { answerProblem, isAcceptingAnswers, isAnswerInTime } from '../answers/answer-rules.js';
@@ -82,8 +82,16 @@ export function createAttemptRouter(dependencies: AppDependencies): Router {
     response.json({ attempt: studentAttempt } satisfies AttemptResponse);
   }
 
-  async function loadAttemptWithOpenPaper(request: Request): Promise<AttemptRecord> {
+  async function loadStartedAttempt(request: Request): Promise<AttemptRecord> {
     const attempt = await loadAttempt(request);
+    if (attempt.status === 'waiting') {
+      throw conflict('Your teacher has not started the test yet.', 'not_started');
+    }
+    return attempt;
+  }
+
+  async function loadAttemptWithOpenPaper(request: Request): Promise<AttemptRecord> {
+    const attempt = await loadStartedAttempt(request);
     if (attempt.status !== 'in_progress') {
       throw new HttpError(410, 'paper_closed', 'The test is closed.');
     }
@@ -124,7 +132,7 @@ export function createAttemptRouter(dependencies: AppDependencies): Router {
   });
 
   router.post('/answers', async (request, response) => {
-    const attempt = await loadAttempt(request);
+    const attempt = await loadStartedAttempt(request);
     const { answers } = parseInput(saveAnswersSchema, request.body);
     const receivedAt = clock.now();
     if (!isAcceptingAnswers(attempt, receivedAt)) {

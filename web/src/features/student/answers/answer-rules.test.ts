@@ -18,6 +18,7 @@ function publicTest(overrides: Partial<PublicTest>): PublicTest {
     writtenAnswers: 'typed',
     bountyNote: '',
     bountyPoints: 0,
+    waitingRoom: false,
     opensAt: null,
     closesAt: null,
     availability: 'open',

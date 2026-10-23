@@ -83,8 +83,10 @@ function JoinForm({ test, testCode, onStarted, isResuming }: JoinFormProps) {
             ) : (
               <li>
                 Time limit: <strong>{describeDuration(test.durationMinutes)}</strong> (
-                {describePaperSize(test)}). The timer starts when you tap Start test and never
-                stops.
+                {describePaperSize(test)}).{' '}
+                {test.waitingRoom
+                  ? 'After you tap Start test you wait until your teacher starts everyone together. Then the timer starts and never stops.'
+                  : 'The timer starts when you tap Start test and never stops.'}
               </li>
             )}
             {test.closesAt !== null && !isResuming && test.kind !== 'assignment' && (

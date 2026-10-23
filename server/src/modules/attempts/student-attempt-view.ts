@@ -22,6 +22,7 @@ export function toPublicTest(test: TestRecord, currentTime: number): PublicTest 
     writtenAnswers: test.writtenAnswers,
     bountyNote: test.bountyNote,
     bountyPoints: test.bountyPoints,
+    waitingRoom: test.waitingRoom,
     opensAt: test.opensAt,
     closesAt: test.closesAt,
     availability: availabilityAt(test, currentTime),

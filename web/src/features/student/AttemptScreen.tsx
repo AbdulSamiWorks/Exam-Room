@@ -13,6 +13,7 @@ import { ErrorScreen } from './screens/ErrorScreen';
 import { FinishedScreen } from './screens/FinishedScreen';
 import { LockedScreen } from './screens/LockedScreen';
 import { SessionLostScreen } from './screens/SessionLostScreen';
+import { WaitingRoomScreen } from './screens/WaitingRoomScreen';
 import { WarningScreen } from './screens/WarningScreen';
 import { isSessionLostError, useAttempt } from './use-attempt';
 import { useScreenWakeLock } from './use-screen-wake-lock';
@@ -45,10 +46,10 @@ export function AttemptScreen({ testCode, attemptToken, onSessionLost }: Attempt
     attemptToken,
     isWatching: status === 'in_progress' && !isFinishing && isTimedExam,
   });
-  useScreenWakeLock(status === 'in_progress' && isTimedExam);
+  useScreenWakeLock((status === 'in_progress' || status === 'waiting') && isTimedExam);
 
   useEffect(() => {
-    if (status && status !== 'in_progress') forgetPaper(queryClient, testCode);
+    if (status === 'submitted' || status === 'locked') forgetPaper(queryClient, testCode);
   }, [status, queryClient, testCode]);
 
   useEffect(() => {
@@ -76,6 +77,7 @@ export function AttemptScreen({ testCode, attemptToken, onSessionLost }: Attempt
     );
   }
   if (attempt.status === 'locked') return <LockedScreen />;
+  if (attempt.status === 'waiting') return <WaitingRoomScreen attempt={attempt} />;
 
   const hasUnseenExit = attempt.exitsUsed > acknowledgedExits;
 

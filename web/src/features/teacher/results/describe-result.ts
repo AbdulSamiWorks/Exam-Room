@@ -19,6 +19,7 @@ const EXIT_REASON_LABELS: Record<ExitReason, string> = {
 };
 
 export function describeResultStatus(result: AttemptResult): ResultStatus {
+  if (result.status === 'waiting') return { label: 'Waiting', tone: 'active' };
   if (result.status === 'locked') return { label: 'Left the test', tone: 'danger' };
   if (result.status === 'submitted') return describeFinishedStatus(result);
   return result.isAwayNow
@@ -43,6 +44,10 @@ export function sortByRollNumber(results: readonly AttemptResult[]): AttemptResu
   return [...results].sort((first, second) =>
     first.rollNumber.localeCompare(second.rollNumber, undefined, { numeric: true }),
   );
+}
+
+export function countWaiting(results: readonly AttemptResult[]): number {
+  return results.filter((result) => result.status === 'waiting').length;
 }
 
 export function isStoppedForLeaving(result: AttemptResult): boolean {

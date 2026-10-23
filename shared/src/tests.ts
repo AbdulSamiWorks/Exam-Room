@@ -34,6 +34,7 @@ export type TestSummary = TestSchedule & {
   writtenAnswers: WrittenAnswers;
   bountyNote: string;
   bountyPoints: number;
+  waitingRoom: boolean;
   resultsReleasedAt: number | null;
   studentCount: number;
   createdAt: number;
@@ -59,6 +60,7 @@ export type TestSettings = {
   writtenAnswers: WrittenAnswers;
   bountyNote: string;
   bountyPoints: number;
+  waitingRoom: boolean;
 };
 
 export type UpdateTestRequest = Partial<TestSettings>;

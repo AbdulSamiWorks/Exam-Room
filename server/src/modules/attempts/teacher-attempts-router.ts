@@ -17,7 +17,7 @@ import type { AttemptRecord } from './attempt-record.js';
 import { countPhotosOfTest } from '../answer-photos/photos-repository.js';
 import { countAnswersOfTest } from '../answers/answers-repository.js';
 import { summarizeAttempt } from './attempt-results.js';
-import { endByTeacher, unlockByTeacher } from './attempt-rules.js';
+import { endByTeacher, startTimesFor, unlockByTeacher } from './attempt-rules.js';
 import { changeAttempt } from './attempt-service.js';
 import {
   deleteAttemptWithExits,
@@ -25,6 +25,7 @@ import {
   listAttemptsOfTest,
   listExitsOfTest,
   listStudentsWithoutAttempt,
+  startWaitingAttempts,
 } from './attempts-repository.js';
 
 const testIdParamsSchema = z.object({
@@ -70,6 +71,12 @@ export function createTestResultsRouter(dependencies: AppDependencies): Router {
 
   router.get('/', async (request, response) => {
     const test = await requireTest(request);
+    await respondWithResults(response, test);
+  });
+
+  router.post('/start', async (request, response) => {
+    const test = await requireTest(request);
+    await startWaitingAttempts(database, test.id, startTimesFor(test, clock.now()));
     await respondWithResults(response, test);
   });
 

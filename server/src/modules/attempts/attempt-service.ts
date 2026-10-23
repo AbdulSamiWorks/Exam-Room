@@ -8,9 +8,10 @@ import type { TestRecord } from '../tests/test-record.js';
 import type { AttemptChange, AttemptRecord, ExitEvent } from './attempt-record.js';
 import {
   applyTimeLimit,
-  deadlineFor,
   registerExit,
   resumeOnNewDevice,
+  startsInWaitingRoom,
+  startTimesFor,
   type ExitRules,
 } from './attempt-rules.js';
 import {
@@ -164,8 +165,8 @@ async function tryInsertAttempt(
       rollNumber: student.rollNumber,
       rollNumberKey: comparisonKey(student.rollNumber),
       tokenHash,
-      startedAt: currentTime,
-      deadlineAt: deadlineFor(test, currentTime),
+      status: startsInWaitingRoom(test) ? 'waiting' : 'in_progress',
+      ...startTimesFor(test, currentTime),
     });
   } catch (error) {
     if (!isUniqueConstraintError(error)) throw error;

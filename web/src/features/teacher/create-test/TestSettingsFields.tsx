@@ -43,6 +43,13 @@ const LEAVE_RULE_CHOICES: Choice<LeaveRule>[] = [
   { value: 'finish', label: 'Finish the test' },
 ];
 
+type StartChoice = 'on_tap' | 'together';
+
+const START_CHOICES: Choice<StartChoice>[] = [
+  { value: 'on_tap', label: 'When each one taps Start' },
+  { value: 'together', label: 'Together, when I start everyone' },
+];
+
 const WRITTEN_ANSWER_CHOICES: Choice<WrittenAnswers>[] = [
   { value: 'on_paper', label: 'On their own paper' },
   { value: 'typed', label: 'Typed on the phone' },
@@ -124,6 +131,17 @@ export function TestSettingsFields({
             selectedValue={values.leaveRule}
             disabled={areRulesFixed}
             onChange={(leaveRule) => onChange((current) => ({ ...current, leaveRule }))}
+          />
+
+          <ChoiceGroup
+            label="Students start"
+            hint="Together: students who tap Start wait until you tap Start for everyone in the results, then all get the same time."
+            choices={START_CHOICES}
+            selectedValue={values.waitingRoom ? 'together' : 'on_tap'}
+            disabled={areRulesFixed}
+            onChange={(startChoice) =>
+              onChange((current) => ({ ...current, waitingRoom: startChoice === 'together' }))
+            }
           />
         </>
       )}

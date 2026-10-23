@@ -38,6 +38,7 @@ export function TestDetailsPage() {
     describePaperSize(test),
     test.kind === 'assignment' ? 'No timer' : describeDuration(test.durationMinutes),
     test.kind === 'assignment' ? undefined : describeAllowedExits(test.allowedExits),
+    test.waitingRoom && test.kind !== 'assignment' ? 'Waiting room' : undefined,
     describeBounty(test.bountyNote, test.bountyPoints),
   ]
     .filter(Boolean)

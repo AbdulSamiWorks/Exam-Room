@@ -18,6 +18,7 @@ export type TestSettings = {
   leaveRule?: LeaveRule;
   pageImages?: Buffer[];
   isOpen?: boolean;
+  waitingRoom?: boolean;
 };
 
 export type StudentIdentity = {
@@ -94,7 +95,8 @@ export async function publishTest(app: Express, settings: TestSettings = {}): Pr
     .field('title', settings.title ?? 'Chapter 3 Quiz')
     .field('durationMinutes', String(settings.durationMinutes ?? 30))
     .field('allowedExits', String(settings.allowedExits ?? 1))
-    .field('leaveRule', settings.leaveRule ?? 'lock');
+    .field('leaveRule', settings.leaveRule ?? 'lock')
+    .field('waitingRoom', String(settings.waitingRoom ?? false));
 
   const pageImages = settings.pageImages ?? [await createBlankPageImage()];
   pageImages.forEach((pageImage, pageIndex) => {

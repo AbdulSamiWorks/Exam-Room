@@ -7,7 +7,7 @@ export type StudentTestGroups = {
   finished: StudentTestCard[];
 };
 
-const UNFINISHED_STATUSES = new Set(['in_progress', 'locked']);
+const UNFINISHED_STATUSES = new Set(['waiting', 'in_progress', 'locked']);
 
 export function groupStudentTests(tests: readonly StudentTestCard[]): StudentTestGroups {
   const now = tests.filter(isHappeningNow);
@@ -42,6 +42,7 @@ export function describeStudentTestState(test: StudentTestCard): string {
   if (test.releasedMarks !== null) {
     return `Marks: ${test.releasedMarks} of ${test.maxMarks ?? 0} – tap to see`;
   }
+  if (test.attemptStatus === 'waiting') return 'Waiting for your teacher – tap to open';
   if (test.attemptStatus === 'in_progress') return 'Started – tap to continue';
   if (test.attemptStatus === 'locked') return 'Locked – ask your teacher';
   if (test.attemptStatus === 'submitted') {

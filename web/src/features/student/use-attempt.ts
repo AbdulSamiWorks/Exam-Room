@@ -8,6 +8,7 @@ import { fetchAttempt, fetchPublicTest, startAttempt } from './student-api';
 const LOCKED_REFRESH_INTERVAL_MS = 5000;
 const IN_PROGRESS_REFRESH_INTERVAL_MS = 30_000;
 const WAITING_FOR_OPENING_REFRESH_INTERVAL_MS = 5000;
+const WAITING_ROOM_REFRESH_INTERVAL_MS = 3000;
 const UNAUTHORIZED_STATUS = 401;
 const TEST_NOT_STARTABLE_ERROR_CODES = new Set(['test_not_open', 'test_closed']);
 const STUDENT_LOGIN_NEEDED_ERROR_CODE = 'student_login_needed';
@@ -45,6 +46,7 @@ export function useAttempt(testCode: string, attemptToken: string) {
 }
 
 function refreshIntervalFor(status: AttemptStatus | undefined): number | false {
+  if (status === 'waiting') return WAITING_ROOM_REFRESH_INTERVAL_MS;
   if (status === 'locked') return LOCKED_REFRESH_INTERVAL_MS;
   if (status === 'in_progress') return IN_PROGRESS_REFRESH_INTERVAL_MS;
   return false;

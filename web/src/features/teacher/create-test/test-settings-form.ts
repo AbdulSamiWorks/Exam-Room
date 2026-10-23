@@ -21,6 +21,7 @@ export type TestSettingsFormValues = {
   writtenAnswers: WrittenAnswers;
   bountyNote: string;
   bountyPoints: string;
+  waitingRoom: boolean;
 };
 
 export type TestSettingsFormErrors = Partial<
@@ -39,6 +40,7 @@ export const NEW_TEST_SETTINGS: TestSettingsFormValues = {
   writtenAnswers: 'on_paper',
   bountyNote: '',
   bountyPoints: '0',
+  waitingRoom: false,
 };
 
 export function settingsFormValuesOf(test: TestSummary): TestSettingsFormValues {
@@ -54,6 +56,7 @@ export function settingsFormValuesOf(test: TestSummary): TestSettingsFormValues 
     writtenAnswers: test.writtenAnswers,
     bountyNote: test.bountyNote,
     bountyPoints: String(test.bountyPoints),
+    waitingRoom: test.waitingRoom,
   };
 }
 
@@ -128,6 +131,7 @@ export function toTestSettings(values: TestSettingsFormValues): TestSettings {
     writtenAnswers: values.writtenAnswers,
     bountyNote: values.bountyNote.trim(),
     bountyPoints: Number(values.bountyPoints || 0),
+    waitingRoom: values.kind !== 'assignment' && values.waitingRoom,
   };
 }
 

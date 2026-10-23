@@ -407,4 +407,12 @@ export const migrations: readonly Migration[] = [
       `CREATE INDEX points_test_id ON points (test_id)`,
     ],
   },
+  {
+    id: 13,
+    name: 'waiting room switch on tests',
+    statements: [
+      `ALTER TABLE tests ADD COLUMN waiting_room INTEGER NOT NULL DEFAULT 0
+         CHECK (waiting_room IN (0, 1))`,
+    ],
+  },
 ];

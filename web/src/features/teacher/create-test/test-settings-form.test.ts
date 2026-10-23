@@ -83,6 +83,7 @@ describe('toUpdateTestRequest', () => {
       durationMinutes: 30,
       allowedExits: 1,
       leaveRule: 'lock',
+      waitingRoom: false,
     });
   });
 });

@@ -4,6 +4,7 @@ import type { Database } from '../../database/connection.js';
 import { requireFirstRow } from '../../database/query-helpers.js';
 import { compareNaturally } from '../../lib/text.js';
 import type { AttemptChange, AttemptRecord, ExitEvent } from './attempt-record.js';
+import type { StartTimes } from './attempt-rules.js';
 
 export type NewAttempt = {
   testId: number;
@@ -12,6 +13,7 @@ export type NewAttempt = {
   rollNumber: string;
   rollNumberKey: string;
   tokenHash: string;
+  status: Extract<AttemptStatus, 'waiting' | 'in_progress'>;
   startedAt: number;
   deadlineAt: number;
 };
@@ -28,7 +30,7 @@ export async function insertAttempt(
     sql: `INSERT INTO attempts
             (test_id, student_id, student_name, roll_no, roll_no_key, token_hash, status,
              started_at, deadline_at)
-          VALUES (?, ?, ?, ?, ?, ?, 'in_progress', ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           RETURNING ${ATTEMPT_COLUMNS}`,
     args: [
       newAttempt.testId,
@@ -37,11 +39,26 @@ export async function insertAttempt(
       newAttempt.rollNumber,
       newAttempt.rollNumberKey,
       newAttempt.tokenHash,
+      newAttempt.status,
       newAttempt.startedAt,
       newAttempt.deadlineAt,
     ],
   });
   return toAttemptRecord(requireFirstRow(result));
+}
+
+export async function startWaitingAttempts(
+  database: Database,
+  testId: number,
+  { startedAt, deadlineAt }: StartTimes,
+): Promise<number> {
+  const result = await database.execute({
+    sql: `UPDATE attempts
+          SET status = 'in_progress', started_at = ?, deadline_at = ?, version = version + 1
+          WHERE test_id = ? AND status = 'waiting'`,
+    args: [startedAt, deadlineAt, testId],
+  });
+  return result.rowsAffected;
 }
 
 export async function findAttemptById(
