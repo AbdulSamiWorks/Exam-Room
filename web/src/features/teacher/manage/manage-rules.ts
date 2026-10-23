@@ -78,3 +78,10 @@ export function pinListText(
   );
   return [`${className} – login PINs`, ...lines].join('\n');
 }
+
+export function describeClassContents(schoolClass: ClassSummary): string {
+  return [
+    countOf(schoolClass.studentCount, 'student'),
+    countOf(schoolClass.subjects.length, 'subject'),
+  ].join(' · ');
+}

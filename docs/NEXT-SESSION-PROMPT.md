@@ -37,6 +37,8 @@ Subjects / Students), `SubjectCard` (rename, move to class, move tests with
 PIN, delete, move all students); a `TextAreaField` component; tests for `test-settings-form.ts`
 helpers and `group-tests-by-subject.ts`; then the docs and commits listed in section 2.
 
+Third session also did: `describeClassContents` moved into `manage-rules.ts`; "Tests | Manage" links in `TeacherLayout` (active by path); `components/TextAreaField.tsx`. Still left: the routes in `TeacherArea.tsx`, `ClassPage` and everything after it in the list above. Run `npm run check` first.
+
 ## 1. Read first
 
 1. `CLAUDE.md`.

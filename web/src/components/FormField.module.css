@@ -43,3 +43,10 @@
   color: var(--color-danger);
   font-size: 0.875rem;
 }
+
+.textArea {
+  min-height: 160px;
+  padding: 10px 14px;
+  resize: vertical;
+  line-height: 1.5;
+}

@@ -4,8 +4,8 @@ import { FormError } from '../../../components/FormError';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { Page } from '../../../components/Page';
 import { Panel } from '../../../components/Panel';
-import { countOf } from '../../../lib/text';
 import { classLimits } from './manage-limits';
+import { describeClassContents } from './manage-rules';
 import { manageClassPath } from './manage-paths';
 import { NameForm } from './NameForm';
 import { useClassTree, useCreateClass } from './use-classes';
@@ -55,11 +55,4 @@ function ClassList({ classes }: { classes: ClassSummary[] }) {
       ))}
     </ul>
   );
-}
-
-export function describeClassContents(schoolClass: ClassSummary): string {
-  return [
-    countOf(schoolClass.studentCount, 'student'),
-    countOf(schoolClass.subjects.length, 'subject'),
-  ].join(' · ');
 }
