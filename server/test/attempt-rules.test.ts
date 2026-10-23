@@ -1,45 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import type { AttemptRecord, ExitEvent } from '../src/modules/attempts/attempt-record.js';
+import type { ExitEvent } from '../src/modules/attempts/attempt-record.js';
 import {
   applyTimeLimit,
   exitsUsed,
   finishByStudent,
   registerExit,
   resumeOnNewDevice,
+  unlockByTeacher,
 } from '../src/modules/attempts/attempt-rules.js';
-
-const STARTED_AT = 1_000_000;
-const DURATION_MS = 30 * 60 * 1000;
-const DEADLINE_AT = STARTED_AT + DURATION_MS;
-
-function attemptRecord(overrides: Partial<AttemptRecord> = {}): AttemptRecord {
-  return {
-    id: 1,
-    testId: 1,
-    studentName: 'Ayesha Khan',
-    rollNumber: '17',
-    tokenHash: 'original-token-hash',
-    status: 'in_progress',
-    finishReason: null,
-    startedAt: STARTED_AT,
-    deadlineAt: DEADLINE_AT,
-    finishedAt: null,
-    exitCount: 0,
-    forgivenExits: 0,
-    version: 0,
-    ...overrides,
-  };
-}
-
-function exitEvent(leftAt = STARTED_AT + 60_000): ExitEvent {
-  return {
-    clientExitId: `exit-${leftAt}`,
-    reason: 'hidden',
-    leftAt,
-    returnedAt: null,
-    awayMs: null,
-  };
-}
+import {
+  attemptRecord,
+  DEADLINE_AT,
+  exitEvent,
+  STARTED_AT,
+} from './support/attempt-record-fixtures.js';
 
 describe('exitsUsed', () => {
   it('does not count forgiven exits', () => {
@@ -144,5 +118,45 @@ describe('resumeOnNewDevice', () => {
     const change = resumeOnNewDevice(attempt, 'new-token-hash', 1, deviceChange);
     expect(change.attempt).toMatchObject({ tokenHash: 'new-token-hash', exitCount: 0 });
     expect(change.newExit).toBeUndefined();
+  });
+});
+
+describe('unlockByTeacher', () => {
+  const lockedAttempt = attemptRecord({
+    status: 'locked',
+    exitCount: 2,
+    finishedAt: STARTED_AT + 60_000,
+  });
+
+  it('opens a locked attempt again and forgives one exit', () => {
+    const change = unlockByTeacher(lockedAttempt, STARTED_AT + 120_000);
+    expect(change.attempt).toMatchObject({
+      status: 'in_progress',
+      finishedAt: null,
+      exitCount: 2,
+      forgivenExits: 1,
+    });
+    expect(exitsUsed(change.attempt)).toBe(1);
+  });
+
+  it('locks again on the next exit', () => {
+    const unlocked = unlockByTeacher(lockedAttempt, STARTED_AT + 120_000).attempt;
+    expect(registerExit(unlocked, 1, exitEvent(STARTED_AT + 180_000)).attempt.status).toBe(
+      'locked',
+    );
+  });
+
+  it('submits the attempt as time up when the deadline has already passed', () => {
+    expect(unlockByTeacher(lockedAttempt, DEADLINE_AT + 1).attempt).toMatchObject({
+      status: 'submitted',
+      finishReason: 'time_up',
+      finishedAt: DEADLINE_AT,
+      forgivenExits: 1,
+    });
+  });
+
+  it.each(['in_progress', 'submitted'] as const)('changes nothing when %s', (status) => {
+    const attempt = attemptRecord({ status });
+    expect(unlockByTeacher(attempt, STARTED_AT + 1).attempt).toBe(attempt);
   });
 });

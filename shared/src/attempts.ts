@@ -6,6 +6,8 @@ export type FinishReason = 'student' | 'time_up';
 
 export type ExitReason = 'hidden' | 'blur' | 'fullscreen' | 'device_change';
 
+export type StudentExitReason = Exclude<ExitReason, 'device_change'>;
+
 export type PublicTest = {
   code: string;
   title: string;
@@ -49,6 +51,38 @@ export type StartAttemptResponse = {
 
 export type AttemptResponse = {
   attempt: StudentAttempt;
+};
+
+export type RecordExitRequest = {
+  clientExitId: string;
+  reason: StudentExitReason;
+};
+
+export type RecordReturnRequest = RecordExitRequest & {
+  awayMsClient: number;
+};
+
+export type AttemptResult = {
+  id: number;
+  studentName: string;
+  rollNumber: string;
+  status: AttemptStatus;
+  finishReason: FinishReason | null;
+  startedAt: number;
+  finishedAt: number | null;
+  exitCount: number;
+  forgivenExits: number;
+  awayMs: number;
+  isAwayNow: boolean;
+};
+
+export type AttemptResultListResponse = {
+  attempts: AttemptResult[];
+  serverTime: number;
+};
+
+export type AttemptResultResponse = {
+  attempt: AttemptResult;
 };
 
 export type StudentLimits = {

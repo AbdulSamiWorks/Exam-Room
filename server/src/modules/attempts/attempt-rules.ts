@@ -47,6 +47,17 @@ export function registerExit(
   };
 }
 
+export function unlockByTeacher(attempt: AttemptRecord, currentTime: number): AttemptChange {
+  if (attempt.status !== 'locked') return { attempt };
+  const unlockedAttempt: AttemptRecord = {
+    ...attempt,
+    status: 'in_progress',
+    finishedAt: null,
+    forgivenExits: attempt.forgivenExits + 1,
+  };
+  return applyTimeLimit(unlockedAttempt, currentTime);
+}
+
 export function resumeOnNewDevice(
   attempt: AttemptRecord,
   newTokenHash: string,

@@ -1,4 +1,4 @@
-import type { AttemptResponse } from '@exam-room/shared';
+import type { AttemptResponse, TestSummary } from '@exam-room/shared';
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import type { AppDependencies } from '../../app-dependencies.js';
@@ -8,13 +8,24 @@ import { parseInput } from '../../lib/parse-input.js';
 import { findPageImage } from '../tests/tests-repository.js';
 import type { AttemptRecord } from './attempt-record.js';
 import { finishByStudent } from './attempt-rules.js';
-import { changeAttempt, enforceTimeLimit } from './attempt-service.js';
+import { changeAttempt, enforceTimeLimit, recordExit, recordReturn } from './attempt-service.js';
 import { readBearerToken } from './attempt-token.js';
 import { findAttemptByTokenHash } from './attempts-repository.js';
 import { buildStudentAttempt, findTestOfAttempt } from './student-attempt-view.js';
 
+const MAX_REPORTED_AWAY_MS = 24 * 60 * 60 * 1000;
+
 const pageParamsSchema = z.object({
   pageNumber: z.coerce.number().int().positive(),
+});
+
+const exitReportSchema = z.object({
+  clientExitId: z.string().regex(/^[\w-]{8,64}$/, 'Invalid exit id.'),
+  reason: z.enum(['hidden', 'blur', 'fullscreen']),
+});
+
+const returnReportSchema = exitReportSchema.extend({
+  awayMsClient: z.number().int().min(0).max(MAX_REPORTED_AWAY_MS),
 });
 
 export function createAttemptRouter(dependencies: AppDependencies): Router {
@@ -36,8 +47,12 @@ export function createAttemptRouter(dependencies: AppDependencies): Router {
     return enforceTimeLimit(database, attempt, clock.now());
   }
 
-  async function respondWithAttempt(response: Response, attempt: AttemptRecord): Promise<void> {
-    const test = await findTestOfAttempt(database, attempt);
+  async function respondWithAttempt(
+    response: Response,
+    attempt: AttemptRecord,
+    knownTest?: TestSummary,
+  ): Promise<void> {
+    const test = knownTest ?? (await findTestOfAttempt(database, attempt));
     const studentAttempt = await buildStudentAttempt(database, attempt, test, clock.now());
     response.json({ attempt: studentAttempt } satisfies AttemptResponse);
   }
@@ -57,6 +72,34 @@ export function createAttemptRouter(dependencies: AppDependencies): Router {
     if (!pageImage) throw notFound('This page does not exist.');
 
     response.set({ 'Content-Type': 'image/webp', 'Cache-Control': 'no-store' }).send(pageImage);
+  });
+
+  router.post('/exits', async (request, response) => {
+    const attempt = await loadAttempt(request);
+    const exitReport = parseInput(exitReportSchema, request.body);
+    const test = await findTestOfAttempt(database, attempt);
+
+    const updatedAttempt = await recordExit(
+      database,
+      attempt,
+      { ...exitReport, allowedExits: test.allowedExits },
+      clock.now(),
+    );
+    await respondWithAttempt(response, updatedAttempt, test);
+  });
+
+  router.post('/return', async (request, response) => {
+    const attempt = await loadAttempt(request);
+    const returnReport = parseInput(returnReportSchema, request.body);
+    const test = await findTestOfAttempt(database, attempt);
+
+    const updatedAttempt = await recordReturn(
+      database,
+      attempt,
+      { ...returnReport, allowedExits: test.allowedExits },
+      clock.now(),
+    );
+    await respondWithAttempt(response, updatedAttempt, test);
   });
 
   router.post('/finish', async (request, response) => {

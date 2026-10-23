@@ -2,7 +2,7 @@ import type { AttemptStatus, FinishReason } from '@exam-room/shared';
 import type { Row } from '@libsql/client';
 import type { Database } from '../../database/connection.js';
 import { requireFirstRow } from '../../database/query-helpers.js';
-import type { AttemptChange, AttemptRecord } from './attempt-record.js';
+import type { AttemptChange, AttemptRecord, ExitEvent } from './attempt-record.js';
 
 export type NewAttempt = {
   testId: number;
@@ -107,6 +107,77 @@ export async function saveAttemptChange(
   } finally {
     transaction.close();
   }
+}
+
+export async function hasExit(
+  database: Database,
+  attemptId: number,
+  clientExitId: string,
+): Promise<boolean> {
+  const { rows } = await database.execute({
+    sql: 'SELECT 1 FROM exits WHERE attempt_id = ? AND client_exit_id = ?',
+    args: [attemptId, clientExitId],
+  });
+  return rows.length > 0;
+}
+
+export async function closeExit(
+  database: Database,
+  attemptId: number,
+  clientExitId: string,
+  returnedAt: number,
+): Promise<void> {
+  await database.execute({
+    sql: `UPDATE exits
+          SET returned_at = ?, away_ms = MAX(0, ? - left_at)
+          WHERE attempt_id = ? AND client_exit_id = ? AND returned_at IS NULL`,
+    args: [returnedAt, returnedAt, attemptId, clientExitId],
+  });
+}
+
+export async function listAttemptsOfTest(
+  database: Database,
+  testId: number,
+): Promise<AttemptRecord[]> {
+  const { rows } = await database.execute({
+    sql: `SELECT ${ATTEMPT_COLUMNS} FROM attempts WHERE test_id = ? ORDER BY started_at, id`,
+    args: [testId],
+  });
+  return rows.map(toAttemptRecord);
+}
+
+export async function listExitsOfTest(
+  database: Database,
+  testId: number,
+): Promise<Map<number, ExitEvent[]>> {
+  const { rows } = await database.execute({
+    sql: `SELECT exits.attempt_id, exits.client_exit_id, exits.reason,
+                 exits.left_at, exits.returned_at, exits.away_ms
+          FROM exits
+          JOIN attempts ON attempts.id = exits.attempt_id
+          WHERE attempts.test_id = ?
+          ORDER BY exits.left_at, exits.id`,
+    args: [testId],
+  });
+
+  const exitsByAttemptId = new Map<number, ExitEvent[]>();
+  for (const row of rows) {
+    const attemptId = Number(row.attempt_id);
+    const attemptExits = exitsByAttemptId.get(attemptId) ?? [];
+    attemptExits.push(toExitEvent(row));
+    exitsByAttemptId.set(attemptId, attemptExits);
+  }
+  return exitsByAttemptId;
+}
+
+function toExitEvent(row: Row): ExitEvent {
+  return {
+    clientExitId: String(row.client_exit_id),
+    reason: String(row.reason) as ExitEvent['reason'],
+    leftAt: Number(row.left_at),
+    returnedAt: row.returned_at === null ? null : Number(row.returned_at),
+    awayMs: row.away_ms === null ? null : Number(row.away_ms),
+  };
 }
 
 async function findOneAttempt(

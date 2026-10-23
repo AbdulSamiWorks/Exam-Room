@@ -1,12 +1,14 @@
-import type { TestSummary } from '@exam-room/shared';
+import type { AllowedExits, StudentExitReason, TestSummary } from '@exam-room/shared';
 import { randomUUID } from 'node:crypto';
 import type { Database } from '../../database/connection.js';
 import { isUniqueConstraintError } from '../../database/query-helpers.js';
 import { HttpError } from '../../lib/http-errors.js';
-import type { AttemptChange, AttemptRecord } from './attempt-record.js';
-import { applyTimeLimit, resumeOnNewDevice } from './attempt-rules.js';
+import type { AttemptChange, AttemptRecord, ExitEvent } from './attempt-record.js';
+import { applyTimeLimit, registerExit, resumeOnNewDevice } from './attempt-rules.js';
 import {
+  closeExit,
   findAttemptById,
+  hasExit,
   findAttemptByRollNumber,
   insertAttempt,
   saveAttemptChange,
@@ -39,12 +41,53 @@ export async function changeAttempt(
       return { ...change.attempt, version: current.version + 1 };
     }
 
-    const latest = await findAttemptById(database, current.id);
-    if (!latest) throw new Error(`Attempt ${current.id} disappeared while being updated.`);
-    current = latest;
+    current = await requireAttempt(database, current.id);
   }
 
   throw new Error(`Attempt ${knownAttempt.id} kept changing while being updated.`);
+}
+
+export type StudentExitInput = {
+  clientExitId: string;
+  reason: StudentExitReason;
+  allowedExits: AllowedExits;
+};
+
+export async function recordExit(
+  database: Database,
+  attempt: AttemptRecord,
+  input: StudentExitInput,
+  leftAt: number,
+): Promise<AttemptRecord> {
+  if (await hasExit(database, attempt.id, input.clientExitId)) return attempt;
+
+  const exit: ExitEvent = {
+    clientExitId: input.clientExitId,
+    reason: input.reason,
+    leftAt,
+    returnedAt: null,
+    awayMs: null,
+  };
+  try {
+    return await changeAttempt(database, attempt, (current) =>
+      registerExit(current, input.allowedExits, exit),
+    );
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) throw error;
+    return requireAttempt(database, attempt.id);
+  }
+}
+
+export async function recordReturn(
+  database: Database,
+  attempt: AttemptRecord,
+  input: StudentExitInput & { awayMsClient: number },
+  currentTime: number,
+): Promise<AttemptRecord> {
+  const estimatedLeftAt = Math.max(attempt.startedAt, currentTime - input.awayMsClient);
+  const attemptAfterExit = await recordExit(database, attempt, input, estimatedLeftAt);
+  await closeExit(database, attempt.id, input.clientExitId, currentTime);
+  return attemptAfterExit;
 }
 
 export function enforceTimeLimit(
@@ -84,6 +127,12 @@ export async function startOrResumeAttempt(
       awayMs: 0,
     }),
   );
+}
+
+async function requireAttempt(database: Database, attemptId: number): Promise<AttemptRecord> {
+  const attempt = await findAttemptById(database, attemptId);
+  if (!attempt) throw new Error(`Attempt ${attemptId} is missing.`);
+  return attempt;
 }
 
 async function tryInsertAttempt(
