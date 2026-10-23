@@ -1,7 +1,7 @@
 # Exam Room — Architecture
 
-> Status: **approved plan, v1** (2026-10-22). Milestones M0–M12 are built (2026-10-25); the
-> real-device checks in §15 are still to do. M13–M19 are planned in §16 (2026-10-24). Update this
+> Status: **approved plan, v1** (2026-10-22). Milestones M0–M13 are built (2026-10-25); the
+> real-device checks in §15 are still to do. M14–M19 are planned in §16 (2026-10-24). Update this
 > file whenever a decision below changes.
 
 Exam Room is a small mobile-first web app. A teacher uploads a test paper (PDF), shares a link, and
@@ -133,9 +133,17 @@ students   (id PK, class_id → classes, name, roll_no, roll_no_key,   -- key = 
             created_at, UNIQUE (class_id, roll_no_key))
 
 tests      (id PK, code UNIQUE,            -- 6-char share code, e.g. K7M2QX (no 0/O/1/I)
-            subject_id → subjects, kind CHECK IN ('test','quiz'), title, duration_minutes,
-            allowed_exits CHECK (0..2), leave_rule, page_count, created_at,
-            opens_at NULL, closes_at NULL)   -- NULL opens_at = not open yet (see 6.8)
+            subject_id → subjects, kind CHECK IN ('test','quiz','assignment'), title,
+            duration_minutes, allowed_exits CHECK (0..2), leave_rule,
+            paper_kind CHECK IN ('pages','typed'), page_count >= 0,
+            paper JSON NULL,               -- typed paper, or the answer sheet of a PDF test (D44)
+            answer_key JSON DEFAULT '{}',  -- never sent to students before release
+            question_count, max_marks NULL, -- stored when the paper is saved, for cheap lists
+            written_answers CHECK IN ('on_paper','typed','photos','typed_and_photos'),
+            created_at, opens_at NULL, closes_at NULL)   -- NULL opens_at = not open yet (6.8)
+
+paper_images (test_id → tests, image_no, image BLOB (WebP, max 1000 px wide), width, height,
+            UNIQUE (test_id, image_no))
 
 test_chapters (test_id → tests, chapter_id → chapters, PRIMARY KEY (test_id, chapter_id))
 
@@ -337,11 +345,16 @@ POST   /api/students/:id/reset-pin    → a new PIN, shown once; old phones are 
 DELETE /api/students/:id              → old results stay by name and roll number
 GET    /api/tests?subjectId=
 POST   /api/tests                 multipart: subjectId, kind, chapterIds, title, durationMinutes,
-                                  allowedExits, leaveRule, pages[]
+                                  allowedExits, leaveRule, writtenAnswers, paperKind, and
+                                  pages[] (PDF) or paper + answerKey + paperImages[] (typed)
 GET    /api/tests/:id
 PATCH  /api/tests/:id                 { subjectId?, kind?, chapterIds?, title?, durationMinutes?,
                                         allowedExits?, leaveRule? }
 PUT    /api/tests/:id/pages           multipart: pages[] (only before any student starts)
+GET    /api/tests/:id/paper           → { paper, answerKey, imageCount }
+PUT    /api/tests/:id/paper           multipart: paper, answerKey, paperImages[] (before any start)
+PUT    /api/tests/:id/answer-key      { answerKey } (any time)
+GET    /api/tests/:id/paper-images/:n
 GET    /api/tests/:id/attempts        → results with exit history
 POST   /api/tests/:id/attempts/end    → ends every running attempt and closes the test
 POST   /api/attempts/:id/unlock
@@ -378,6 +391,8 @@ GET    /api/public/tests/:code             → title, subject, durationMinutes, 
 POST   /api/public/tests/:code/attempts    (student cookie) → token + state
 GET    /api/attempt                        → state (status, deadlineAt, serverNow, exits, pageCount…)
 GET    /api/attempt/pages/:n               → page image (in progress only)
+GET    /api/attempt/paper                  → the typed paper without answers (in progress only)
+GET    /api/attempt/paper-images/:n        → a picture of the typed paper (in progress only)
 POST   /api/attempt/exits                  { clientExitId, reason }
 POST   /api/attempt/return                 { clientExitId, reason, awayMsClient }
 POST   /api/attempt/finish
@@ -516,8 +531,8 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 | M18 | Dashboard and progress for students and the teacher                                                    |
 | M19 | Waiting room: the teacher starts everyone at the same time                                             |
 
-Status (2026-10-25): M0–M12 are built and tested (unit tests, API tests and a smoke test of the
-production build). Still to do by hand: the real-device checks in §15. M13–M19 are planned in §16.
+Status (2026-10-25): M0–M13 are built and tested (unit tests, API tests and a smoke test of the
+production build). Still to do by hand: the real-device checks in §15. M14–M19 are planned in §16.
 
 ## 13. Decision log
 
@@ -809,6 +824,29 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 | Render hours     | One service awake all month ≈ 744 hours                               | 750 hours / month                  |
 
 ## 17. Built milestones
+
+### M13 Typed papers and answer sheets (built 2026-10-25)
+
+- **New test → Paper → Type or paste**: the teacher pastes plain text or JSON
+  (`docs/PAPER-FORMAT.md` has both formats with a full sample, and a test checks that the samples
+  stay valid). The editor shows the problems with line numbers, warnings (missing marks count 1),
+  a summary (questions, marks, answered MCQs) and a live preview with the correct options
+  marked, where pictures are added per question (shrunk to 1000 px WebP in the browser).
+- The text reader is forgiving: `# Section`, `1.` / `Q1.` / `1)`, `a)` / `(A)` / `A.`, marks as
+  `[2]`, `[2 marks]` or `(2 marks)`, `Answer: b`, model answers over several lines, and written
+  questions with parts that carry their own marks. `paperToText` writes a paper back in the same
+  format, so editing an existing paper starts from its text.
+- One `Paper` shape for both kinds (D44): typed tests store it as their paper; a PDF test can store
+  it as its **answer sheet** (built from "N MCQs with options A–D, M marks each; K written
+  questions"). The answer key is a separate column, changed any time on **Questions and
+  answers** (letters in order like `BCAD?`, or tap per question), never sent to students.
+  `question_count` and `max_marks` are stored with the paper so lists stay one query.
+- Migration 8 rebuilt `tests` (page count may be 0, the duration has no upper limit in the
+  database any more, and the new paper columns) and added `paper_images`.
+- Students see the typed paper as a real exam paper: instructions, sections, numbered questions,
+  marks on the right and large option buttons, right-to-left text where needed. The paper and its
+  pictures load when the exam opens and are dropped from memory when it closes, like PDF pages.
+- How written questions are answered is chosen per test (D53); answering itself comes in M14.
 
 ### M12 Installable app, fingerprint login and phone-lock steps (built 2026-10-25)
 

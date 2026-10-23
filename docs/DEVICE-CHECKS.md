@@ -129,3 +129,13 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
 - [ ] The teacher taps **Reset PIN**: the fingerprint login on that phone stops working and asks
       for the PIN.
 - [ ] Follow **Lock your phone to this test** on Android (App pinning) and iPhone (Guided Access).
+
+## 13. Typed papers
+
+- [ ] **New test → Type or paste → Start from a sample paper**: the preview shows the paper; a
+      broken line (for example `Answer: e` for four options) shows a problem with its line number.
+- [ ] Add a picture from the phone's camera roll to a question; it shows in the preview.
+- [ ] Create the test, then open it on a student phone: the paper is easy to read, Urdu text runs
+      right to left, the picture shows, and no correct answer is visible.
+- [ ] On a PDF test, **Add an answer sheet** (for example 10 MCQs with A–D) and type the answers
+      as letters.
