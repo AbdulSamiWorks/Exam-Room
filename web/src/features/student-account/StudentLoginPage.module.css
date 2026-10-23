@@ -3,3 +3,16 @@
   flex-direction: column;
   gap: 16px;
 }
+
+.fingerprint {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.or {
+  margin: 0;
+  color: var(--color-muted);
+  text-align: center;
+}

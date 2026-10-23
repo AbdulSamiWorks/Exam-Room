@@ -129,11 +129,17 @@ export async function replacePinHash(
   studentId: number,
   pinHash: string,
 ): Promise<void> {
-  await database.execute({
-    sql: `UPDATE students SET pin_hash = ?, session_version = session_version + 1
-          WHERE id = ?`,
-    args: [pinHash, studentId],
-  });
+  await database.batch(
+    [
+      {
+        sql: `UPDATE students SET pin_hash = ?, session_version = session_version + 1
+              WHERE id = ?`,
+        args: [pinHash, studentId],
+      },
+      { sql: 'DELETE FROM student_passkeys WHERE student_id = ?', args: [studentId] },
+    ],
+    'write',
+  );
 }
 
 export async function moveStudentsOfClass(
@@ -152,6 +158,7 @@ export async function deleteStudent(database: Database, studentId: number): Prom
   await database.batch(
     [
       { sql: 'UPDATE attempts SET student_id = NULL WHERE student_id = ?', args: [studentId] },
+      { sql: 'DELETE FROM student_passkeys WHERE student_id = ?', args: [studentId] },
       { sql: 'DELETE FROM students WHERE id = ?', args: [studentId] },
     ],
     'write',

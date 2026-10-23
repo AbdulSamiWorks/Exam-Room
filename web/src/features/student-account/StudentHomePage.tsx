@@ -8,6 +8,8 @@ import { Panel } from '../../components/Panel';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import { describeDateTime } from '../../lib/describe-date-time';
 import { describeDuration } from '../../lib/describe-test-length';
+import { FingerprintOffer } from './FingerprintOffer';
+import { InstallAppPanel } from './InstallAppPanel';
 import { describeStudentTestState, groupStudentTests } from './group-student-tests';
 import { studentTestPath } from './student-paths';
 import { useStudentHome, useStudentLogout } from './use-student-account';
@@ -30,9 +32,13 @@ export function StudentHomePage({ student }: { student: StudentProfile }) {
         </div>
       }
     >
-      {home.isPending && <LoadingScreen message="Loading your tests…" />}
-      {home.isError && <FormError>{home.error.message}</FormError>}
-      {home.data && <TestSections tests={home.data.tests} />}
+      <div className={styles.sections}>
+        <FingerprintOffer />
+        <InstallAppPanel />
+        {home.isPending && <LoadingScreen message="Loading your tests…" />}
+        {home.isError && <FormError>{home.error.message}</FormError>}
+        {home.data && <TestSections tests={home.data.tests} />}
+      </div>
     </Page>
   );
 }

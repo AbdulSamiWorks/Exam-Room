@@ -2,6 +2,7 @@ import { ButtonLink } from '../../components/Button';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Page, PageText } from '../../components/Page';
 import { ThemeToggle } from '../../components/ThemeToggle';
+import { InstallAppPanel } from '../student-account/InstallAppPanel';
 import { StudentHomePage } from '../student-account/StudentHomePage';
 import { STUDENT_LOGIN_PATH } from '../student-account/student-paths';
 import { useStudentSession } from '../student-account/use-student-account';
@@ -23,6 +24,7 @@ export function HomePage() {
         <ButtonLink to="/teacher" variant="secondary" fullWidth>
           Teacher login
         </ButtonLink>
+        <InstallAppPanel />
       </div>
     </Page>
   );

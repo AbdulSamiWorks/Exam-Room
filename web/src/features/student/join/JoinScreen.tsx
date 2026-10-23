@@ -14,6 +14,7 @@ import { TestNotOpenScreen } from '../screens/TestNotOpenScreen';
 import { usePublicTest, useStartAttempt } from '../use-attempt';
 import { studentLoginPath, studentTestPath } from '../../student-account/student-paths';
 import { useStudentSession } from '../../student-account/use-student-account';
+import { PhoneLockSteps } from './PhoneLockSteps';
 import styles from './JoinScreen.module.css';
 
 type JoinScreenProps = {
@@ -81,6 +82,8 @@ function JoinForm({ test, testCode, onStarted, isResuming }: JoinFormProps) {
             <li>Answer on your own paper. When you are done, tap Finish.</li>
           </ul>
         </Panel>
+
+        <PhoneLockSteps />
 
         {student ? (
           <div className={styles.form}>

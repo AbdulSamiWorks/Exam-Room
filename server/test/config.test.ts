@@ -15,8 +15,21 @@ describe('loadConfig', () => {
       port: 3000,
       teacherPassword: 'a-good-password',
       sessionSecret: 'x'.repeat(32),
+      publicOrigin: 'http://localhost:5173',
       database: { url: 'file:/tmp/exam-room.db', authToken: undefined },
     });
+  });
+
+  it('takes the public web address from PUBLIC_ORIGIN, else from Render', () => {
+    const onRender = { ...validVariables, RENDER_EXTERNAL_URL: 'https://exam-room.onrender.com' };
+    expect(loadConfig(onRender, defaults).publicOrigin).toBe('https://exam-room.onrender.com');
+    expect(
+      loadConfig({ ...onRender, PUBLIC_ORIGIN: 'https://exams.example.org/' }, defaults)
+        .publicOrigin,
+    ).toBe('https://exams.example.org');
+    expect(() => loadConfig({ ...validVariables, PUBLIC_ORIGIN: 'not a url' }, defaults)).toThrow(
+      /PUBLIC_ORIGIN/,
+    );
   });
 
   it('uses the remote database settings when given', () => {

@@ -220,4 +220,21 @@ export const migrations: readonly Migration[] = [
       `CREATE INDEX attempts_student_id ON attempts (student_id)`,
     ],
   },
+  {
+    id: 7,
+    name: 'fingerprint and face login with passkeys',
+    statements: [
+      `CREATE TABLE student_passkeys (
+        id             INTEGER PRIMARY KEY,
+        student_id     INTEGER NOT NULL REFERENCES students (id),
+        credential_id  TEXT    NOT NULL UNIQUE,
+        public_key     BLOB    NOT NULL,
+        sign_count     INTEGER NOT NULL DEFAULT 0,
+        transports     TEXT    NOT NULL DEFAULT '',
+        created_at     INTEGER NOT NULL,
+        last_used_at   INTEGER
+      )`,
+      `CREATE INDEX student_passkeys_student_id ON student_passkeys (student_id)`,
+    ],
+  },
 ];

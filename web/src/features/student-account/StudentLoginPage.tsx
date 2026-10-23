@@ -1,5 +1,7 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router';
+import { ApiError } from '../../api/http-client';
 import { Button, ButtonLink } from '../../components/Button';
 import { FormError } from '../../components/FormError';
 import { LoadingScreen } from '../../components/LoadingScreen';
@@ -8,8 +10,20 @@ import { SelectField } from '../../components/SelectField';
 import { TextField } from '../../components/TextField';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import { studentLimits } from '../../lib/student-limits';
+import {
+  describeFingerprintError,
+  logInWithFingerprint,
+  readFingerprintChoice,
+  saveFingerprintChoice,
+} from './fingerprint';
 import { safeNextPath } from './student-paths';
-import { useLoginClasses, useStudentLogin, useStudentSession } from './use-student-account';
+import {
+  studentAccountQueryKeys,
+  useLoginClasses,
+  useStudentLogin,
+  useStudentSession,
+} from './use-student-account';
+import { useFingerprintSupport } from './use-fingerprint-support';
 import styles from './StudentLoginPage.module.css';
 
 export function StudentLoginPage() {
@@ -23,8 +37,45 @@ export function StudentLoginPage() {
   return (
     <Page title="Student login" actions={<ThemeToggle />}>
       <PageText>Use the roll number and the PIN your teacher gave you.</PageText>
+      <FingerprintLogin nextPath={nextPath} />
       <LoginForm nextPath={nextPath} />
     </Page>
+  );
+}
+
+function FingerprintLogin({ nextPath }: { nextPath: string }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const isSupported = useFingerprintSupport();
+  const [isBusy, setIsBusy] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>();
+
+  if (!isSupported || readFingerprintChoice() !== 'ready') return null;
+
+  async function logIn() {
+    setIsBusy(true);
+    setErrorMessage(undefined);
+    try {
+      const session = await logInWithFingerprint();
+      queryClient.setQueryData(studentAccountQueryKeys.session, session);
+      navigate(nextPath, { replace: true });
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'passkey_unknown') {
+        saveFingerprintChoice(undefined);
+      }
+      setErrorMessage(describeFingerprintError(error));
+      setIsBusy(false);
+    }
+  }
+
+  return (
+    <div className={styles.fingerprint}>
+      <Button size="large" fullWidth onClick={() => void logIn()} disabled={isBusy}>
+        {isBusy ? 'Checking…' : 'Log in with fingerprint'}
+      </Button>
+      {errorMessage && <FormError>{errorMessage}</FormError>}
+      <p className={styles.or}>or use your PIN</p>
+    </div>
   );
 }
 

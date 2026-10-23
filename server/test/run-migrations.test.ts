@@ -173,7 +173,7 @@ describe('runMigrations', () => {
       'write',
     );
 
-    expect(await runMigrations(database)).toEqual([6]);
+    expect(await runMigrations(database, migrationsUpTo(6))).toEqual([6]);
 
     const attempts = await database.execute('SELECT id, student_id, token_hash FROM attempts');
     expect(attempts.rows.map((row) => [row.id, row.student_id, row.token_hash])).toEqual([
