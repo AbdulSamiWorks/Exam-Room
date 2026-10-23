@@ -1,7 +1,5 @@
-import { useId } from 'react';
 import { Button } from './Button';
-import { FormError } from './FormError';
-import styles from './ConfirmDialog.module.css';
+import { Dialog } from './Dialog';
 
 type ConfirmDialogProps = {
   title: string;
@@ -26,25 +24,21 @@ export function ConfirmDialog({
   onCancel,
   onConfirm,
 }: ConfirmDialogProps) {
-  const titleId = useId();
-
   return (
-    <div className={styles.backdrop}>
-      <div className={styles.dialog} role="alertdialog" aria-modal="true" aria-labelledby={titleId}>
-        <h2 id={titleId} className={styles.title}>
-          {title}
-        </h2>
-        <p className={styles.message}>{message}</p>
-        {errorMessage && <FormError>{errorMessage}</FormError>}
-        <div className={styles.actions}>
+    <Dialog
+      title={title}
+      message={message}
+      errorMessage={errorMessage}
+      actions={
+        <>
           <Button variant="secondary" onClick={onCancel} disabled={isBusy} autoFocus>
             {cancelLabel}
           </Button>
           <Button variant="danger" onClick={onConfirm} disabled={isBusy}>
             {isBusy ? busyLabel : confirmLabel}
           </Button>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    />
   );
 }

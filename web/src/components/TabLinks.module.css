@@ -1,0 +1,28 @@
+.tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.tab {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-bottom: 3px solid transparent;
+  color: var(--color-muted);
+  font-weight: 600;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tab:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: -3px;
+}
+
+.activeTab {
+  border-bottom-color: var(--color-text);
+  color: var(--color-text);
+}
