@@ -5,6 +5,7 @@ export type StudentTestRow = {
   code: string;
   title: string;
   kind: TestKind;
+  subjectId: number;
   subjectName: string;
   durationMinutes: number;
   opensAt: number | null;
@@ -26,7 +27,8 @@ export async function listTestsOfStudent(
     sql: `SELECT tests.code, tests.title, tests.kind, tests.duration_minutes, tests.opens_at,
                  tests.closes_at, tests.max_marks, tests.results_released_at,
                  tests.bounty_note, tests.bounty_points,
-                 subjects.name AS subject_name, attempts.status AS attempt_status,
+                 subjects.id AS subject_id, subjects.name AS subject_name,
+                 attempts.status AS attempt_status,
                  attempts.finish_reason, attempts.total_marks
           FROM tests
           JOIN subjects ON subjects.id = tests.subject_id
@@ -38,6 +40,7 @@ export async function listTestsOfStudent(
     code: String(row.code),
     title: String(row.title),
     kind: String(row.kind) as TestKind,
+    subjectId: Number(row.subject_id),
     subjectName: String(row.subject_name),
     durationMinutes: Number(row.duration_minutes),
     opensAt: row.opens_at === null ? null : Number(row.opens_at),

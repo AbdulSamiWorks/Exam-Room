@@ -4,6 +4,7 @@ import { NotFoundPage } from '../features/home/NotFoundPage';
 import { StudentPage } from '../features/student/StudentPage';
 import { StudentLoginPage } from '../features/student-account/StudentLoginPage';
 import { StudentResultPage } from '../features/student-account/StudentResultPage';
+import { StudentSubjectPage } from '../features/student-account/StudentSubjectPage';
 import { STUDENT_LOGIN_PATH } from '../features/student-account/student-paths';
 import { TeacherArea } from '../features/teacher/TeacherArea';
 
@@ -15,6 +16,7 @@ export function App() {
       <Route path="/teacher/*" element={<TeacherArea />} />
       <Route path="/t/:testCode" element={<StudentPage />} />
       <Route path="/results/:testCode" element={<StudentResultPage />} />
+      <Route path="/subjects/:subjectId" element={<StudentSubjectPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

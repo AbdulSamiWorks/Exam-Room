@@ -1,0 +1,31 @@
+.note {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.stat dt {
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+}
+
+.stat dd {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}

@@ -15,6 +15,7 @@ import { OfflineMarksPage } from './marking/OfflineMarksPage';
 import { PaperPage } from './paper/PaperPage';
 import { AnswerPhotosPage } from './results/AnswerPhotosPage';
 import { PrintResultsPage } from './results/PrintResultsPage';
+import { StudentProfilePage } from './students/StudentProfilePage';
 import { TeacherLayout } from './TeacherLayout';
 import { TestDetailsPage } from './test-details/TestDetailsPage';
 
@@ -50,6 +51,7 @@ export function TeacherArea() {
         <Route path="tests/:testId/marking" element={<MarkingPage />} />
         <Route path="tests/:testId/offline-marks" element={<OfflineMarksPage />} />
         <Route path="attempts/:attemptId/photos" element={<AnswerPhotosPage />} />
+        <Route path="students/:studentId" element={<StudentProfilePage />} />
         <Route path="manage" element={<ManagePage />} />
         <Route path="manage/classes/:classId" element={<ClassPage />} />
         <Route path="*" element={<Navigate to="/teacher" replace />} />

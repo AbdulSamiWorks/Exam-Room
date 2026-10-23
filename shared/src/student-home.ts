@@ -6,6 +6,7 @@ export type StudentTestCard = TestSchedule & {
   code: string;
   title: string;
   kind: TestKind;
+  subjectId: number;
   subjectName: string;
   durationMinutes: number;
   availability: TestAvailability;

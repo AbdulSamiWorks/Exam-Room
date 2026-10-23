@@ -14,3 +14,7 @@ export function safeNextPath(searchParams: URLSearchParams): string {
 export function studentTestPath(testCode: string): string {
   return `/t/${testCode}`;
 }
+
+export function studentSubjectPath(subjectId: number): string {
+  return `/subjects/${subjectId}`;
+}

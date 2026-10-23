@@ -1,5 +1,6 @@
 import type { ClassSummary, Student, StudentWithPin } from '@exam-room/shared';
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { Button } from '../../../components/Button';
 import { useConfirmation } from '../../../components/use-confirmation';
 import { StudentEditForm } from './StudentEditForm';
@@ -51,7 +52,9 @@ export function StudentRow({ student, classes, onPinReset }: StudentRowProps) {
   return (
     <li className={styles.studentRow}>
       <span className={styles.rollNumber}>{student.rollNumber}</span>
-      <span className={styles.studentName}>{student.name}</span>
+      <Link to={`/teacher/students/${student.id}`} className={styles.studentName}>
+        {student.name}
+      </Link>
       <span className={styles.studentActions}>
         <Button variant="secondary" size="small" onClick={() => setIsEditing(true)}>
           Edit

@@ -7,6 +7,7 @@ function card(overrides: Partial<StudentTestCard>): StudentTestCard {
     code: 'K7M2QX',
     title: 'Quiz',
     kind: 'test',
+    subjectId: 1,
     subjectName: 'Physics',
     durationMinutes: 30,
     availability: 'open',

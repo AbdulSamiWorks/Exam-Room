@@ -1,0 +1,81 @@
+.lineChart {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: var(--color-text);
+}
+
+.gridLine {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.axisLabel {
+  fill: var(--color-muted);
+  font-size: 10px;
+}
+
+.line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.point {
+  fill: var(--color-bg);
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.barHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.barLabel {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.barValue {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bar {
+  display: block;
+  width: 100%;
+  height: 8px;
+}
+
+.barTrack {
+  fill: var(--color-surface);
+  stroke: var(--color-border);
+  stroke-width: 0.5;
+}
+
+.barFill {
+  fill: var(--color-text);
+}
+
+.barDetail {
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+}

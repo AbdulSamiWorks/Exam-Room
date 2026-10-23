@@ -9,6 +9,7 @@ export type * from './health.js';
 export type * from './marking.js';
 export type * from './paper.js';
 export type * from './points.js';
+export type * from './progress.js';
 export type * from './student-auth.js';
 export type * from './student-home.js';
 export type * from './students.js';
