@@ -10,8 +10,11 @@ import { describeDateTime } from '../../lib/describe-date-time';
 import { describeDuration } from '../../lib/describe-test-length';
 import { FingerprintOffer } from './FingerprintOffer';
 import { InstallAppPanel } from './InstallAppPanel';
-import { describeStudentTestState, groupStudentTests } from './group-student-tests';
-import { studentTestPath } from './student-paths';
+import {
+  describeStudentTestState,
+  groupStudentTests,
+  studentTestPath,
+} from './group-student-tests';
 import { useStudentHome, useStudentLogout } from './use-student-account';
 import styles from './StudentHomePage.module.css';
 
@@ -88,7 +91,7 @@ function StudentTestLink({ test }: { test: StudentTestCard }) {
       : describeDuration(test.durationMinutes);
 
   return (
-    <Link to={studentTestPath(test.code)} className={styles.testCard}>
+    <Link to={studentTestPath(test)} className={styles.testCard}>
       <span className={styles.testTitle}>{test.title}</span>
       <span className={styles.testDetails}>
         {test.subjectName} · {timing}

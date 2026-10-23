@@ -34,7 +34,14 @@ function byTitle(first: StudentTestCard, second: StudentTestCard): number {
   return compareNaturally(first.title, second.title);
 }
 
+export function studentTestPath(test: StudentTestCard): string {
+  return test.releasedMarks === null ? `/t/${test.code}` : `/results/${test.code}`;
+}
+
 export function describeStudentTestState(test: StudentTestCard): string {
+  if (test.releasedMarks !== null) {
+    return `Marks: ${test.releasedMarks} of ${test.maxMarks ?? 0} – tap to see`;
+  }
   if (test.attemptStatus === 'in_progress') return 'Started – tap to continue';
   if (test.attemptStatus === 'locked') return 'Locked – ask your teacher';
   if (test.attemptStatus === 'submitted') {

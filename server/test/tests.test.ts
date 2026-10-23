@@ -74,6 +74,7 @@ describe('tests', () => {
       questionCount: 0,
       maxMarks: null,
       writtenAnswers: 'on_paper',
+      resultsReleasedAt: null,
       studentCount: 0,
       createdAt: TEST_START_TIME,
       opensAt: null,

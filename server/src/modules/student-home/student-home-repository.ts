@@ -11,6 +11,8 @@ export type StudentTestRow = {
   closesAt: number | null;
   attemptStatus: AttemptStatus | null;
   finishReason: FinishReason | null;
+  maxMarks: number | null;
+  releasedMarks: number | null;
 };
 
 export async function listTestsOfStudent(
@@ -20,8 +22,9 @@ export async function listTestsOfStudent(
 ): Promise<StudentTestRow[]> {
   const { rows } = await database.execute({
     sql: `SELECT tests.code, tests.title, tests.kind, tests.duration_minutes, tests.opens_at,
-                 tests.closes_at, subjects.name AS subject_name,
-                 attempts.status AS attempt_status, attempts.finish_reason
+                 tests.closes_at, tests.max_marks, tests.results_released_at,
+                 subjects.name AS subject_name, attempts.status AS attempt_status,
+                 attempts.finish_reason, attempts.total_marks
           FROM tests
           JOIN subjects ON subjects.id = tests.subject_id
           LEFT JOIN attempts ON attempts.test_id = tests.id AND attempts.student_id = ?
@@ -39,5 +42,8 @@ export async function listTestsOfStudent(
     attemptStatus:
       row.attempt_status === null ? null : (String(row.attempt_status) as AttemptStatus),
     finishReason: row.finish_reason === null ? null : (String(row.finish_reason) as FinishReason),
+    maxMarks: row.max_marks === null ? null : Number(row.max_marks),
+    releasedMarks:
+      row.results_released_at === null || row.total_marks === null ? null : Number(row.total_marks),
   }));
 }

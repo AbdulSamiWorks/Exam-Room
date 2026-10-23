@@ -19,6 +19,7 @@ export function attemptRecord(overrides: Partial<AttemptRecord> = {}): AttemptRe
     finishedAt: null,
     exitCount: 0,
     forgivenExits: 0,
+    totalMarks: null,
     version: 0,
     ...overrides,
   };

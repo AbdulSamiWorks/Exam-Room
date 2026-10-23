@@ -17,9 +17,20 @@ const HEADER = [
   'Time away',
 ];
 
-export function buildResultsCsv(results: AttemptResult[]): string {
-  const rows = [HEADER, ...sortByRollNumber(results).map(toCsvRow)];
+export function buildResultsCsv(results: AttemptResult[], maxMarks: number | null = null): string {
+  const hasMarks = maxMarks !== null && maxMarks > 0;
+  const header = hasMarks ? [...HEADER, `Marks (out of ${maxMarks})`] : HEADER;
+  const rows = [
+    header,
+    ...sortByRollNumber(results).map((result) =>
+      hasMarks ? [...toCsvRow(result), describeTotalMarks(result)] : toCsvRow(result),
+    ),
+  ];
   return BYTE_ORDER_MARK + rows.map((row) => row.map(toCsvCell).join(',')).join(LINE_BREAK);
+}
+
+export function describeTotalMarks(result: AttemptResult): string {
+  return result.totalMarks === null ? '' : String(result.totalMarks);
 }
 
 function toCsvRow(result: AttemptResult): string[] {

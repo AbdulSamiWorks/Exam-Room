@@ -18,7 +18,7 @@ export type NewAttempt = {
 
 const ATTEMPT_COLUMNS = `
   id, test_id, student_id, student_name, roll_no, token_hash, status, finish_reason,
-  started_at, deadline_at, finished_at, exit_count, forgiven_exits, version`;
+  started_at, deadline_at, finished_at, exit_count, forgiven_exits, total_marks, version`;
 
 export async function insertAttempt(
   database: Database,
@@ -145,6 +145,7 @@ export async function deleteAttemptWithExits(database: Database, attemptId: numb
       { sql: 'DELETE FROM exits WHERE attempt_id = ?', args: [attemptId] },
       { sql: 'DELETE FROM answers WHERE attempt_id = ?', args: [attemptId] },
       { sql: 'DELETE FROM answer_photos WHERE attempt_id = ?', args: [attemptId] },
+      { sql: 'DELETE FROM question_marks WHERE attempt_id = ?', args: [attemptId] },
       { sql: 'DELETE FROM attempts WHERE id = ?', args: [attemptId] },
     ],
     'write',
@@ -245,6 +246,7 @@ function toAttemptRecord(row: Row): AttemptRecord {
     finishedAt: row.finished_at === null ? null : Number(row.finished_at),
     exitCount: Number(row.exit_count),
     forgivenExits: Number(row.forgiven_exits),
+    totalMarks: row.total_marks === null ? null : Number(row.total_marks),
     version: Number(row.version),
   };
 }

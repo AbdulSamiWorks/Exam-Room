@@ -10,6 +10,7 @@ import { DashboardPage } from './dashboard/DashboardPage';
 import { EditTestPage } from './edit-test/EditTestPage';
 import { ClassPage } from './manage/ClassPage';
 import { ManagePage } from './manage/ManagePage';
+import { MarkingPage } from './marking/MarkingPage';
 import { PaperPage } from './paper/PaperPage';
 import { AnswerPhotosPage } from './results/AnswerPhotosPage';
 import { PrintResultsPage } from './results/PrintResultsPage';
@@ -45,6 +46,7 @@ export function TeacherArea() {
         <Route path="tests/:testId" element={<TestDetailsPage />} />
         <Route path="tests/:testId/edit" element={<EditTestPage />} />
         <Route path="tests/:testId/paper" element={<PaperPage />} />
+        <Route path="tests/:testId/marking" element={<MarkingPage />} />
         <Route path="attempts/:attemptId/photos" element={<AnswerPhotosPage />} />
         <Route path="manage" element={<ManagePage />} />
         <Route path="manage/classes/:classId" element={<ClassPage />} />

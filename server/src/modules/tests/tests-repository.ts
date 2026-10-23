@@ -50,6 +50,7 @@ const SELECT_TEST_SUMMARY = `
     tests.question_count,
     tests.max_marks,
     tests.written_answers,
+    tests.results_released_at,
     tests.created_at,
     tests.opens_at,
     tests.closes_at,
@@ -293,6 +294,11 @@ export async function deleteTestWithResults(database: Database, testId: number):
               WHERE attempt_id IN (SELECT id FROM attempts WHERE test_id = ?)`,
         args: [testId],
       },
+      {
+        sql: `DELETE FROM question_marks
+              WHERE attempt_id IN (SELECT id FROM attempts WHERE test_id = ?)`,
+        args: [testId],
+      },
       { sql: 'DELETE FROM attempts WHERE test_id = ?', args: [testId] },
       { sql: 'DELETE FROM test_pages WHERE test_id = ?', args: [testId] },
       { sql: 'DELETE FROM paper_images WHERE test_id = ?', args: [testId] },
@@ -336,6 +342,7 @@ function toTestRecord(row: Row): TestRecord {
     questionCount: Number(row.question_count),
     maxMarks: row.max_marks === null ? null : Number(row.max_marks),
     writtenAnswers: String(row.written_answers) as WrittenAnswers,
+    resultsReleasedAt: row.results_released_at === null ? null : Number(row.results_released_at),
     studentCount: Number(row.student_count),
     createdAt: Number(row.created_at),
     opensAt: row.opens_at === null ? null : Number(row.opens_at),

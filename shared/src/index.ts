@@ -6,6 +6,7 @@ export type * from './chapters.js';
 export type * from './classes.js';
 export type * from './errors.js';
 export type * from './health.js';
+export type * from './marking.js';
 export type * from './paper.js';
 export type * from './student-auth.js';
 export type * from './student-home.js';

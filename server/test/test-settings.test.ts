@@ -17,6 +17,7 @@ const test: TestRecord = {
   allowedExits: 1,
   leaveRule: 'lock',
   writtenAnswers: 'on_paper',
+  resultsReleasedAt: null,
   paperKind: 'pages',
   pageCount: 2,
   questionCount: 0,

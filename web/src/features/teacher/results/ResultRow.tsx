@@ -49,6 +49,7 @@ export function ResultRow({
           <Fact label="Answered" value={`${result.answeredCount} of ${questionCount}`} />
         )}
         {result.photoCount > 0 && <Fact label="Photos" value={String(result.photoCount)} />}
+        {result.totalMarks !== null && <Fact label="Marks" value={String(result.totalMarks)} />}
       </dl>
       {result.exits.length > 0 && <ExitHistory exits={result.exits} />}
       {result.photoCount > 0 && (

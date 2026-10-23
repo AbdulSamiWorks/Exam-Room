@@ -28,6 +28,7 @@ export function summarizeAttempt(
     isAwayNow: attempt.status === 'in_progress' && openExit !== undefined,
     answeredCount: counts.answeredCount,
     photoCount: counts.photoCount,
+    totalMarks: attempt.totalMarks,
     exits: exits.map((exit) => summarizeExit(exit, awayUntil)),
   };
 }

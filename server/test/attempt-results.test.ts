@@ -33,6 +33,7 @@ describe('summarizeAttempt', () => {
       isAwayNow: false,
       answeredCount: 4,
       photoCount: 2,
+      totalMarks: null,
       exits: [],
     });
   });

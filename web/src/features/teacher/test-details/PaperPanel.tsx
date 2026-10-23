@@ -12,13 +12,22 @@ export function PaperPanel({ test }: { test: TestSummary }) {
     ? `${countOf(test.questionCount, 'question')} · ${describeMarks(test.maxMarks ?? 0)}`
     : undefined;
 
+  const markingLink = hasQuestions && (
+    <ButtonLink to={`/teacher/tests/${test.id}/marking`}>
+      {test.resultsReleasedAt === null ? 'Marks and release' : 'Marks (released)'}
+    </ButtonLink>
+  );
+
   if (test.paperKind === 'typed') {
     return (
       <Panel title="Questions">
         <p className={styles.note}>{questionSummary}</p>
-        <ButtonLink to={paperPath} variant="secondary">
-          Questions and answers
-        </ButtonLink>
+        <div className={styles.actions}>
+          <ButtonLink to={paperPath} variant="secondary">
+            Questions and answers
+          </ButtonLink>
+          {markingLink}
+        </div>
       </Panel>
     );
   }
@@ -29,9 +38,12 @@ export function PaperPanel({ test }: { test: TestSummary }) {
         {questionSummary ??
           'No answer sheet yet. Add one so students tap their MCQ answers and the app marks them.'}
       </p>
-      <ButtonLink to={paperPath} variant="secondary">
-        {hasQuestions ? 'Answer sheet and answers' : 'Add an answer sheet'}
-      </ButtonLink>
+      <div className={styles.actions}>
+        <ButtonLink to={paperPath} variant="secondary">
+          {hasQuestions ? 'Answer sheet and answers' : 'Add an answer sheet'}
+        </ButtonLink>
+        {markingLink}
+      </div>
     </Panel>
   );
 }

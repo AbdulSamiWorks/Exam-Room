@@ -14,6 +14,7 @@ import { badRequest, HttpError, notFound } from '../../lib/http-errors.js';
 import { parseInput } from '../../lib/parse-input.js';
 import type { TestRecord } from '../tests/test-record.js';
 import { answerProblem, isAcceptingAnswers, isAnswerInTime } from '../answers/answer-rules.js';
+import { markAttempt } from '../marking/marking-service.js';
 import { listAnswersOfAttempt, saveAnswers } from '../answers/answers-repository.js';
 import { findPaperForStudents, findPaperImage } from '../tests/paper-repository.js';
 import { findPageImage } from '../tests/tests-repository.js';
@@ -158,6 +159,9 @@ export function createAttemptRouter(dependencies: AppDependencies): Router {
       isAnswerInTime(attempt, change.answeredAt, receivedAt),
     );
     await retryTransientErrors(() => saveAnswers(database, attempt.id, inTime, receivedAt));
+    if (test.resultsReleasedAt !== null && inTime.length > 0) {
+      await markAttempt(database, attempt, receivedAt);
+    }
     response.json({
       savedCount: inTime.length,
       tooLateCount: answers.length - inTime.length,

@@ -15,6 +15,7 @@ import { parseInput } from '../../lib/parse-input.js';
 import { requireTeacher } from '../auth/teacher-session.js';
 import { findChapterIdsInSubject } from '../chapters/chapters-repository.js';
 import { findSubjectById } from '../subjects/subjects-repository.js';
+import { markTest } from '../marking/marking-service.js';
 import { checkedPaper, checkPaperImageSizes } from './checked-paper.js';
 import { normalizePageImages, normalizePaperImages } from './page-images.js';
 import {
@@ -315,6 +316,7 @@ export function createTestsRouter(dependencies: AppDependencies): Router {
     if (firstProblem) throw badRequest(firstProblem, 'invalid_answer_key');
 
     await saveAnswerKey(database, test.id, answerKey);
+    await markTest(database, test, clock.now());
     response.json((await findStoredPaper(database, test.id)) satisfies TeacherPaperResponse);
   });
 

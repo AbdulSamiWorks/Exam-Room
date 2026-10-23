@@ -14,6 +14,8 @@ function card(overrides: Partial<StudentTestCard>): StudentTestCard {
     closesAt: null,
     attemptStatus: null,
     finishReason: null,
+    maxMarks: null,
+    releasedMarks: null,
     ...overrides,
   };
 }
@@ -49,5 +51,10 @@ describe('describeStudentTestState', () => {
       describeStudentTestState(card({ attemptStatus: 'submitted', finishReason: 'time_up' })),
     ).toBe('Finished – time up');
     expect(describeStudentTestState(card({ availability: 'closed' }))).toBe('Missed');
+    expect(
+      describeStudentTestState(
+        card({ attemptStatus: 'submitted', releasedMarks: 7.5, maxMarks: 10 }),
+      ),
+    ).toBe('Marks: 7.5 of 10 – tap to see');
   });
 });

@@ -32,7 +32,11 @@ export function ResultsPanel({ test }: { test: TestSummary }) {
   const isAnyoneWriting = attempts.some((attempt) => attempt.status === 'in_progress');
 
   function downloadCsv() {
-    downloadTextFile(resultsFileName(test.title), buildResultsCsv(attempts), CSV_MEDIA_TYPE);
+    downloadTextFile(
+      resultsFileName(test.title),
+      buildResultsCsv(attempts, test.maxMarks),
+      CSV_MEDIA_TYPE,
+    );
   }
 
   function confirmEnd(attempt: AttemptResult) {

@@ -32,6 +32,7 @@ export type TestSummary = TestSchedule & {
   questionCount: number;
   maxMarks: number | null;
   writtenAnswers: WrittenAnswers;
+  resultsReleasedAt: number | null;
   studentCount: number;
   createdAt: number;
   availability: TestAvailability;

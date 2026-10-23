@@ -322,4 +322,25 @@ export const migrations: readonly Migration[] = [
       )`,
     ],
   },
+  {
+    id: 11,
+    name: 'marks, comments and released results',
+    statements: [
+      `CREATE TABLE question_marks (
+        attempt_id   INTEGER NOT NULL REFERENCES attempts (id) ON DELETE CASCADE,
+        question_id  TEXT    NOT NULL,
+        marks        REAL,
+        comment      TEXT    NOT NULL DEFAULT '',
+        PRIMARY KEY (attempt_id, question_id)
+      ) WITHOUT ROWID`,
+      `ALTER TABLE attempts ADD COLUMN mcq_marks REAL`,
+      `ALTER TABLE attempts ADD COLUMN written_marks REAL`,
+      `ALTER TABLE attempts ADD COLUMN total_marks REAL`,
+      `ALTER TABLE attempts ADD COLUMN teacher_comment TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE tests ADD COLUMN results_released_at INTEGER`,
+      `ALTER TABLE tests ADD COLUMN show_correct_answers INTEGER NOT NULL DEFAULT 1`,
+      `ALTER TABLE tests ADD COLUMN show_comments INTEGER NOT NULL DEFAULT 1`,
+      `ALTER TABLE tests ADD COLUMN show_top_scorer INTEGER NOT NULL DEFAULT 1`,
+    ],
+  },
 ];

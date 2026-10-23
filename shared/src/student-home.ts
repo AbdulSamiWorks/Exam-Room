@@ -11,6 +11,8 @@ export type StudentTestCard = TestSchedule & {
   availability: TestAvailability;
   attemptStatus: AttemptStatus | null;
   finishReason: FinishReason | null;
+  maxMarks: number | null;
+  releasedMarks: number | null;
 };
 
 export type StudentHomeResponse = {

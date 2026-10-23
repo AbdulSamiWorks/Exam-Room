@@ -14,6 +14,7 @@ export type AttemptRecord = {
   finishedAt: number | null;
   exitCount: number;
   forgivenExits: number;
+  totalMarks: number | null;
   version: number;
 };
 
