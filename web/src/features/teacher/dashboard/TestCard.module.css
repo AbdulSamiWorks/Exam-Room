@@ -42,6 +42,13 @@
   letter-spacing: 0.08em;
 }
 
+.footerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .details {
   color: var(--color-muted);
   font-size: 0.875rem;

@@ -7,6 +7,7 @@ import { describeAllowedExits } from '../tests/describe-test';
 import { ResultsPanel } from '../results/ResultsPanel';
 import { useTest } from '../tests/use-tests';
 import { ShareTestPanel } from './ShareTestPanel';
+import { TestAvailabilityPanel } from './TestAvailabilityPanel';
 import styles from './TestDetailsPage.module.css';
 
 const BACK_TO_TESTS = { to: '/teacher', label: 'All tests' };
@@ -36,6 +37,7 @@ export function TestDetailsPage() {
   return (
     <Page title={test.title} subtitle={subtitle} backLink={BACK_TO_TESTS}>
       <div className={styles.sections}>
+        <TestAvailabilityPanel test={test} />
         <ShareTestPanel test={test} />
         <ResultsPanel testId={test.id} />
       </div>

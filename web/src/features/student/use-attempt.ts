@@ -6,7 +6,9 @@ import { fetchAttempt, fetchPublicTest, finishAttempt, startAttempt } from './st
 
 const LOCKED_REFRESH_INTERVAL_MS = 5000;
 const IN_PROGRESS_REFRESH_INTERVAL_MS = 30_000;
+const WAITING_FOR_OPENING_REFRESH_INTERVAL_MS = 5000;
 const UNAUTHORIZED_STATUS = 401;
+const TEST_NOT_STARTABLE_ERROR_CODES = new Set(['test_not_open', 'test_closed']);
 
 export const studentQueryKeys = {
   publicTest: (testCode: string) => ['public-test', testCode] as const,
@@ -25,6 +27,10 @@ export function usePublicTest(testCode: string) {
     queryKey: studentQueryKeys.publicTest(testCode),
     queryFn: () => fetchPublicTest(testCode),
     select: (response) => response.test,
+    refetchInterval: (query) =>
+      query.state.data?.test.availability === 'open'
+        ? false
+        : WAITING_FOR_OPENING_REFRESH_INTERVAL_MS,
   });
 }
 
@@ -58,6 +64,11 @@ export function useStartAttempt(testCode: string) {
     onSuccess: ({ attemptToken, attempt }) => {
       saveStoredAttempt(testCode, { attemptToken, acknowledgedExits: 0 });
       setAttemptData(queryClient, testCode, { attempt });
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && TEST_NOT_STARTABLE_ERROR_CODES.has(error.code)) {
+        return queryClient.invalidateQueries({ queryKey: studentQueryKeys.publicTest(testCode) });
+      }
     },
   });
 }

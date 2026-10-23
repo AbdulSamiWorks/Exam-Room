@@ -1,6 +1,7 @@
 import type { TestSummary } from '@exam-room/shared';
 import { Link } from 'react-router';
 import { describeDuration, describePageCount } from '../../../lib/describe-test-length';
+import { AvailabilityBadge } from '../tests/AvailabilityBadge';
 import {
   describeAllowedExits,
   describeCreatedDate,
@@ -26,7 +27,10 @@ export function TestCard({ test }: { test: TestSummary }) {
         <span className={styles.code}>{test.code}</span>
       </span>
       <span className={styles.details}>{testDetails}</span>
-      <span className={styles.details}>{activity}</span>
+      <span className={styles.footerRow}>
+        <span className={styles.details}>{activity}</span>
+        <AvailabilityBadge test={test} />
+      </span>
     </Link>
   );
 }

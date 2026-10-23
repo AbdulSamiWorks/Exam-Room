@@ -17,3 +17,8 @@
   flex-direction: column;
   gap: 16px;
 }
+
+.note {
+  margin: 0;
+  color: var(--color-muted);
+}

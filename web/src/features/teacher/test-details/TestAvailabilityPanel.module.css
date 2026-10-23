@@ -1,0 +1,23 @@
+.status {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.actions > * {
+  flex: 1 1 140px;
+}
+
+.note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}

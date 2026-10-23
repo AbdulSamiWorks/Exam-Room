@@ -6,9 +6,11 @@ import { LoadingScreen } from '../../../components/LoadingScreen';
 import { Page } from '../../../components/Page';
 import { Panel } from '../../../components/Panel';
 import { TextField } from '../../../components/TextField';
+import { describeDateTime } from '../../../lib/describe-date-time';
 import { describeDuration, describePageCount } from '../../../lib/describe-test-length';
 import { enterFullscreen } from '../fullscreen';
 import { ErrorScreen } from '../screens/ErrorScreen';
+import { TestNotOpenScreen } from '../screens/TestNotOpenScreen';
 import { usePublicTest, useStartAttempt } from '../use-attempt';
 import { studentLimits } from './student-limits';
 import styles from './JoinScreen.module.css';
@@ -22,6 +24,7 @@ type JoinScreenProps = {
 
 export function JoinScreen({ testCode, onStarted }: JoinScreenProps) {
   const testQuery = usePublicTest(testCode);
+  const [hasAlreadyStarted, setHasAlreadyStarted] = useState(false);
 
   if (testQuery.isPending) return <LoadingScreen />;
   if (testQuery.isError) {
@@ -34,10 +37,21 @@ export function JoinScreen({ testCode, onStarted }: JoinScreenProps) {
     );
   }
 
-  return <JoinForm test={testQuery.data} testCode={testCode} onStarted={onStarted} />;
+  const test = testQuery.data;
+  const isResuming = test.availability === 'closed' && hasAlreadyStarted;
+  if (test.availability !== 'open' && !isResuming) {
+    return <TestNotOpenScreen test={test} onAlreadyStarted={() => setHasAlreadyStarted(true)} />;
+  }
+
+  return <JoinForm test={test} testCode={testCode} onStarted={onStarted} isResuming={isResuming} />;
 }
 
-function JoinForm({ test, testCode, onStarted }: JoinScreenProps & { test: PublicTest }) {
+type JoinFormProps = JoinScreenProps & {
+  test: PublicTest;
+  isResuming: boolean;
+};
+
+function JoinForm({ test, testCode, onStarted, isResuming }: JoinFormProps) {
   const startAttempt = useStartAttempt(testCode);
   const [studentName, setStudentName] = useState('');
   const [rollNumber, setRollNumber] = useState('');
@@ -69,6 +83,11 @@ function JoinForm({ test, testCode, onStarted }: JoinScreenProps & { test: Publi
               {describePageCount(test.pageCount)}). The timer starts when you tap Start test and
               never stops.
             </li>
+            {test.closesAt !== null && !isResuming && (
+              <li>
+                You can start until <strong>{describeDateTime(test.closesAt)}</strong>.
+              </li>
+            )}
             <li>{describeExitRule(test.allowedExits)}</li>
             <li>Your name and roll number are printed on every page.</li>
             <li>Answer on your own paper. When you are done, tap Finish.</li>
@@ -76,6 +95,11 @@ function JoinForm({ test, testCode, onStarted }: JoinScreenProps & { test: Publi
         </Panel>
 
         <form className={styles.form} onSubmit={handleSubmit} noValidate>
+          {isResuming && (
+            <p className={styles.note}>
+              Enter the same name and roll number you used when you started.
+            </p>
+          )}
           <TextField
             label="Your name"
             autoComplete="name"
@@ -96,12 +120,17 @@ function JoinForm({ test, testCode, onStarted }: JoinScreenProps & { test: Publi
           {startAttempt.error && <FormError>{startAttempt.error.message}</FormError>}
 
           <Button type="submit" size="large" fullWidth disabled={startAttempt.isPending}>
-            {startAttempt.isPending ? 'Starting…' : 'Start test'}
+            {describeStartButton(startAttempt.isPending, isResuming)}
           </Button>
         </form>
       </div>
     </Page>
   );
+}
+
+function describeStartButton(isPending: boolean, isResuming: boolean): string {
+  if (isResuming) return isPending ? 'Opening…' : 'Continue test';
+  return isPending ? 'Starting…' : 'Start test';
 }
 
 function describeExitRule(allowedExits: PublicTest['allowedExits']): string {

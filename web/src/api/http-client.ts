@@ -44,6 +44,14 @@ export function postJson<ResponseBody>(
   });
 }
 
+export function putJson<ResponseBody>(path: string, body: unknown): Promise<ResponseBody> {
+  return requestJson<ResponseBody>(path, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
 export async function getBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
   const response = await sendRequest(path, { method: 'GET', headers: options.headers });
   if (!response.ok) throw await readApiError(response);
