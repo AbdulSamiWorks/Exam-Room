@@ -21,6 +21,9 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
 - [ ] Create a test from the **scanned** PDF. Every page looks right (no blank or broken pages).
 - [ ] Create a test from the **Word** PDF. Every page looks right.
 - [ ] A new test shows the badge **Not open** on the test list and on the test page.
+- [ ] **Edit** a test before anyone starts: change the title, time limit and leave rule, and
+      replace the paper. The changes show on the test page.
+- [ ] After a student has started, **Edit** only lets you change the title and subject.
 
 ## 2. Opening and closing
 
@@ -44,6 +47,8 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
 
 ## 4. Reading the paper
 
+- [ ] After starting, turn on airplane mode for a moment: every page can still be opened
+      (all pages load at the start). Turn airplane mode off again.
 - [ ] Pinch to zoom, double-tap to zoom, move around a zoomed page.
 - [ ] **Back** and **Next** work, and "Page X of Y" is right.
 - [ ] Long-press on a page: no "Save image" or "Share image" menu appears.
@@ -57,14 +62,32 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
 - [ ] Pull down the notification shade: note if it counts as an exit (Android usually does).
 - [ ] Refresh the page: it counts as an exit (this is expected).
 - [ ] iPhone: there is no fullscreen in Safari (this is expected); leaving is still detected.
+- [ ] The teacher row shows **Exit history** with the times and reasons.
+- [ ] Make a test with **Finish the test** as the leave rule and 0 exits. Leave once: the phone
+      shows **Test finished**, the teacher row says **Left · finished**, and there is no Unlock.
 
 ## 6. Finishing
 
 - [ ] Tap **Finish**, then **Finish test**: the finished screen shows.
 - [ ] Refresh the page: it still shows finished, and the paper does not come back.
 - [ ] Create a 1-minute test and wait: it shows **Time up** on the phone and on the teacher page.
+- [ ] Teacher taps **End test** on one student: that phone shows **Your teacher ended the test**.
+- [ ] Teacher taps **End exam for everyone**: every writing phone shows the same, the test
+      becomes **Closed**, and a new roll number cannot start.
 
-## 7. Removing and deleting
+## 7. Results
+
+- [ ] **Download CSV** opens in Excel / Google Sheets with the right names (also Urdu names),
+      sorted by roll number.
+- [ ] **Print** shows a clean table; the browser's print preview has no buttons or header.
+
+## 8. Theme
+
+- [ ] Tap **☾ Dark**: the app turns black with white text. Reload the page: it stays dark and
+      does not flash white.
+- [ ] Tap **☀ Light** to go back. The paper itself is always white.
+
+## 9. Removing and deleting
 
 - [ ] Teacher taps **Remove** on a student: the row disappears. The student's phone shows
       **Test closed on this phone**; **Open the test here** lets them start again with full time.
