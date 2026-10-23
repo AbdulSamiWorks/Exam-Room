@@ -1,7 +1,7 @@
 # Exam Room — Architecture
 
-> Status: **approved plan, v1** (2026-10-22). Milestones M0–M13 are built (2026-10-25); the
-> real-device checks in §15 are still to do. M14–M19 are planned in §16 (2026-10-24). Update this
+> Status: **approved plan, v1** (2026-10-22). Milestones M0–M14 are built (2026-10-25); the
+> real-device checks in §15 are still to do. M15–M19 are planned in §16 (2026-10-24). Update this
 > file whenever a decision below changes.
 
 Exam Room is a small mobile-first web app. A teacher uploads a test paper (PDF), shares a link, and
@@ -144,6 +144,11 @@ tests      (id PK, code UNIQUE,            -- 6-char share code, e.g. K7M2QX (no
 
 paper_images (test_id → tests, image_no, image BLOB (WebP, max 1000 px wide), width, height,
             UNIQUE (test_id, image_no))
+
+answers    (attempt_id → attempts, question_id, choice NULL, text NULL,
+            sequence,                      -- grows with every change on the phone; newest wins (D45)
+            answered_at, received_at,      -- server-clock time on the phone, and arrival time
+            PRIMARY KEY (attempt_id, question_id)) WITHOUT ROWID
 
 test_chapters (test_id → tests, chapter_id → chapters, PRIMARY KEY (test_id, chapter_id))
 
@@ -393,6 +398,9 @@ GET    /api/attempt                        → state (status, deadlineAt, server
 GET    /api/attempt/pages/:n               → page image (in progress only)
 GET    /api/attempt/paper                  → the typed paper without answers (in progress only)
 GET    /api/attempt/paper-images/:n        → a picture of the typed paper (in progress only)
+GET    /api/attempt/answers                → the saved answers (in progress only)
+POST   /api/attempt/answers                { answers: [{ questionId, choice, text, sequence,
+                                              answeredAt }] } → { savedCount, tooLateCount }
 POST   /api/attempt/exits                  { clientExitId, reason }
 POST   /api/attempt/return                 { clientExitId, reason, awayMsClient }
 POST   /api/attempt/finish
@@ -531,8 +539,8 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 | M18 | Dashboard and progress for students and the teacher                                                    |
 | M19 | Waiting room: the teacher starts everyone at the same time                                             |
 
-Status (2026-10-25): M0–M13 are built and tested (unit tests, API tests and a smoke test of the
-production build). Still to do by hand: the real-device checks in §15. M14–M19 are planned in §16.
+Status (2026-10-25): M0–M14 are built and tested (unit tests, API tests and a smoke test of the
+production build). Still to do by hand: the real-device checks in §15. M15–M19 are planned in §16.
 
 ## 13. Decision log
 
@@ -824,6 +832,29 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 | Render hours     | One service awake all month ≈ 744 hours                               | 750 hours / month                  |
 
 ## 17. Built milestones
+
+### M14 Answering and never losing an answer (built 2026-10-25)
+
+- Students tap multiple choice answers (tap again to clear) on the typed paper or on the
+  **Answer sheet** tab under a PDF, and type written answers when the test allows it (D53).
+- **Outbox** (D47, `web/src/features/student/answers/`): every change is saved on the phone
+  first (IndexedDB through `lib/durable-store.ts`, localStorage when IndexedDB fails), keeping
+  only the newest unsent answer per question. A sender posts batches of up to 50 answers, then
+  the Finish, in that order; it retries with exponential backoff and jitter from 1 s up to 60 s,
+  and starts again on app start, on `online` and when the page becomes visible. Typed text waits
+  1.5 s before sending. The top bar shows **Saved**, **Saving…** or **Offline – your answers are
+  safe on this phone**. While Finish waits for the network, exits are no longer reported.
+- The store is a factory (`createOutboxStore`) with the network, storage, clock and randomness
+  passed in, so tests run it with a fake server, memory storage and fake timers: the server
+  asleep and back, a phone closed and opened again, an answer changed while it was being sent,
+  Finish after the answers, and a logged-out phone.
+- **Server** (D45, D46, D56): one upsert per answer in one batch, kept only when its sequence is
+  higher, so repeated and out-of-order batches change nothing. `isAnswerInTime` (pure, tested)
+  counts an answer when the phone recorded it before the end (2 s tolerance; a phone time later
+  than the arrival is never trusted) and it arrives within 10 minutes after the end. Short Turso
+  errors are retried up to 3 times within about 0.6 s around these idempotent writes and the
+  finish. A new phone restores the saved answers from `GET /api/attempt/answers`.
+- The teacher's results show **Answered N of M** per student.
 
 ### M13 Typed papers and answer sheets (built 2026-10-25)
 

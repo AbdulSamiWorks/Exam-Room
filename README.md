@@ -98,6 +98,12 @@ Every push to `main` deploys again automatically.
   one minute. **Open the site 2–3 minutes before the exam starts.** During the exam the students
   keep it awake.
 - Restarts never lose data: everything lives in the Turso database.
+- Answers are never lost: each answer is saved on the student's phone first and sent again and
+  again until the server confirms it, also after the app was closed. Answers made before the end
+  of the test still count when they arrive up to 10 minutes later.
+- Optional: to keep the site awake during school hours, add a free uptime monitor (for example
+  UptimeRobot) that opens `https://<your-site>.onrender.com/api/health` every 10 minutes. One
+  service awake all month uses about 744 of Render's 750 free hours.
 
 ### Test on real phones before the first real exam
 

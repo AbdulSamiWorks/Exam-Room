@@ -139,3 +139,15 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
       right to left, the picture shows, and no correct answer is visible.
 - [ ] On a PDF test, **Add an answer sheet** (for example 10 MCQs with A–D) and type the answers
       as letters.
+
+## 14. Answering
+
+- [ ] Tap answers on a typed paper; the top bar says **Saved**. Tap a chosen answer again to clear
+      it.
+- [ ] Turn on airplane mode, tap two more answers and type a written answer: the bar says
+      **Offline – your answers are safe on this phone**. Close the app, turn the network on, open
+      the app again: the answers are there and the bar says **Saved**.
+- [ ] Turn on airplane mode and tap **Finish**: the dialog waits for the internet. Turn it on: the
+      test is submitted.
+- [ ] On a PDF test with an answer sheet, switch between **Paper** and **Answer sheet**.
+- [ ] The teacher's results show **Answered N of M** for each student.
