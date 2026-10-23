@@ -48,8 +48,8 @@
 }
 
 .active {
-  background: #eff6ff;
-  color: var(--color-primary);
+  background: var(--color-active-bg);
+  color: var(--color-text);
 }
 
 .success {
@@ -59,7 +59,7 @@
 
 .danger {
   background: var(--color-danger);
-  color: #ffffff;
+  color: var(--color-on-danger);
 }
 
 .rowActions {

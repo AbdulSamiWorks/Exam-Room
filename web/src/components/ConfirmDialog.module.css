@@ -5,7 +5,7 @@
   display: grid;
   place-items: center;
   padding: var(--page-padding);
-  background: rgb(15 23 42 / 55%);
+  background: var(--color-backdrop);
 }
 
 .dialog {

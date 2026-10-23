@@ -3,6 +3,7 @@ import { Button } from '../../../components/Button';
 import { FormError } from '../../../components/FormError';
 import { Page, PageText } from '../../../components/Page';
 import { TextField } from '../../../components/TextField';
+import { ThemeToggle } from '../../../components/ThemeToggle';
 import { useLogin } from './use-teacher-session';
 import styles from './LoginPage.module.css';
 
@@ -16,7 +17,7 @@ export function LoginPage() {
   }
 
   return (
-    <Page title="Teacher login">
+    <Page title="Teacher login" actions={<ThemeToggle />}>
       <PageText>Enter the teacher password to manage tests and see results.</PageText>
       <form className={styles.loginForm} onSubmit={handleSubmit} noValidate>
         <TextField

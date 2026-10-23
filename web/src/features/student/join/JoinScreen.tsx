@@ -6,6 +6,7 @@ import { LoadingScreen } from '../../../components/LoadingScreen';
 import { Page } from '../../../components/Page';
 import { Panel } from '../../../components/Panel';
 import { TextField } from '../../../components/TextField';
+import { ThemeToggle } from '../../../components/ThemeToggle';
 import { describeDateTime } from '../../../lib/describe-date-time';
 import { describeDuration, describePageCount } from '../../../lib/describe-test-length';
 import { enterFullscreen } from '../fullscreen';
@@ -74,7 +75,7 @@ function JoinForm({ test, testCode, onStarted, isResuming }: JoinFormProps) {
   }
 
   return (
-    <Page title={test.title} subtitle={test.subjectName}>
+    <Page title={test.title} subtitle={test.subjectName} actions={<ThemeToggle />}>
       <div className={styles.sections}>
         <Panel title="Before you start">
           <ul className={styles.rules}>

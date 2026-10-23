@@ -1,5 +1,6 @@
 import { Link, Outlet } from 'react-router';
 import { Button } from '../../components/Button';
+import { ThemeToggle } from '../../components/ThemeToggle';
 import { useLogout } from './auth/use-teacher-session';
 import styles from './TeacherLayout.module.css';
 
@@ -12,9 +13,12 @@ export function TeacherLayout() {
         <Link to="/teacher" className={styles.brand}>
           Exam Room
         </Link>
-        <Button variant="secondary" onClick={() => logout.mutate()} disabled={logout.isPending}>
-          Log out
-        </Button>
+        <div className={styles.headerActions}>
+          <ThemeToggle />
+          <Button variant="secondary" onClick={() => logout.mutate()} disabled={logout.isPending}>
+            Log out
+          </Button>
+        </div>
       </header>
       <Outlet />
     </>

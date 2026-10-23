@@ -13,7 +13,7 @@
 }
 
 .waiting {
-  background: #fffbeb;
+  background: var(--color-warning-bg);
   color: var(--color-warning);
 }
 
