@@ -5,7 +5,7 @@ import type {
   TestSummary,
 } from '@exam-room/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getJson, postForm, postJson, putJson } from '../../../api/http-client';
+import { deleteResource, getJson, postForm, postJson, putJson } from '../../../api/http-client';
 
 const ALL_SUBJECTS = 'all';
 const SCHEDULE_REFRESH_INTERVAL_MS = 10_000;
@@ -66,6 +66,18 @@ export function useScheduleTest(testId: number) {
   return useTestChange(testId, (schedule: ScheduleTestRequest) =>
     putJson<TestResponse>(`/tests/${testId}/schedule`, schedule),
   );
+}
+
+export function useDeleteTest(testId: number, onDeleted: () => void) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => deleteResource(`/tests/${testId}`),
+    onSuccess: () => {
+      onDeleted();
+      queryClient.removeQueries({ queryKey: testQueryKeys.detail(testId) });
+      return queryClient.invalidateQueries({ queryKey: testQueryKeys.lists() });
+    },
+  });
 }
 
 function useTestChange<Variables>(

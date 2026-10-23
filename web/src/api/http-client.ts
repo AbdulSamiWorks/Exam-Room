@@ -52,6 +52,11 @@ export function putJson<ResponseBody>(path: string, body: unknown): Promise<Resp
   });
 }
 
+export async function deleteResource(path: string): Promise<void> {
+  const response = await sendRequest(path, { method: 'DELETE' });
+  if (!response.ok) throw await readApiError(response);
+}
+
 export async function getBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
   const response = await sendRequest(path, { method: 'GET', headers: options.headers });
   if (!response.ok) throw await readApiError(response);

@@ -6,6 +6,7 @@ import { describeDuration, describePageCount } from '../../../lib/describe-test-
 import { describeAllowedExits } from '../tests/describe-test';
 import { ResultsPanel } from '../results/ResultsPanel';
 import { useTest } from '../tests/use-tests';
+import { DeleteTestPanel } from './DeleteTestPanel';
 import { ShareTestPanel } from './ShareTestPanel';
 import { TestAvailabilityPanel } from './TestAvailabilityPanel';
 import styles from './TestDetailsPage.module.css';
@@ -40,6 +41,7 @@ export function TestDetailsPage() {
         <TestAvailabilityPanel test={test} />
         <ShareTestPanel test={test} />
         <ResultsPanel testId={test.id} />
+        <DeleteTestPanel test={test} />
       </div>
     </Page>
   );

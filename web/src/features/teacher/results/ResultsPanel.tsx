@@ -1,5 +1,7 @@
 import type { AttemptResult } from '@exam-room/shared';
+import { useState } from 'react';
 import { Button } from '../../../components/Button';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { FormError } from '../../../components/FormError';
 import { Panel } from '../../../components/Panel';
 import { classNames } from '../../../lib/class-names';
@@ -9,12 +11,19 @@ import {
   describeExits,
   describeResultStatus,
 } from './describe-result';
-import { useTestResults, useUnlockAttempt } from './use-results';
+import { useDeleteAttempt, useTestResults, useUnlockAttempt } from './use-results';
 import styles from './ResultsPanel.module.css';
 
 export function ResultsPanel({ testId }: { testId: number }) {
   const resultsQuery = useTestResults(testId);
   const unlockAttempt = useUnlockAttempt(testId);
+  const deleteAttempt = useDeleteAttempt(testId);
+  const [attemptToRemove, setAttemptToRemove] = useState<AttemptResult>();
+
+  function closeRemoveDialog() {
+    setAttemptToRemove(undefined);
+    deleteAttempt.reset();
+  }
 
   return (
     <Panel title="Results">
@@ -35,11 +44,27 @@ export function ResultsPanel({ testId }: { testId: number }) {
                 result={result}
                 isUnlocking={unlockAttempt.isPending && unlockAttempt.variables === result.id}
                 onUnlock={() => unlockAttempt.mutate(result.id)}
+                onRemove={() => setAttemptToRemove(result)}
               />
             ))}
           </ul>
           <p className={styles.note}>Updates every 5 seconds.</p>
         </>
+      )}
+
+      {attemptToRemove && (
+        <ConfirmDialog
+          title={`Remove ${attemptToRemove.studentName}?`}
+          message="Their start time and exits are deleted. While the test is open, they can start again with the full time."
+          confirmLabel="Remove"
+          busyLabel="Removing…"
+          isBusy={deleteAttempt.isPending}
+          errorMessage={deleteAttempt.error?.message}
+          onCancel={closeRemoveDialog}
+          onConfirm={() =>
+            deleteAttempt.mutate(attemptToRemove.id, { onSuccess: closeRemoveDialog })
+          }
+        />
       )}
     </Panel>
   );
@@ -49,9 +74,10 @@ type ResultRowProps = {
   result: AttemptResult;
   isUnlocking: boolean;
   onUnlock: () => void;
+  onRemove: () => void;
 };
 
-function ResultRow({ result, isUnlocking, onUnlock }: ResultRowProps) {
+function ResultRow({ result, isUnlocking, onUnlock, onRemove }: ResultRowProps) {
   const status = describeResultStatus(result);
   const isLocked = result.status === 'locked';
 
@@ -68,11 +94,16 @@ function ResultRow({ result, isUnlocking, onUnlock }: ResultRowProps) {
         <Fact label="Exits" value={describeExits(result)} />
         <Fact label="Away" value={describeAwayTime(result.awayMs)} />
       </dl>
-      {isLocked && (
-        <Button variant="danger" onClick={onUnlock} disabled={isUnlocking}>
-          {isUnlocking ? 'Unlocking…' : 'Unlock'}
+      <div className={styles.rowActions}>
+        {isLocked && (
+          <Button variant="danger" onClick={onUnlock} disabled={isUnlocking}>
+            {isUnlocking ? 'Unlocking…' : 'Unlock'}
+          </Button>
+        )}
+        <Button variant="secondary" onClick={onRemove}>
+          Remove
         </Button>
-      )}
+      </div>
     </li>
   );
 }

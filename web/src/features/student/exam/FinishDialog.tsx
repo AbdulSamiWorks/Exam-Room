@@ -1,6 +1,4 @@
-import { Button } from '../../../components/Button';
-import { FormError } from '../../../components/FormError';
-import styles from './FinishDialog.module.css';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 
 type FinishDialogProps = {
   isFinishing: boolean;
@@ -16,27 +14,16 @@ export function FinishDialog({
   onConfirm,
 }: FinishDialogProps) {
   return (
-    <div className={styles.backdrop}>
-      <div
-        className={styles.dialog}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="finish-dialog-title"
-      >
-        <h2 id="finish-dialog-title" className={styles.title}>
-          Finish the test?
-        </h2>
-        <p className={styles.message}>After you finish, you cannot open the paper again.</p>
-        {errorMessage && <FormError>{errorMessage}</FormError>}
-        <div className={styles.actions}>
-          <Button variant="secondary" onClick={onCancel} disabled={isFinishing} autoFocus>
-            Keep working
-          </Button>
-          <Button variant="danger" onClick={onConfirm} disabled={isFinishing}>
-            {isFinishing ? 'Finishing…' : 'Finish test'}
-          </Button>
-        </div>
-      </div>
-    </div>
+    <ConfirmDialog
+      title="Finish the test?"
+      message="After you finish, you cannot open the paper again."
+      confirmLabel="Finish test"
+      busyLabel="Finishing…"
+      cancelLabel="Keep working"
+      isBusy={isFinishing}
+      errorMessage={errorMessage}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+    />
   );
 }
