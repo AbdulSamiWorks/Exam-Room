@@ -513,6 +513,13 @@ The owner's choices: students log in with roll number + PIN (D26), students are 
 Each milestone is finished, tested and usable before the next one starts. Details may be refined
 when a milestone starts; the decision log records every change.
 
+**Update (2026-10-24):** the owner added more requirements: full teacher control (rename and
+delete everything), PIN and fingerprint (passkey) login, an installable PWA, a student dashboard
+with profile, subjects, chapters and progress, typed papers from JSON or text, MCQ auto-marking
+with release of results, top scorers and bounties, and answers that are never lost when the free
+server sleeps. They are written in [NEXT-SESSION-PROMPT.md](NEXT-SESSION-PROMPT.md). The next
+session re-plans M10 onwards with them.
+
 ### M9 Quick wins (built 2026-10-24)
 
 - All pages load when the exam starts, one after another, so neither the phone nor the server is
