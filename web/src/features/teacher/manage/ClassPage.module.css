@@ -1,0 +1,14 @@
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.headerActions {
+  display: flex;
+  gap: 8px;
+}
+
+.sectionTabs {
+  border-bottom: 1px solid var(--color-border);
+}

@@ -1,0 +1,75 @@
+.chapters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.heading {
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.editingRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.editingRow > form {
+  align-self: stretch;
+}
+
+.position {
+  flex-shrink: 0;
+  min-width: 1.75em;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.chapterText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.chapterName {
+  overflow-wrap: anywhere;
+}
+
+.rowActions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}

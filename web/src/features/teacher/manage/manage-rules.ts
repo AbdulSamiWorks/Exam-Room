@@ -2,15 +2,18 @@ import type {
   ChapterSummary,
   ClassSubjectSummary,
   ClassSummary,
+  Student,
   StudentWithPin,
+  UpdateStudentRequest,
 } from '@exam-room/shared';
 import { countOf, joinWithAnd } from '../../../lib/text';
 
 export type MoveDirection = 'up' | 'down';
 
-export type SubjectChoice = {
-  subjectId: number;
-  label: string;
+export type StudentFormValues = {
+  rollNumber: string;
+  name: string;
+  classId: number;
 };
 
 export function classDeletionBlocker(schoolClass: ClassSummary): string | undefined {
@@ -54,21 +57,6 @@ export function chapterIdsAfterMove(
   return reordered;
 }
 
-export function otherSubjectChoices(
-  classes: readonly ClassSummary[],
-  subjectId: number,
-): SubjectChoice[] {
-  const showsClassName = classes.length > 1;
-  return classes.flatMap((schoolClass) =>
-    schoolClass.subjects
-      .filter((subject) => subject.id !== subjectId)
-      .map((subject) => ({
-        subjectId: subject.id,
-        label: showsClassName ? `${subject.name} · ${schoolClass.name}` : subject.name,
-      })),
-  );
-}
-
 export function pinListText(
   className: string,
   studentsWithPins: readonly StudentWithPin[],
@@ -84,4 +72,14 @@ export function describeClassContents(schoolClass: ClassSummary): string {
     countOf(schoolClass.studentCount, 'student'),
     countOf(schoolClass.subjects.length, 'subject'),
   ].join(' · ');
+}
+
+export function studentChanges(student: Student, values: StudentFormValues): UpdateStudentRequest {
+  const rollNumber = values.rollNumber.trim();
+  const name = values.name.trim();
+  return {
+    ...(rollNumber !== student.rollNumber && { rollNumber }),
+    ...(name !== student.name && { name }),
+    ...(values.classId !== student.classId && { classId: values.classId }),
+  };
 }

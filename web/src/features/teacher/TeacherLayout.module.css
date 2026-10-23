@@ -27,29 +27,5 @@
 }
 
 .sections {
-  display: flex;
-  gap: 4px;
   padding: 0 var(--page-padding);
-}
-
-.sectionLink {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 14px;
-  border-bottom: 3px solid transparent;
-  color: var(--color-muted);
-  font-weight: 600;
-  text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.sectionLink:focus-visible {
-  outline: 3px solid var(--color-focus);
-  outline-offset: -3px;
-}
-
-.activeSection {
-  border-bottom-color: var(--color-text);
-  color: var(--color-text);
 }

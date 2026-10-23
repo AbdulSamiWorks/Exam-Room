@@ -1,6 +1,6 @@
 import type { TestKind } from '@exam-room/shared';
 import { Chip } from '../../../components/Chip';
-import type { SubjectOption } from './group-tests-by-subject';
+import type { SubjectOption } from '../manage/subject-options';
 import styles from './SubjectFilter.module.css';
 
 type SubjectFilterProps = {

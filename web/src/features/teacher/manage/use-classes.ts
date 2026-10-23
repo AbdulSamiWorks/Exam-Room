@@ -30,20 +30,23 @@ export function useClassTree() {
 
 type ManageChangeOptions = {
   changesTests?: boolean;
+  onChanged?: () => void;
 };
 
 export function useManageChange<Variables, Result>(
   sendChange: (variables: Variables) => Promise<Result>,
-  { changesTests = false }: ManageChangeOptions = {},
+  { changesTests = false, onChanged }: ManageChangeOptions = {},
 ) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: sendChange,
-    onSuccess: () =>
-      Promise.all([
+    onSuccess: () => {
+      onChanged?.();
+      return Promise.all([
         queryClient.invalidateQueries({ queryKey: classQueryKeys.tree }),
         changesTests && queryClient.invalidateQueries({ queryKey: testQueryKeys.everything }),
-      ]),
+      ]);
+    },
   });
 }
 
@@ -61,8 +64,8 @@ export function useRenameClass(classId: number) {
   );
 }
 
-export function useDeleteClass(classId: number) {
-  return useManageChange(() => deleteResource(`/classes/${classId}`));
+export function useDeleteClass(classId: number, onDeleted: () => void) {
+  return useManageChange(() => deleteResource(`/classes/${classId}`), { onChanged: onDeleted });
 }
 
 export function useCreateSubject(classId: number) {
