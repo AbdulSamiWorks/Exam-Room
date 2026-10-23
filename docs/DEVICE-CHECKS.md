@@ -107,3 +107,12 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
       the app explains why it cannot be deleted yet.
 - [ ] Create a test: the class and subject can be chosen, chapters can be tapped, and the test list
       groups the test under its subject.
+
+## 11. Student login
+
+- [ ] On a student phone open the site: **Student login** → class, roll number and PIN. A wrong
+      PIN says so; the right PIN opens the student home with the student's name and class.
+- [ ] Close the browser and open the site again the next day: the student is still logged in.
+- [ ] Open a test link while logged out: it asks to log in, then comes back to the test.
+- [ ] The teacher taps **Reset PIN**: the student phone is logged out and only the new PIN works.
+- [ ] The teacher's results list **Not started yet** with the students who have not started.

@@ -1,7 +1,7 @@
 # Exam Room — Architecture
 
-> Status: **approved plan, v1** (2026-10-22). Milestones M0–M10 are built (2026-10-25); the
-> real-device checks in §15 are still to do. M11–M19 are planned in §16 (2026-10-24). Update this
+> Status: **approved plan, v1** (2026-10-22). Milestones M0–M11 are built (2026-10-25); the
+> real-device checks in §15 are still to do. M12–M19 are planned in §16 (2026-10-24). Update this
 > file whenever a decision below changes.
 
 Exam Room is a small mobile-first web app. A teacher uploads a test paper (PDF), shares a link, and
@@ -179,18 +179,20 @@ Size check: a page is ~150–250 KB as WebP, so Turso's 5 GB free storage holds 
 
 ### 6.2 Starting / resuming (student)
 
-1. Student opens `/t/<code>`, sees title + subject + time limit, enters name and roll number.
-   If the test is not open, a waiting or closed screen shows instead (see 6.8).
+1. Student opens `/t/<code>` (or taps the test on the student home), sees title + subject + time
+   limit. A student who is not logged in is sent to `/login?next=/t/<code>` first (class, roll
+   number, PIN). If the test is not open, a waiting or closed screen shows instead (see 6.8).
 2. Tapping **Start Test** requests fullscreen _first_ (browsers only allow it inside a tap), then
-   calls the server.
-3. For a new roll number the server first checks that the test is open (6.8). It creates the
-   attempt: `deadline_at = now + duration`, generates a random secret token,
-   stores only its hash, returns the token. The phone keeps it in `localStorage` (per test code)
-   and sends it as `Authorization: Bearer <token>`.
-4. **Same roll number again:**
+   calls the server with the student session cookie.
+3. The server checks that the student belongs to the test's class (`403 other_class`). For a
+   student without an attempt it checks that the test is open (6.8) and creates the attempt with
+   `student_id`, a copy of the name and roll number, and `deadline_at = now + duration`. It
+   generates a random secret token, stores only its hash and returns the token. The phone keeps it
+   in `localStorage` (per test code) and sends it as `Authorization: Bearer <token>` (D41).
+4. **Same student again** (another phone, or the token was lost):
    - attempt submitted or locked → show the final screen (never the paper);
-   - attempt in progress and the name matches → resume on the new device, **count it as an exit**
-     (`device_change`) and rotate the token so the old device is logged out.
+   - attempt in progress → resume on the new device, **count it as an exit** (`device_change`)
+     and rotate the token so the old device is logged out.
 
 ### 6.3 Time limit
 
@@ -348,12 +350,22 @@ DELETE /api/tests/:id                 → test, pages, attempts and exits
 DELETE /api/attempts/:id              → one attempt and its exits (frees the roll number)
 ```
 
-Student (public by test code, then `Authorization: Bearer <token>`):
+Student account (student session cookie, D39):
+
+```
+GET    /api/student-auth/classes           → class names for the login form (public)
+POST   /api/student-auth/login             { classId, rollNumber, pin } → profile + cookie
+GET    /api/student-auth/session           → profile or null
+POST   /api/student-auth/logout
+GET    /api/student/home                   → profile + tests of the class with the own attempt state
+```
+
+Student exam (public by test code, then `Authorization: Bearer <token>`):
 
 ```
 GET    /api/public/tests/:code             → title, subject, durationMinutes, pageCount, allowedExits,
                                               availability, opensAt, closesAt
-POST   /api/public/tests/:code/attempts    { name, rollNo }  → token + state
+POST   /api/public/tests/:code/attempts    (student cookie) → token + state
 GET    /api/attempt                        → state (status, deadlineAt, serverNow, exits, pageCount…)
 GET    /api/attempt/pages/:n               → page image (in progress only)
 POST   /api/attempt/exits                  { clientExitId, reason }
@@ -368,7 +380,12 @@ Other: `GET /api/health`. Errors always use one JSON shape: `{ error: { code, me
 - **Teacher auth:** one password (`TEACHER_PASSWORD`), compared in constant time. Success sets an
   HMAC-signed session cookie (`httpOnly`, `SameSite=Strict`, `Secure` in production, 12 h expiry).
   Login is rate-limited.
-- **Student auth:** random 256-bit token per attempt; only its SHA-256 hash is stored.
+- **Student login:** class + roll number + 6-digit PIN (scrypt hash, D26). Success sets an
+  HMAC-signed cookie with the student id, the session version and the expiry (60 days, D39);
+  Reset PIN raises the version, which logs out every phone. Wrong PINs: 10 per account per 15
+  minutes (in memory) and 100 failed logins per network per 15 minutes (D40). An unknown roll
+  number gets the same answer and takes as long as a wrong PIN.
+- **Student exam auth:** random 256-bit token per attempt; only its SHA-256 hash is stored.
 - **Validation:** every request body/param is parsed with zod at the route boundary.
 - **Uploads:** size/count limits; every image decoded and re-encoded by `sharp` (never stored as-is).
 - **Headers:** helmet with a strict CSP (`default-src 'self'`, `img-src 'self' blob: data:`,
@@ -488,8 +505,8 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 | M18 | Dashboard and progress for students and the teacher                                                    |
 | M19 | Waiting room: the teacher starts everyone at the same time                                             |
 
-Status (2026-10-25): M0–M10 are built and tested (unit tests, API tests and a smoke test of the
-production build). Still to do by hand: the real-device checks in §15. M11–M19 are planned in §16.
+Status (2026-10-25): M0–M11 are built and tested (unit tests, API tests and a smoke test of the
+production build). Still to do by hand: the real-device checks in §15. M12–M19 are planned in §16.
 
 ## 13. Decision log
 
@@ -781,6 +798,19 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 | Render hours     | One service awake all month ≈ 744 hours                               | 750 hours / month                  |
 
 ## 17. Built milestones
+
+### M11 Student login and home (built 2026-10-25)
+
+- `/login`: class, roll number and PIN (the class is chosen for you when there is only one).
+  `/` shows the student home when logged in: name, class and roll number, then **Open now**
+  (open tests and unfinished attempts), **Upcoming** (sorted by the nearest opening time) and
+  **Finished** (finished or missed). The grouping is a pure, tested function.
+- The test link asks for the login first, then shows **Start test** with the student's name; no
+  typing of names any more. A student of another class gets a clear message.
+- Migration 6 rebuilt `attempts`: `student_id` (NULL for attempts made before accounts), one
+  attempt per student per test, and a nullable `token_hash` for the offline assignments of M17.
+  Deleting a student sets `student_id` to NULL, so old results stay by name and roll number.
+- The teacher's results list **Not started yet** with the class's students who have no attempt.
 
 ### M10 Manage (built 2026-10-25)
 

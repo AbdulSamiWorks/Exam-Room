@@ -13,7 +13,8 @@ Architecture, decisions and roadmap: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md
 2. The teacher taps **New test**, picks the PDF, class, subject, chapters, title, time limit and
    allowed exits (0, 1 or 2). The PDF is turned into page images in the teacher's browser.
 3. The test page shows a link and a code. Send the link with **Copy link** or **Send on WhatsApp**.
-4. **Student** opens the link, enters name and roll number and taps **Start test**. The timer
+4. **Student** logs in once with class, roll number and PIN (the phone stays logged in for 60
+   days), opens the test from the student home or the link and taps **Start test**. The timer
    starts and never stops.
 5. If the student leaves the page or switches apps, a red warning appears. After the allowed
    exits the test locks. The teacher can tap **Unlock** in the results.
