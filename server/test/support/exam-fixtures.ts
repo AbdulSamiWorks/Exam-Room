@@ -74,6 +74,10 @@ export async function logInAsStudent(
   return agent;
 }
 
+export function rememberTestClass(app: Express, test: TestSummary): void {
+  entriesOf(classIdsByTestCode, app).set(test.code, test.schoolClass.id);
+}
+
 export function classIdOfTest(app: Express, testCode: string): number {
   const classId = entriesOf(classIdsByTestCode, app).get(testCode);
   if (classId === undefined) throw new Error(`Test ${testCode} was not published by publishTest.`);
@@ -103,7 +107,7 @@ export async function publishTest(app: Express, settings: TestSettings = {}): Pr
   const response = await upload;
   if (response.status !== 201) throw new Error(`Test creation failed: ${response.status}`);
   const createdTest: TestSummary = response.body.test;
-  entriesOf(classIdsByTestCode, app).set(createdTest.code, createdTest.schoolClass.id);
+  rememberTestClass(app, createdTest);
   if (settings.isOpen === false) return createdTest;
 
   const opened = await teacher.post(`/api/tests/${createdTest.id}/open`);

@@ -4,6 +4,7 @@ import type {
   RecordExitRequest,
   RecordReturnRequest,
   StartAttemptResponse,
+  StudentPaperResponse,
 } from '@exam-room/shared';
 import { getBlob, getJson, postJson, type RequestOptions } from '../../api/http-client';
 
@@ -25,6 +26,14 @@ export function fetchAttempt(attemptToken: string): Promise<AttemptResponse> {
 
 export function fetchPageImage(attemptToken: string, pageNumber: number): Promise<Blob> {
   return getBlob(`/attempt/pages/${pageNumber}`, withAttemptToken(attemptToken));
+}
+
+export function fetchPaperPicture(attemptToken: string, imageNumber: number): Promise<Blob> {
+  return getBlob(`/attempt/paper-images/${imageNumber}`, withAttemptToken(attemptToken));
+}
+
+export function fetchStudentPaper(attemptToken: string): Promise<StudentPaperResponse> {
+  return getJson<StudentPaperResponse>('/attempt/paper', withAttemptToken(attemptToken));
 }
 
 export function reportExit(

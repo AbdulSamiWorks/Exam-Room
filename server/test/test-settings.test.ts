@@ -16,7 +16,11 @@ const test: TestRecord = {
   durationMinutes: 30,
   allowedExits: 1,
   leaveRule: 'lock',
+  writtenAnswers: 'on_paper',
+  paperKind: 'pages',
   pageCount: 2,
+  questionCount: 0,
+  maxMarks: null,
   studentCount: 0,
   createdAt: 0,
   opensAt: null,
@@ -32,6 +36,7 @@ describe('applySettingChanges', () => {
       durationMinutes: 30,
       allowedExits: 1,
       leaveRule: 'lock',
+      writtenAnswers: 'on_paper',
     });
   });
 });

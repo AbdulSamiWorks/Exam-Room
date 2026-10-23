@@ -3,7 +3,12 @@ import type { TestRecord } from './test-record.js';
 
 export type StoredTestSettings = Omit<TestSettings, 'chapterIds'>;
 
-const SETTINGS_FIXED_ONCE_STARTED = ['durationMinutes', 'allowedExits', 'leaveRule'] as const;
+const SETTINGS_FIXED_ONCE_STARTED = [
+  'durationMinutes',
+  'allowedExits',
+  'leaveRule',
+  'writtenAnswers',
+] as const;
 
 export function settingsOf(test: TestRecord): StoredTestSettings {
   return {
@@ -13,6 +18,7 @@ export function settingsOf(test: TestRecord): StoredTestSettings {
     durationMinutes: test.durationMinutes,
     allowedExits: test.allowedExits,
     leaveRule: test.leaveRule,
+    writtenAnswers: test.writtenAnswers,
   };
 }
 
@@ -28,6 +34,7 @@ export function applySettingChanges(
     durationMinutes: changes.durationMinutes ?? current.durationMinutes,
     allowedExits: changes.allowedExits ?? current.allowedExits,
     leaveRule: changes.leaveRule ?? current.leaveRule,
+    writtenAnswers: changes.writtenAnswers ?? current.writtenAnswers,
   };
 }
 

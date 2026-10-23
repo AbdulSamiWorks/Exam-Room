@@ -96,7 +96,7 @@ function EditTestForm({ test }: { test: TestSummary }) {
         areRulesFixed={hasStudents}
       />
 
-      {!hasStudents && (
+      {!hasStudents && test.paperKind === 'pages' && (
         <PdfPicker
           label="Replace the paper (optional)"
           pdfPages={pdfPages}

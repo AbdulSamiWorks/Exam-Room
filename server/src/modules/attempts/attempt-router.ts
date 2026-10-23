@@ -1,4 +1,4 @@
-import type { AttemptResponse } from '@exam-room/shared';
+import type { AttemptResponse, StudentPaperResponse } from '@exam-room/shared';
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import type { AppDependencies } from '../../app-dependencies.js';
@@ -6,6 +6,7 @@ import { sha256 } from '../../lib/crypto.js';
 import { HttpError, notFound } from '../../lib/http-errors.js';
 import { parseInput } from '../../lib/parse-input.js';
 import type { TestRecord } from '../tests/test-record.js';
+import { findPaperForStudents, findPaperImage } from '../tests/paper-repository.js';
 import { findPageImage } from '../tests/tests-repository.js';
 import type { AttemptRecord } from './attempt-record.js';
 import { finishByStudent } from './attempt-rules.js';
@@ -19,6 +20,12 @@ const MAX_REPORTED_AWAY_MS = 24 * 60 * 60 * 1000;
 const pageParamsSchema = z.object({
   pageNumber: z.coerce.number().int().positive(),
 });
+
+const imageParamsSchema = z.object({
+  imageNumber: z.coerce.number().int().positive(),
+});
+
+const IMAGE_HEADERS = { 'Content-Type': 'image/webp', 'Cache-Control': 'no-store' };
 
 const exitReportSchema = z.object({
   clientExitId: z.string().regex(/^[\w-]{8,64}$/, 'Invalid exit id.'),
@@ -58,21 +65,39 @@ export function createAttemptRouter(dependencies: AppDependencies): Router {
     response.json({ attempt: studentAttempt } satisfies AttemptResponse);
   }
 
+  async function loadAttemptWithOpenPaper(request: Request): Promise<AttemptRecord> {
+    const attempt = await loadAttempt(request);
+    if (attempt.status !== 'in_progress') {
+      throw new HttpError(410, 'paper_closed', 'The test is closed.');
+    }
+    return attempt;
+  }
+
   router.get('/', async (request, response) => {
     await respondWithAttempt(response, await loadAttempt(request));
   });
 
   router.get('/pages/:pageNumber', async (request, response) => {
-    const attempt = await loadAttempt(request);
-    if (attempt.status !== 'in_progress') {
-      throw new HttpError(410, 'paper_closed', 'The test is closed.');
-    }
-
+    const attempt = await loadAttemptWithOpenPaper(request);
     const { pageNumber } = parseInput(pageParamsSchema, request.params);
     const pageImage = await findPageImage(database, attempt.testId, pageNumber);
     if (!pageImage) throw notFound('This page does not exist.');
+    response.set(IMAGE_HEADERS).send(pageImage);
+  });
 
-    response.set({ 'Content-Type': 'image/webp', 'Cache-Control': 'no-store' }).send(pageImage);
+  router.get('/paper', async (request, response) => {
+    const attempt = await loadAttemptWithOpenPaper(request);
+    const paper = await findPaperForStudents(database, attempt.testId);
+    if (!paper) throw notFound('This test has no typed questions.', 'paper_not_found');
+    response.set('Cache-Control', 'no-store').json({ paper } satisfies StudentPaperResponse);
+  });
+
+  router.get('/paper-images/:imageNumber', async (request, response) => {
+    const attempt = await loadAttemptWithOpenPaper(request);
+    const { imageNumber } = parseInput(imageParamsSchema, request.params);
+    const image = await findPaperImage(database, attempt.testId, imageNumber);
+    if (!image) throw notFound('This picture does not exist.');
+    response.set(IMAGE_HEADERS).send(image);
   });
 
   router.post('/exits', async (request, response) => {

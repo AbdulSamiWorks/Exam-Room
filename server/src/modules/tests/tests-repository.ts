@@ -1,8 +1,22 @@
-import type { AllowedExits, LeaveRule, PageSize, TestKind, TestSchedule } from '@exam-room/shared';
+import type {
+  AllowedExits,
+  LeaveRule,
+  PageSize,
+  PaperKind,
+  TestKind,
+  TestSchedule,
+  WrittenAnswers,
+} from '@exam-room/shared';
 import type { Row, Transaction } from '@libsql/client';
 import type { Database } from '../../database/connection.js';
 import { requireFirstRow } from '../../database/query-helpers.js';
 import type { PageImage } from './page-images.js';
+import { startedAttemptExists } from './started-attempts.js';
+import {
+  insertPaperImageStatements,
+  paperColumnValues,
+  type StoredPaper,
+} from './paper-repository.js';
 import {
   chapterTagsByTestId,
   chapterTagsQuery,
@@ -18,6 +32,10 @@ export type NewTest = StoredTestSettings & {
   createdAt: number;
 };
 
+export type TestContent =
+  | { paperKind: 'pages'; pages: PageImage[]; answerSheet: StoredPaper | undefined }
+  | { paperKind: 'typed'; typedPaper: StoredPaper; paperImages: PageImage[] };
+
 const SELECT_TEST_SUMMARY = `
   SELECT
     tests.id,
@@ -27,7 +45,11 @@ const SELECT_TEST_SUMMARY = `
     tests.duration_minutes,
     tests.allowed_exits,
     tests.leave_rule,
+    tests.paper_kind,
     tests.page_count,
+    tests.question_count,
+    tests.max_marks,
+    tests.written_answers,
     tests.created_at,
     tests.opens_at,
     tests.closes_at,
@@ -81,18 +103,23 @@ export async function findTestWithChapters(
   return test;
 }
 
-export async function insertTestWithPages(
+export async function insertTest(
   database: Database,
   newTest: NewTest,
-  pages: PageImage[],
+  content: TestContent,
 ): Promise<number> {
+  const pages = content.paperKind === 'pages' ? content.pages : [];
+  const storedPaper = content.paperKind === 'pages' ? content.answerSheet : content.typedPaper;
+  const paperColumns = paperColumnValues(storedPaper);
+
   const transaction = await database.transaction('write');
   try {
     const insertedTest = await transaction.execute({
       sql: `INSERT INTO tests
               (code, subject_id, kind, title, duration_minutes, allowed_exits, leave_rule,
-               page_count, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+               written_answers, paper_kind, page_count, paper, answer_key, question_count,
+               max_marks, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id`,
       args: [
         newTest.code,
@@ -102,14 +129,25 @@ export async function insertTestWithPages(
         newTest.durationMinutes,
         newTest.allowedExits,
         newTest.leaveRule,
+        newTest.writtenAnswers,
+        content.paperKind,
         pages.length,
+        paperColumns.paper,
+        paperColumns.answerKey,
+        paperColumns.questionCount,
+        paperColumns.maxMarks,
         newTest.createdAt,
       ],
     });
     const testId = Number(requireFirstRow(insertedTest).id);
     await insertPages(transaction, testId, pages);
-    const chapterTagStatements = insertChapterTagsStatements(testId, newTest.chapterIds);
-    if (chapterTagStatements.length > 0) await transaction.batch(chapterTagStatements);
+    const followingStatements = [
+      ...insertChapterTagsStatements(testId, newTest.chapterIds),
+      ...(content.paperKind === 'typed'
+        ? insertPaperImageStatements(testId, content.paperImages)
+        : []),
+    ];
+    if (followingStatements.length > 0) await transaction.batch(followingStatements);
     await transaction.commit();
     return testId;
   } finally {
@@ -124,11 +162,7 @@ export async function replacePagesBeforeAnyStart(
 ): Promise<boolean> {
   const transaction = await database.transaction('write');
   try {
-    const startedAttempts = await transaction.execute({
-      sql: 'SELECT 1 FROM attempts WHERE test_id = ? LIMIT 1',
-      args: [testId],
-    });
-    if (startedAttempts.rows.length > 0) return false;
+    if (await startedAttemptExists(transaction, testId)) return false;
 
     await transaction.execute({ sql: 'DELETE FROM test_pages WHERE test_id = ?', args: [testId] });
     await insertPages(transaction, testId, pages);
@@ -168,7 +202,7 @@ export async function saveTestSettings(
       {
         sql: `UPDATE tests
               SET subject_id = ?, kind = ?, title = ?, duration_minutes = ?, allowed_exits = ?,
-                  leave_rule = ?
+                  leave_rule = ?, written_answers = ?
               WHERE id = ?`,
         args: [
           settings.subjectId,
@@ -177,6 +211,7 @@ export async function saveTestSettings(
           settings.durationMinutes,
           settings.allowedExits,
           settings.leaveRule,
+          settings.writtenAnswers,
           testId,
         ],
       },
@@ -251,6 +286,7 @@ export async function deleteTestWithResults(database: Database, testId: number):
       },
       { sql: 'DELETE FROM attempts WHERE test_id = ?', args: [testId] },
       { sql: 'DELETE FROM test_pages WHERE test_id = ?', args: [testId] },
+      { sql: 'DELETE FROM paper_images WHERE test_id = ?', args: [testId] },
       { sql: 'DELETE FROM test_chapters WHERE test_id = ?', args: [testId] },
       { sql: 'DELETE FROM tests WHERE id = ?', args: [testId] },
     ],
@@ -286,7 +322,11 @@ function toTestRecord(row: Row): TestRecord {
     durationMinutes: Number(row.duration_minutes),
     allowedExits: Number(row.allowed_exits) as AllowedExits,
     leaveRule: String(row.leave_rule) as LeaveRule,
+    paperKind: String(row.paper_kind) as PaperKind,
     pageCount: Number(row.page_count),
+    questionCount: Number(row.question_count),
+    maxMarks: row.max_marks === null ? null : Number(row.max_marks),
+    writtenAnswers: String(row.written_answers) as WrittenAnswers,
     studentCount: Number(row.student_count),
     createdAt: Number(row.created_at),
     opensAt: row.opens_at === null ? null : Number(row.opens_at),

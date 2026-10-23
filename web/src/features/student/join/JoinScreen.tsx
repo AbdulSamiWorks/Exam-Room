@@ -7,7 +7,7 @@ import { Page } from '../../../components/Page';
 import { Panel } from '../../../components/Panel';
 import { ThemeToggle } from '../../../components/ThemeToggle';
 import { describeDateTime } from '../../../lib/describe-date-time';
-import { describeDuration, describePageCount } from '../../../lib/describe-test-length';
+import { describeDuration, describePaperSize } from '../../../lib/describe-test-length';
 import { enterFullscreen } from '../fullscreen';
 import { ErrorScreen } from '../screens/ErrorScreen';
 import { TestNotOpenScreen } from '../screens/TestNotOpenScreen';
@@ -70,8 +70,7 @@ function JoinForm({ test, testCode, onStarted, isResuming }: JoinFormProps) {
           <ul className={styles.rules}>
             <li>
               Time limit: <strong>{describeDuration(test.durationMinutes)}</strong> (
-              {describePageCount(test.pageCount)}). The timer starts when you tap Start test and
-              never stops.
+              {describePaperSize(test)}). The timer starts when you tap Start test and never stops.
             </li>
             {test.closesAt !== null && !isResuming && (
               <li>

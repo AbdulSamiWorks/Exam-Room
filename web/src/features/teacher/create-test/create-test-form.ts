@@ -1,4 +1,6 @@
-import type { CreateTestFormField } from '@exam-room/shared';
+import type { CreateTestFormField, PaperKind } from '@exam-room/shared';
+import type { PaperUpload } from '../paper/paper-upload';
+import { appendPaperUpload } from '../paper/use-paper';
 import type { RenderedPage } from './render-pdf-pages';
 import type { PdfPagesState } from './use-pdf-pages';
 import {
@@ -8,7 +10,7 @@ import {
   type TestSettingsFormValues,
 } from './test-settings-form';
 
-export type CreateTestFormErrors = TestSettingsFormErrors & { pdf?: string };
+export type CreateTestFormErrors = TestSettingsFormErrors & { pdf?: string; paper?: string };
 
 const FILE_EXTENSION_BY_IMAGE_TYPE: Record<string, string> = {
   'image/webp': 'webp',
@@ -18,9 +20,18 @@ const FILE_EXTENSION_BY_IMAGE_TYPE: Record<string, string> = {
 
 export function validateCreateTestForm(
   values: TestSettingsFormValues,
+  paperKind: PaperKind,
   pdfPages: PdfPagesState,
+  isTypedPaperReady: boolean,
 ): CreateTestFormErrors {
-  return { ...validateTestSettings(values), pdf: describePdfProblem(pdfPages, true) };
+  return {
+    ...validateTestSettings(values),
+    pdf: paperKind === 'pages' ? describePdfProblem(pdfPages, true) : undefined,
+    paper:
+      paperKind === 'typed' && !isTypedPaperReady
+        ? 'Paste the questions and fix the problems shown.'
+        : undefined,
+  };
 }
 
 export function describePdfProblem(
@@ -37,10 +48,25 @@ export function buildCreateTestFormData(
   values: TestSettingsFormValues,
   pages: RenderedPage[],
 ): FormData {
+  return appendSettings(buildPagesFormData(pages), values, 'pages');
+}
+
+export function buildTypedTestFormData(
+  values: TestSettingsFormValues,
+  upload: PaperUpload,
+): FormData {
+  return appendSettings(appendPaperUpload(new FormData(), upload), values, 'typed');
+}
+
+function appendSettings(
+  formData: FormData,
+  values: TestSettingsFormValues,
+  paperKind: PaperKind,
+): FormData {
   const settings = toTestSettings(values);
-  const formData = buildPagesFormData(pages);
   const appendText = (field: CreateTestFormField, text: string) => formData.append(field, text);
 
+  appendText('paperKind', paperKind);
   appendText('subjectId', String(settings.subjectId));
   appendText('kind', settings.kind);
   appendText('chapterIds', settings.chapterIds.join(','));
@@ -48,6 +74,7 @@ export function buildCreateTestFormData(
   appendText('durationMinutes', String(settings.durationMinutes));
   appendText('allowedExits', String(settings.allowedExits));
   appendText('leaveRule', settings.leaveRule);
+  appendText('writtenAnswers', settings.writtenAnswers);
   return formData;
 }
 

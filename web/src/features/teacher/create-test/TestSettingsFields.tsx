@@ -1,8 +1,15 @@
-import type { AllowedExits, ClassSummary, LeaveRule, TestKind } from '@exam-room/shared';
+import type {
+  AllowedExits,
+  ClassSummary,
+  LeaveRule,
+  TestKind,
+  WrittenAnswers,
+} from '@exam-room/shared';
 import { ButtonLink } from '../../../components/Button';
 import { ChoiceGroup, type Choice } from '../../../components/ChoiceGroup';
 import { FormError } from '../../../components/FormError';
 import { Panel } from '../../../components/Panel';
+import { SelectField } from '../../../components/SelectField';
 import { TextField } from '../../../components/TextField';
 import { MANAGE_PATH, manageClassPath } from '../manage/manage-paths';
 import { useClassTree } from '../manage/use-classes';
@@ -32,6 +39,13 @@ const ALLOWED_EXITS_CHOICES: Choice<AllowedExits>[] = [
 const LEAVE_RULE_CHOICES: Choice<LeaveRule>[] = [
   { value: 'lock', label: 'Lock (I can unlock)' },
   { value: 'finish', label: 'Finish the test' },
+];
+
+const WRITTEN_ANSWER_CHOICES: Choice<WrittenAnswers>[] = [
+  { value: 'on_paper', label: 'On their own paper' },
+  { value: 'typed', label: 'Typed on the phone' },
+  { value: 'photos', label: 'Photos of the paper after finishing' },
+  { value: 'typed_and_photos', label: 'Typed, and photos after finishing' },
 ];
 
 type TestSettingsFieldsProps = {
@@ -102,6 +116,23 @@ export function TestSettingsFields({
         disabled={areRulesFixed}
         onChange={(leaveRule) => onChange((current) => ({ ...current, leaveRule }))}
       />
+
+      <SelectField
+        label="Written answers"
+        hint="How students answer written questions. Multiple choice is always tapped on the phone when the test has questions."
+        value={values.writtenAnswers}
+        disabled={areRulesFixed}
+        onChange={(event) => {
+          const writtenAnswers = event.target.value as WrittenAnswers;
+          onChange((current) => ({ ...current, writtenAnswers }));
+        }}
+      >
+        {WRITTEN_ANSWER_CHOICES.map((choice) => (
+          <option key={choice.value} value={choice.value}>
+            {choice.label}
+          </option>
+        ))}
+      </SelectField>
     </>
   );
 }

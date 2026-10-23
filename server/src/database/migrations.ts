@@ -237,4 +237,54 @@ export const migrations: readonly Migration[] = [
       `CREATE INDEX student_passkeys_student_id ON student_passkeys (student_id)`,
     ],
   },
+  {
+    id: 8,
+    name: 'typed papers, answer keys and paper images',
+    rebuildsTables: true,
+    statements: [
+      `CREATE TABLE tests_rebuilt (
+        id                INTEGER PRIMARY KEY,
+        code              TEXT    NOT NULL UNIQUE,
+        subject_id        INTEGER NOT NULL REFERENCES subjects (id),
+        kind              TEXT    NOT NULL DEFAULT 'test'
+                          CHECK (kind IN ('test', 'quiz', 'assignment')),
+        title             TEXT    NOT NULL,
+        duration_minutes  INTEGER NOT NULL CHECK (duration_minutes >= 1),
+        allowed_exits     INTEGER NOT NULL CHECK (allowed_exits BETWEEN 0 AND 2),
+        leave_rule        TEXT    NOT NULL DEFAULT 'lock' CHECK (leave_rule IN ('lock', 'finish')),
+        paper_kind        TEXT    NOT NULL DEFAULT 'pages' CHECK (paper_kind IN ('pages', 'typed')),
+        page_count        INTEGER NOT NULL CHECK (page_count >= 0),
+        paper             TEXT,
+        answer_key        TEXT    NOT NULL DEFAULT '{}',
+        question_count    INTEGER NOT NULL DEFAULT 0,
+        max_marks         REAL,
+        written_answers   TEXT    NOT NULL DEFAULT 'on_paper'
+                          CHECK (written_answers IN ('on_paper', 'typed', 'photos',
+                                                     'typed_and_photos')),
+        created_at        INTEGER NOT NULL,
+        opens_at          INTEGER,
+        closes_at         INTEGER,
+        CHECK (paper_kind = 'typed' OR page_count >= 1),
+        CHECK (paper_kind = 'pages' OR paper IS NOT NULL)
+      )`,
+      `INSERT INTO tests_rebuilt
+         (id, code, subject_id, kind, title, duration_minutes, allowed_exits, leave_rule,
+          paper_kind, page_count, created_at, opens_at, closes_at)
+       SELECT id, code, subject_id, kind, title, duration_minutes, allowed_exits, leave_rule,
+              'pages', page_count, created_at, opens_at, closes_at
+       FROM tests`,
+      `DROP TABLE tests`,
+      `ALTER TABLE tests_rebuilt RENAME TO tests`,
+      `CREATE INDEX tests_subject_id ON tests (subject_id)`,
+      `CREATE TABLE paper_images (
+        id        INTEGER PRIMARY KEY,
+        test_id   INTEGER NOT NULL REFERENCES tests (id) ON DELETE CASCADE,
+        image_no  INTEGER NOT NULL CHECK (image_no >= 1),
+        image     BLOB    NOT NULL,
+        width     INTEGER NOT NULL,
+        height    INTEGER NOT NULL,
+        UNIQUE (test_id, image_no)
+      )`,
+    ],
+  },
 ];

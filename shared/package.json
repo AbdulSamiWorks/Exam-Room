@@ -2,14 +2,21 @@
   "name": "@exam-room/shared",
   "version": "0.1.0",
   "private": true,
-  "description": "API contract types shared by server and web (types only)",
+  "description": "API contract types and the paper rules shared by server and web",
   "type": "module",
   "exports": {
     ".": {
       "types": "./src/index.ts"
+    },
+    "./paper-rules": {
+      "types": "./src/paper-rules.ts",
+      "default": "./src/paper-rules.ts"
     }
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
   }
 }

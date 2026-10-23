@@ -1,5 +1,6 @@
 import type { ChapterTag } from './chapters.js';
 import type { SchoolClass } from './classes.js';
+import type { PaperKind, WrittenAnswers } from './paper.js';
 import type { Subject } from './subjects.js';
 
 export type AllowedExits = 0 | 1 | 2;
@@ -26,7 +27,11 @@ export type TestSummary = TestSchedule & {
   durationMinutes: number;
   allowedExits: AllowedExits;
   leaveRule: LeaveRule;
+  paperKind: PaperKind;
   pageCount: number;
+  questionCount: number;
+  maxMarks: number | null;
+  writtenAnswers: WrittenAnswers;
   studentCount: number;
   createdAt: number;
   availability: TestAvailability;
@@ -48,6 +53,7 @@ export type TestSettings = {
   durationMinutes: number;
   allowedExits: AllowedExits;
   leaveRule: LeaveRule;
+  writtenAnswers: WrittenAnswers;
 };
 
 export type UpdateTestRequest = Partial<TestSettings>;
@@ -57,7 +63,10 @@ export type ScheduleTestRequest = {
   closesAt: number | null;
 };
 
-export type CreateTestFormField = keyof TestSettings | 'pages';
+export type CreateTestFormField =
+  keyof TestSettings | 'paperKind' | 'pages' | 'paper' | 'answerKey' | 'paperImages';
+
+export type PaperFormField = 'paper' | 'answerKey' | 'paperImages';
 
 export type TestLimits = {
   maxTitleLength: 120;

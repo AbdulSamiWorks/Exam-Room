@@ -1,4 +1,10 @@
-import type { TestListResponse, TestResponse, TestSchedule } from '@exam-room/shared';
+import type {
+  TeacherPaperResponse,
+  TestListResponse,
+  TestResponse,
+  TestSchedule,
+} from '@exam-room/shared';
+import { answerKeyProblems, answerKeySchema, paperSchema } from '@exam-room/shared/paper-rules';
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import type { AppDependencies } from '../../app-dependencies.js';
@@ -9,8 +15,15 @@ import { parseInput } from '../../lib/parse-input.js';
 import { requireTeacher } from '../auth/teacher-session.js';
 import { findChapterIdsInSubject } from '../chapters/chapters-repository.js';
 import { findSubjectById } from '../subjects/subjects-repository.js';
-import { normalizePageImages } from './page-images.js';
-import { receivePageImages, uploadedPageImages } from './receive-page-images.js';
+import { checkedPaper, checkPaperImageSizes } from './checked-paper.js';
+import { normalizePageImages, normalizePaperImages } from './page-images.js';
+import {
+  findPaperImage,
+  findStoredPaper,
+  replacePaperBeforeAnyStart,
+  saveAnswerKey,
+} from './paper-repository.js';
+import { receiveTestUpload, uploadedImages } from './receive-test-upload.js';
 import { closeNow, openNow, summarizeTest } from './test-availability.js';
 import { createUniqueTestCode } from './test-code.js';
 import { testLimits } from './test-limits.js';
@@ -23,11 +36,12 @@ import {
 import {
   deleteTestWithResults,
   findTestWithChapters,
-  insertTestWithPages,
+  insertTest,
   listTests,
   replacePagesBeforeAnyStart,
   saveTestSchedule,
   saveTestSettings,
+  type TestContent,
 } from './tests-repository.js';
 
 const COMMA = ',';
@@ -63,6 +77,27 @@ const testSettingsFields = {
     ),
   allowedExits: z.coerce.number().pipe(z.literal([0, 1, 2], 'Allowed exits must be 0, 1 or 2.')),
   leaveRule: z.enum(['lock', 'finish'], 'Choose what happens when a student leaves.'),
+  writtenAnswers: z.enum(
+    ['on_paper', 'typed', 'photos', 'typed_and_photos'],
+    'Choose how students answer written questions.',
+  ),
+};
+
+function jsonText<Schema extends z.ZodType>(schema: Schema, unreadableMessage: string) {
+  return z.preprocess((value, context) => {
+    if (typeof value !== 'string') return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      context.addIssue({ code: 'custom', message: unreadableMessage });
+      return z.NEVER;
+    }
+  }, schema);
+}
+
+const paperFields = {
+  paper: jsonText(paperSchema, 'The paper could not be read.'),
+  answerKey: jsonText(answerKeySchema, 'The answer key could not be read.').default({}),
 };
 
 const createTestFieldsSchema = z.object({
@@ -70,7 +105,19 @@ const createTestFieldsSchema = z.object({
   kind: testSettingsFields.kind.default('test'),
   chapterIds: testSettingsFields.chapterIds.default([]),
   leaveRule: testSettingsFields.leaveRule.default('lock'),
+  writtenAnswers: testSettingsFields.writtenAnswers.default('on_paper'),
+  paperKind: z.enum(['pages', 'typed']).default('pages'),
+  paper: paperFields.paper.optional(),
+  answerKey: paperFields.answerKey,
 });
+
+type CreateTestFields = z.output<typeof createTestFieldsSchema>;
+
+const paperUploadSchema = z.object(paperFields);
+
+const answerKeyRequestSchema = z.object({ answerKey: answerKeySchema });
+
+const imageParamsSchema = z.object({ imageNumber: positiveId });
 
 const updateTestSchema = z
   .object(testSettingsFields)
@@ -81,6 +128,42 @@ const STARTED_TEST_SETTINGS_MESSAGE =
   'Students have already started this test. Now you can only change the title, type, subject and chapters.';
 const STARTED_TEST_PAPER_MESSAGE =
   'Students have already started this test, so the paper cannot be replaced.';
+
+function settingsOfNewTest(fields: CreateTestFields) {
+  const { subjectId, kind, chapterIds, title, durationMinutes, allowedExits } = fields;
+  const { leaveRule, writtenAnswers } = fields;
+  return {
+    subjectId,
+    kind,
+    chapterIds,
+    title,
+    durationMinutes,
+    allowedExits,
+    leaveRule,
+    writtenAnswers,
+  };
+}
+
+async function testContentOf(fields: CreateTestFields, files: unknown): Promise<TestContent> {
+  if (fields.paperKind === 'typed') {
+    if (!fields.paper) throw badRequest('Add the questions of the paper.', 'paper_required');
+    const images = uploadedImages(files, 'paperImages');
+    checkPaperImageSizes(images);
+    return {
+      paperKind: 'typed',
+      typedPaper: checkedPaper(fields.paper, fields.answerKey, images.length),
+      paperImages: await normalizePaperImages(images),
+    };
+  }
+
+  const pageImages = uploadedImages(files, 'pages');
+  if (pageImages.length === 0) throw badRequest('Add the test paper.', 'pages_required');
+  return {
+    paperKind: 'pages',
+    pages: await normalizePageImages(pageImages),
+    answerSheet: fields.paper && checkedPaper(fields.paper, fields.answerKey, 0),
+  };
+}
 
 const scheduleSchema = z
   .object({
@@ -142,20 +225,16 @@ export function createTestsRouter(dependencies: AppDependencies): Router {
     } satisfies TestListResponse);
   });
 
-  router.post('/', receivePageImages, async (request, response) => {
+  router.post('/', receiveTestUpload, async (request, response) => {
     const fields = parseInput(createTestFieldsSchema, request.body);
-    const pageImages = uploadedPageImages(request.files);
-    if (pageImages.length === 0) {
-      throw badRequest('Add the test paper.', 'pages_required');
-    }
+    const settings = settingsOfNewTest(fields);
+    await requireSubjectWithChapters(database, settings.subjectId, settings.chapterIds);
 
-    await requireSubjectWithChapters(database, fields.subjectId, fields.chapterIds);
-
-    const pages = await normalizePageImages(pageImages);
-    const testId = await insertTestWithPages(
+    const content = await testContentOf(fields, request.files);
+    const testId = await insertTest(
       database,
-      { ...fields, code: await createUniqueTestCode(database), createdAt: clock.now() },
-      pages,
+      { ...settings, code: await createUniqueTestCode(database), createdAt: clock.now() },
+      content,
     );
     await respondWithTest(response, testId, 201);
   });
@@ -193,9 +272,10 @@ export function createTestsRouter(dependencies: AppDependencies): Router {
     await respondWithTest(response, test.id);
   });
 
-  router.put('/:testId/pages', receivePageImages, async (request, response) => {
+  router.put('/:testId/pages', receiveTestUpload, async (request, response) => {
     const test = await requireTest(request);
-    const pageImages = uploadedPageImages(request.files);
+    const pageImages = uploadedImages(request.files, 'pages');
+    if (test.paperKind !== 'pages') throw badRequest('This test has a typed paper.', 'typed_paper');
     if (pageImages.length === 0) throw badRequest('Add the test paper.', 'pages_required');
     if (test.studentCount > 0) throw conflict(STARTED_TEST_PAPER_MESSAGE, 'test_already_started');
 
@@ -204,6 +284,46 @@ export function createTestsRouter(dependencies: AppDependencies): Router {
       throw conflict(STARTED_TEST_PAPER_MESSAGE, 'test_already_started');
     }
     await respondWithTest(response, test.id);
+  });
+
+  router.get('/:testId/paper', async (request, response) => {
+    const test = await requireTest(request);
+    response.json((await findStoredPaper(database, test.id)) satisfies TeacherPaperResponse);
+  });
+
+  router.put('/:testId/paper', receiveTestUpload, async (request, response) => {
+    const test = await requireTest(request);
+    const { paper, answerKey } = parseInput(paperUploadSchema, request.body);
+    if (test.studentCount > 0) throw conflict(STARTED_TEST_PAPER_MESSAGE, 'test_already_started');
+
+    const images = test.paperKind === 'typed' ? uploadedImages(request.files, 'paperImages') : [];
+    checkPaperImageSizes(images);
+    const storedPaper = checkedPaper(paper, answerKey, images.length);
+    const paperImages = await normalizePaperImages(images);
+    if (!(await replacePaperBeforeAnyStart(database, test.id, storedPaper, paperImages))) {
+      throw conflict(STARTED_TEST_PAPER_MESSAGE, 'test_already_started');
+    }
+    await respondWithTest(response, test.id);
+  });
+
+  router.put('/:testId/answer-key', async (request, response) => {
+    const test = await requireTest(request);
+    const { answerKey } = parseInput(answerKeyRequestSchema, request.body);
+    const { paper } = await findStoredPaper(database, test.id);
+    if (!paper) throw badRequest('This test has no questions yet.', 'paper_required');
+    const [firstProblem] = answerKeyProblems(paper, answerKey);
+    if (firstProblem) throw badRequest(firstProblem, 'invalid_answer_key');
+
+    await saveAnswerKey(database, test.id, answerKey);
+    response.json((await findStoredPaper(database, test.id)) satisfies TeacherPaperResponse);
+  });
+
+  router.get('/:testId/paper-images/:imageNumber', async (request, response) => {
+    const test = await requireTest(request);
+    const { imageNumber } = parseInput(imageParamsSchema, request.params);
+    const image = await findPaperImage(database, test.id, imageNumber);
+    if (!image) throw notFound('This picture does not exist.');
+    response.set({ 'Content-Type': 'image/webp', 'Cache-Control': 'no-store' }).send(image);
   });
 
   router.delete('/:testId', async (request, response) => {

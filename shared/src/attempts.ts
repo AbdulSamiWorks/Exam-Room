@@ -1,3 +1,4 @@
+import type { PaperKind, WrittenAnswers } from './paper.js';
 import type { AllowedExits, LeaveRule, TestAvailability, TestSchedule } from './tests.js';
 
 export type AttemptStatus = 'in_progress' | 'submitted' | 'locked';
@@ -15,7 +16,11 @@ export type PublicTest = TestSchedule & {
   durationMinutes: number;
   allowedExits: AllowedExits;
   leaveRule: LeaveRule;
+  paperKind: PaperKind;
   pageCount: number;
+  questionCount: number;
+  maxMarks: number | null;
+  writtenAnswers: WrittenAnswers;
   availability: TestAvailability;
 };
 

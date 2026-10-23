@@ -5,6 +5,7 @@ import { classNames } from '../../../lib/class-names';
 import { useFinishAttempt } from '../use-attempt';
 import { FinishDialog } from './FinishDialog';
 import { PaperViewer } from './PaperViewer';
+import { TypedPaperViewer } from './TypedPaperViewer';
 import { formatRemainingTime, useRemainingTime } from './use-remaining-time';
 import styles from './ExamScreen.module.css';
 
@@ -56,7 +57,15 @@ export function ExamScreen({ testCode, attemptToken, attempt, onTimeUp }: ExamSc
         <Button onClick={() => setIsFinishDialogOpen(true)}>Finish</Button>
       </header>
 
-      <PaperViewer testCode={testCode} attemptToken={attemptToken} pageSizes={attempt.pageSizes} />
+      {attempt.test.paperKind === 'typed' ? (
+        <TypedPaperViewer testCode={testCode} attemptToken={attemptToken} />
+      ) : (
+        <PaperViewer
+          testCode={testCode}
+          attemptToken={attemptToken}
+          pageSizes={attempt.pageSizes}
+        />
+      )}
 
       {isFinishDialogOpen && (
         <FinishDialog

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { readStoredAttempt, updateStoredAttempt } from './attempt-storage';
 import { ExamScreen } from './exam/ExamScreen';
-import { forgetPageImages } from './exam/use-page-image';
+import { forgetPaper } from './exam/use-page-image';
 import { useExitReporting } from './exit-detection/use-exit-reporting';
 import { enterFullscreen } from './fullscreen';
 import { ErrorScreen } from './screens/ErrorScreen';
@@ -32,7 +32,7 @@ export function AttemptScreen({ testCode, attemptToken, onSessionLost }: Attempt
   useScreenWakeLock(status === 'in_progress');
 
   useEffect(() => {
-    if (status && status !== 'in_progress') forgetPageImages(queryClient, testCode);
+    if (status && status !== 'in_progress') forgetPaper(queryClient, testCode);
   }, [status, queryClient, testCode]);
 
   if (attemptQuery.isPending) return <LoadingScreen message="Opening your test…" />;

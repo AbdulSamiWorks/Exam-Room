@@ -16,8 +16,7 @@ export const studentQueryKeys = {
   publicTest: (testCode: string) => ['public-test', testCode] as const,
   attempt: (testCode: string) => ['student-attempt', testCode] as const,
   pageImages: (testCode: string) => ['student-page-image', testCode] as const,
-  pageImage: (testCode: string, pageNumber: number) =>
-    [...studentQueryKeys.pageImages(testCode), pageNumber] as const,
+  paper: (testCode: string) => ['student-paper', testCode] as const,
 };
 
 export function isSessionLostError(error: unknown): boolean {

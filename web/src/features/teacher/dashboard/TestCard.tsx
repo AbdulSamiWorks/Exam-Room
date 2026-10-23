@@ -1,6 +1,6 @@
 import type { TestSummary } from '@exam-room/shared';
 import { Link } from 'react-router';
-import { describeDuration, describePageCount } from '../../../lib/describe-test-length';
+import { describeDuration, describePaperSize } from '../../../lib/describe-test-length';
 import { AvailabilityBadge } from '../tests/AvailabilityBadge';
 import {
   describeAllowedExits,
@@ -14,7 +14,7 @@ import styles from './TestCard.module.css';
 export function TestCard({ test }: { test: TestSummary }) {
   const testDetails = [
     describeTestKind(test.kind),
-    describePageCount(test.pageCount),
+    describePaperSize(test),
     describeDuration(test.durationMinutes),
     describeAllowedExits(test.allowedExits),
   ].join(' · ');

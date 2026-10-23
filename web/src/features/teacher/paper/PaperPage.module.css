@@ -1,0 +1,61 @@
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.note {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.saved {
+  margin: 0;
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.answerKey {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.answerList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.answerRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.answerNumber {
+  min-width: 2.25em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.answerChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sheetForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sheetFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}

@@ -5,6 +5,7 @@ import type {
   TestSettings,
   TestSummary,
   UpdateTestRequest,
+  WrittenAnswers,
 } from '@exam-room/shared';
 import { testLimits } from './test-limits';
 
@@ -17,6 +18,7 @@ export type TestSettingsFormValues = {
   durationMinutes: string;
   allowedExits: AllowedExits;
   leaveRule: LeaveRule;
+  writtenAnswers: WrittenAnswers;
 };
 
 export type TestSettingsFormErrors = Partial<
@@ -32,6 +34,7 @@ export const NEW_TEST_SETTINGS: TestSettingsFormValues = {
   durationMinutes: '30',
   allowedExits: 1,
   leaveRule: 'lock',
+  writtenAnswers: 'on_paper',
 };
 
 export function settingsFormValuesOf(test: TestSummary): TestSettingsFormValues {
@@ -44,6 +47,7 @@ export function settingsFormValuesOf(test: TestSummary): TestSettingsFormValues 
     durationMinutes: String(test.durationMinutes),
     allowedExits: test.allowedExits,
     leaveRule: test.leaveRule,
+    writtenAnswers: test.writtenAnswers,
   };
 }
 
@@ -106,6 +110,7 @@ export function toTestSettings(values: TestSettingsFormValues): TestSettings {
     durationMinutes: Number(values.durationMinutes),
     allowedExits: values.allowedExits,
     leaveRule: values.leaveRule,
+    writtenAnswers: values.writtenAnswers,
   };
 }
 
