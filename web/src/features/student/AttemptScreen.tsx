@@ -12,6 +12,7 @@ import { LockedScreen } from './screens/LockedScreen';
 import { SessionLostScreen } from './screens/SessionLostScreen';
 import { WarningScreen } from './screens/WarningScreen';
 import { isSessionLostError, useAttempt } from './use-attempt';
+import { useScreenWakeLock } from './use-screen-wake-lock';
 
 type AttemptScreenProps = {
   testCode: string;
@@ -28,6 +29,7 @@ export function AttemptScreen({ testCode, attemptToken, onSessionLost }: Attempt
   const reloadAttempt = useCallback(() => void refetch(), [refetch]);
 
   useExitReporting({ testCode, attemptToken, isWatching: status === 'in_progress' });
+  useScreenWakeLock(status === 'in_progress');
 
   useEffect(() => {
     if (status && status !== 'in_progress') forgetPageImages(queryClient, testCode);
