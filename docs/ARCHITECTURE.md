@@ -1,7 +1,7 @@
 # Exam Room — Architecture
 
-> Status: **approved plan, v1** (2026-10-22). Milestones M0–M9 are built (2026-10-24); the
-> real-device checks in §15 are still to do. M10–M19 are planned in §16 (2026-10-24). Update this
+> Status: **approved plan, v1** (2026-10-22). Milestones M0–M10 are built (2026-10-25); the
+> real-device checks in §15 are still to do. M11–M19 are planned in §16 (2026-10-24). Update this
 > file whenever a decision below changes.
 
 Exam Room is a small mobile-first web app. A teacher uploads a test paper (PDF), shares a link, and
@@ -119,21 +119,34 @@ All timestamps are **UTC epoch milliseconds (INTEGER)** — no timezone bugs. Fo
 happens only in the browser.
 
 ```sql
-subjects   (id PK, name UNIQUE COLLATE NOCASE, created_at)
+classes    (id PK, name UNIQUE COLLATE NOCASE, created_at)
+
+subjects   (id PK, class_id → classes, name, created_at,
+            UNIQUE (class_id, name COLLATE NOCASE))      -- a subject belongs to one class (D36)
+
+chapters   (id PK, subject_id → subjects, name, position, created_at,
+            UNIQUE (subject_id, name COLLATE NOCASE))    -- position orders the chapters
+
+students   (id PK, class_id → classes, name, roll_no, roll_no_key,   -- key = trimmed + lowercased
+            pin_hash,                       -- scrypt hash of the 6-digit PIN (D26)
+            session_version DEFAULT 0,      -- Reset PIN increases it (D39)
+            created_at, UNIQUE (class_id, roll_no_key))
 
 tests      (id PK, code UNIQUE,            -- 6-char share code, e.g. K7M2QX (no 0/O/1/I)
-            subject_id → subjects, title, duration_minutes,
-            allowed_exits CHECK (0..2), page_count, created_at,
+            subject_id → subjects, kind CHECK IN ('test','quiz'), title, duration_minutes,
+            allowed_exits CHECK (0..2), leave_rule, page_count, created_at,
             opens_at NULL, closes_at NULL)   -- NULL opens_at = not open yet (see 6.8)
+
+test_chapters (test_id → tests, chapter_id → chapters, PRIMARY KEY (test_id, chapter_id))
 
 test_pages (test_id → tests ON DELETE CASCADE, page_no,
             image BLOB, width, height,
             PRIMARY KEY (test_id, page_no))
 
-attempts   (id PK, test_id → tests, student_name, roll_no, roll_no_key,  -- key = trimmed + lowercased
+attempts   (id PK, test_id → tests, student_name, roll_no, roll_no_key,
             token_hash UNIQUE,              -- sha256 of the student's secret token
-            status CHECK IN ('in_progress','submitted','locked'),
-            finish_reason CHECK IN ('student','time_up') NULL,
+            status CHECK IN ('waiting','in_progress','submitted','locked'),
+            finish_reason CHECK IN ('student','time_up','teacher','left_test') NULL,
             started_at, deadline_at, finished_at NULL,
             exit_count DEFAULT 0, forgiven_exits DEFAULT 0,
             version DEFAULT 0,              -- optimistic locking for concurrent updates
@@ -299,13 +312,30 @@ Teacher (session cookie required, except login):
 POST   /api/auth/login            { password }
 POST   /api/auth/logout
 GET    /api/auth/session
-GET    /api/subjects
-POST   /api/subjects              { name }
+GET    /api/classes                   → classes with subjects, chapters and counts (3 queries)
+POST   /api/classes                   { name }
+PATCH  /api/classes/:id               { name }
+DELETE /api/classes/:id               → only when it has no subjects and no students
+POST   /api/classes/:id/subjects      { name }
+GET    /api/classes/:id/students
+POST   /api/classes/:id/students      { students: [{ rollNumber, name }] } → each with a new PIN
+POST   /api/classes/:id/students/move { toClassId }
+PATCH  /api/subjects/:id              { name?, classId? }
+DELETE /api/subjects/:id              → only without tests; its chapters go with it
+POST   /api/subjects/:id/move-tests   { toSubjectId } (any class; chapter tags are removed)
+POST   /api/subjects/:id/chapters     { name }
+PUT    /api/subjects/:id/chapters/order { chapterIds }
+PATCH  /api/chapters/:id              { name }
+DELETE /api/chapters/:id              → removes only its tags from tests
+PATCH  /api/students/:id              { name?, rollNumber?, classId? }
+POST   /api/students/:id/reset-pin    → a new PIN, shown once; old phones are logged out
+DELETE /api/students/:id              → old results stay by name and roll number
 GET    /api/tests?subjectId=
-POST   /api/tests                 multipart: subjectId, title, durationMinutes, allowedExits,
-                                  leaveRule, pages[]
+POST   /api/tests                 multipart: subjectId, kind, chapterIds, title, durationMinutes,
+                                  allowedExits, leaveRule, pages[]
 GET    /api/tests/:id
-PATCH  /api/tests/:id                 { subjectId?, title?, durationMinutes?, allowedExits?, leaveRule? }
+PATCH  /api/tests/:id                 { subjectId?, kind?, chapterIds?, title?, durationMinutes?,
+                                        allowedExits?, leaveRule? }
 PUT    /api/tests/:id/pages           multipart: pages[] (only before any student starts)
 GET    /api/tests/:id/attempts        → results with exit history
 POST   /api/tests/:id/attempts/end    → ends every running attempt and closes the test
@@ -458,8 +488,8 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 | M18 | Dashboard and progress for students and the teacher                                                    |
 | M19 | Waiting room: the teacher starts everyone at the same time                                             |
 
-Status (2026-10-24): M0–M9 are built and tested (unit tests, API tests and a smoke test of the
-production build). Still to do by hand: the real-device checks in §15. M10–M19 are planned in §16.
+Status (2026-10-25): M0–M10 are built and tested (unit tests, API tests and a smoke test of the
+production build). Still to do by hand: the real-device checks in §15. M11–M19 are planned in §16.
 
 ## 13. Decision log
 
@@ -614,8 +644,8 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 - **Safe deleting** (D38). The app always asks first and says what goes with it:
   - a class with subjects or students cannot be deleted: move its students to another class, or
     delete them first;
-  - a subject with tests cannot be deleted: **Move its tests** to another subject of the same
-    class (their chapter tags are removed) or delete the tests first; its chapters go with it;
+  - a subject with tests cannot be deleted: **Move its tests** to another subject (of any class;
+    their chapter tags are removed) or delete the tests first; its chapters go with it;
   - deleting a chapter removes only its tags from tests;
   - deleting a student keeps their old results in each test by name and roll number.
 - Tests get a **type** (test or quiz) and **chapter tags**. The test list is grouped by class and
@@ -751,6 +781,23 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 | Render hours     | One service awake all month ≈ 744 hours                               | 750 hours / month                  |
 
 ## 17. Built milestones
+
+### M10 Manage (built 2026-10-25)
+
+- **Manage** tab for the teacher: `/teacher/manage` lists the classes; `/teacher/manage/classes/:id`
+  has two tabs, **Subjects** (rename, move to another class, move its tests, delete; chapters with
+  add, rename, up and down, delete) and **Students** (add one, paste a list with a preview and line
+  numbers for problems, new PINs shown once with **Copy all PINs**, edit, Reset PIN, delete, move
+  all students to another class).
+- Every delete asks first and says what goes with it; a blocked delete explains why (D38). The
+  explanations are pure functions in `manage/manage-rules.ts` with tests.
+- The class tree (`GET /api/classes`) is the one source for the Manage pages, the test form's class
+  and subject pickers and the test list's subject filter, so a change in Manage refreshes them all
+  with one request.
+- Tests have a type (test or quiz) and chapter tags; the test list is grouped by class and subject
+  and can be filtered by subject and type.
+- Migration 5 rebuilt `subjects` with `class_id` and added `classes`, `chapters`, `students`,
+  `test_chapters` and `tests.kind`; existing subjects went into "My class" (D37).
 
 ### M9 Quick wins (built 2026-10-24)
 

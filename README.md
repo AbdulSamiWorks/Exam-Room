@@ -8,16 +8,18 @@ Architecture, decisions and roadmap: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md
 
 ## How it works
 
-1. **Teacher** logs in, taps **New test**, picks the PDF, subject, title, time limit and allowed
-   exits (0, 1 or 2). The PDF is turned into page images in the teacher's browser.
-2. The test page shows a link and a code. Send the link with **Copy link** or **Send on WhatsApp**.
-3. **Student** opens the link, enters name and roll number and taps **Start test**. The timer
-   starts and never stops. Every page shows the student's name and roll number.
-4. If the student leaves the page or switches apps, a red warning appears. After the allowed
+1. **Teacher** logs in and opens **Manage** once to add classes, their subjects and chapters, and
+   the students (one by one or a pasted list). Every student gets a 6-digit PIN, shown once.
+2. The teacher taps **New test**, picks the PDF, class, subject, chapters, title, time limit and
+   allowed exits (0, 1 or 2). The PDF is turned into page images in the teacher's browser.
+3. The test page shows a link and a code. Send the link with **Copy link** or **Send on WhatsApp**.
+4. **Student** opens the link, enters name and roll number and taps **Start test**. The timer
+   starts and never stops.
+5. If the student leaves the page or switches apps, a red warning appears. After the allowed
    exits the test locks. The teacher can tap **Unlock** in the results.
-5. The student taps **Finish**, or the test is submitted when the time is up. After that the paper
+6. The student taps **Finish**, or the test is submitted when the time is up. After that the paper
    cannot be opened again.
-6. The teacher's results list updates every 5 seconds.
+7. The teacher's results list updates every 5 seconds.
 
 ## Requirements
 

@@ -93,3 +93,17 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
       **Test closed on this phone**; **Open the test here** lets them start again with full time.
 - [ ] Teacher deletes a test: the teacher goes back to the test list, and the student link says the
       test does not exist.
+
+## 10. Manage (classes, subjects, chapters, students)
+
+- [ ] **Manage** → add a class, open it, add two subjects and three chapters. Move a chapter up
+      and down with the arrows; the order stays after a reload.
+- [ ] **Students** → **Paste a list** from a spreadsheet (roll number and name columns). The
+      preview shows every student; a line without a name or a repeated roll number is explained
+      with its line number.
+- [ ] Add the list: the new PINs show once. **Copy all PINs** and paste them into WhatsApp; every
+      line has the roll number, name and PIN.
+- [ ] **Reset PIN** on one student shows one new PIN. **Delete** a class that still has students:
+      the app explains why it cannot be deleted yet.
+- [ ] Create a test: the class and subject can be chosen, chapters can be tapped, and the test list
+      groups the test under its subject.
