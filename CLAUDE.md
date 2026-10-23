@@ -1,7 +1,7 @@
 # Exam Room
 
 Mobile-first web app: a teacher uploads a PDF test and shares a link, and 5–10 students read it on
-their phones with a timer, exit detection and a watermark.
+their phones with a timer and exit detection.
 
 Before starting, read `docs/ARCHITECTURE.md` (the approved plan, milestones M0–M7 and the decision
 log) and check `git log` to see which milestone is done. When a decision changes, update the
@@ -11,6 +11,10 @@ decision log there.
 
 - No comments anywhere in code: no JSDoc, no inline comments, no CSS comments. Put reasoning in
   `docs/ARCHITECTURE.md` or in commit messages instead.
+- Write code and architecture at a principal-engineer level: scalable, optimized and clean.
+  Choose designs that stay simple as features grow, keep work cheap on the free servers (few
+  database reads and writes, no heavy work on the server at exam time) and keep business rules
+  as pure, tested functions.
 - Human-readable, unabbreviated names. Small functions and feature modules that are easy to extend.
 - Never add `Co-Authored-By: Claude`, "Generated with Claude Code" or any other AI attribution to
   commits or pull requests.
