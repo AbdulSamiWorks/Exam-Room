@@ -1,5 +1,11 @@
-import type { AllowedExits, LeaveRule, PageSize, TestSchedule } from '@exam-room/shared';
-import type { Row } from '@libsql/client';
+import type {
+  AllowedExits,
+  LeaveRule,
+  PageSize,
+  TestSchedule,
+  TestSettings,
+} from '@exam-room/shared';
+import type { Row, Transaction } from '@libsql/client';
 import type { Database } from '../../database/connection.js';
 import { requireFirstRow } from '../../database/query-helpers.js';
 import type { PageImage } from './page-images.js';
@@ -77,20 +83,72 @@ export async function insertTestWithPages(
       ],
     });
     const testId = Number(requireFirstRow(insertedTest).id);
-
-    for (const [pageIndex, page] of pages.entries()) {
-      await transaction.execute({
-        sql: `INSERT INTO test_pages (test_id, page_no, image, width, height)
-              VALUES (?, ?, ?, ?, ?)`,
-        args: [testId, pageIndex + 1, page.data, page.width, page.height],
-      });
-    }
-
+    await insertPages(transaction, testId, pages);
     await transaction.commit();
     return testId;
   } finally {
     transaction.close();
   }
+}
+
+export async function replacePagesBeforeAnyStart(
+  database: Database,
+  testId: number,
+  pages: PageImage[],
+): Promise<boolean> {
+  const transaction = await database.transaction('write');
+  try {
+    const startedAttempts = await transaction.execute({
+      sql: 'SELECT 1 FROM attempts WHERE test_id = ? LIMIT 1',
+      args: [testId],
+    });
+    if (startedAttempts.rows.length > 0) return false;
+
+    await transaction.execute({ sql: 'DELETE FROM test_pages WHERE test_id = ?', args: [testId] });
+    await insertPages(transaction, testId, pages);
+    await transaction.execute({
+      sql: 'UPDATE tests SET page_count = ? WHERE id = ?',
+      args: [pages.length, testId],
+    });
+    await transaction.commit();
+    return true;
+  } finally {
+    transaction.close();
+  }
+}
+
+async function insertPages(
+  transaction: Transaction,
+  testId: number,
+  pages: PageImage[],
+): Promise<void> {
+  for (const [pageIndex, page] of pages.entries()) {
+    await transaction.execute({
+      sql: `INSERT INTO test_pages (test_id, page_no, image, width, height)
+            VALUES (?, ?, ?, ?, ?)`,
+      args: [testId, pageIndex + 1, page.data, page.width, page.height],
+    });
+  }
+}
+
+export async function saveTestSettings(
+  database: Database,
+  testId: number,
+  settings: TestSettings,
+): Promise<void> {
+  await database.execute({
+    sql: `UPDATE tests
+          SET subject_id = ?, title = ?, duration_minutes = ?, allowed_exits = ?, leave_rule = ?
+          WHERE id = ?`,
+    args: [
+      settings.subjectId,
+      settings.title,
+      settings.durationMinutes,
+      settings.allowedExits,
+      settings.leaveRule,
+      testId,
+    ],
+  });
 }
 
 export async function findTestById(

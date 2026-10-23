@@ -2,7 +2,7 @@ import type { TestListResponse, TestResponse, TestSchedule } from '@exam-room/sh
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import type { AppDependencies } from '../../app-dependencies.js';
-import { badRequest, notFound } from '../../lib/http-errors.js';
+import { badRequest, conflict, notFound } from '../../lib/http-errors.js';
 import { parseInput } from '../../lib/parse-input.js';
 import { requireTeacher } from '../auth/teacher-session.js';
 import { findSubjectById } from '../subjects/subjects-repository.js';
@@ -12,15 +12,18 @@ import { closeNow, openNow, summarizeTest } from './test-availability.js';
 import { createUniqueTestCode } from './test-code.js';
 import { testLimits } from './test-limits.js';
 import type { TestRecord } from './test-record.js';
+import { changesFixedSettings, settingsOf } from './test-settings.js';
 import {
   deleteTestWithResults,
   findTestById,
   insertTestWithPages,
   listTests,
+  replacePagesBeforeAnyStart,
   saveTestSchedule,
+  saveTestSettings,
 } from './tests-repository.js';
 
-const createTestFieldsSchema = z.object({
+const testSettingsFields = {
   subjectId: z.coerce.number().int().positive('Choose a subject.'),
   title: z
     .string()
@@ -36,10 +39,26 @@ const createTestFieldsSchema = z.object({
       `Time limit can be at most ${testLimits.maxDurationMinutes} minutes.`,
     ),
   allowedExits: z.coerce.number().pipe(z.literal([0, 1, 2], 'Allowed exits must be 0, 1 or 2.')),
-  leaveRule: z
-    .enum(['lock', 'finish'], 'Choose what happens when a student leaves.')
-    .default('lock'),
+  leaveRule: z.enum(['lock', 'finish'], 'Choose what happens when a student leaves.'),
+};
+
+const createTestFieldsSchema = z.object({
+  ...testSettingsFields,
+  leaveRule: testSettingsFields.leaveRule.default('lock'),
 });
+
+const updateTestSchema = z
+  .object(testSettingsFields)
+  .partial()
+  .refine(
+    (changes) => Object.values(changes).some((value) => value !== undefined),
+    'Nothing to change.',
+  );
+
+const STARTED_TEST_SETTINGS_MESSAGE =
+  'Students have already started this test. Now you can only change the title and subject.';
+const STARTED_TEST_PAPER_MESSAGE =
+  'Students have already started this test, so the paper cannot be replaced.';
 
 const scheduleSchema = z
   .object({
@@ -72,6 +91,12 @@ export function createTestsRouter(dependencies: AppDependencies): Router {
     const test = await findTestById(database, testId);
     if (!test) throw notFound('Test not found.');
     return test;
+  }
+
+  async function respondWithTest(response: Response, testId: number): Promise<void> {
+    const test = await findTestById(database, testId);
+    if (!test) throw notFound('Test not found.');
+    response.json({ test: summarizeTest(test, clock.now()) } satisfies TestResponse);
   }
 
   async function changeSchedule(
@@ -143,6 +168,33 @@ export function createTestsRouter(dependencies: AppDependencies): Router {
   router.put('/:testId/schedule', async (request, response) => {
     const schedule = parseInput(scheduleSchema, request.body);
     await changeSchedule(request, response, () => schedule);
+  });
+
+  router.patch('/:testId', async (request, response) => {
+    const test = await requireTest(request);
+    const changes = parseInput(updateTestSchema, request.body);
+    if (changesFixedSettings(test, changes)) {
+      throw conflict(STARTED_TEST_SETTINGS_MESSAGE, 'test_already_started');
+    }
+    if (changes.subjectId !== undefined && !(await findSubjectById(database, changes.subjectId))) {
+      throw badRequest('Choose a subject.', 'subject_not_found');
+    }
+
+    await saveTestSettings(database, test.id, { ...settingsOf(test), ...changes });
+    await respondWithTest(response, test.id);
+  });
+
+  router.put('/:testId/pages', receivePageImages, async (request, response) => {
+    const test = await requireTest(request);
+    const pageImages = uploadedPageImages(request.files);
+    if (pageImages.length === 0) throw badRequest('Add the test paper.', 'pages_required');
+    if (test.studentCount > 0) throw conflict(STARTED_TEST_PAPER_MESSAGE, 'test_already_started');
+
+    const pages = await normalizePageImages(pageImages);
+    if (!(await replacePagesBeforeAnyStart(database, test.id, pages))) {
+      throw conflict(STARTED_TEST_PAPER_MESSAGE, 'test_already_started');
+    }
+    await respondWithTest(response, test.id);
   });
 
   router.delete('/:testId', async (request, response) => {

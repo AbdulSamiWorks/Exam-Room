@@ -33,6 +33,16 @@ export type TestListResponse = {
   tests: TestSummary[];
 };
 
+export type TestSettings = {
+  subjectId: number;
+  title: string;
+  durationMinutes: number;
+  allowedExits: AllowedExits;
+  leaveRule: LeaveRule;
+};
+
+export type UpdateTestRequest = Partial<TestSettings>;
+
 export type ScheduleTestRequest = {
   opensAt: number;
   closesAt: number | null;
