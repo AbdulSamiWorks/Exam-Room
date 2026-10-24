@@ -811,7 +811,7 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 - **Outbox on the phone** (D47): every answer and the final Finish are saved on the phone
   (IndexedDB, with a localStorage fallback) before any network call. A sender retries with
   growing waits and some randomness until the server confirms, also after the app was closed and
-  opened again. The screen shows **Saved**, **Saving…** or **Offline – your answers are safe on
+  opened again. The screen shows **Saved**, **Saving…** or **Not sent yet – your answers are safe on
   this phone**.
 - **Never twice, never older** (D45): each answer carries a sequence number that grows with every
   change; the server keeps only the newest answer per question, so repeated or out-of-order
@@ -973,7 +973,7 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
   only the newest unsent answer per question. A sender posts batches of up to 50 answers, then
   the Finish, in that order; it retries with exponential backoff and jitter from 1 s up to 60 s,
   and starts again on app start, on `online` and when the page becomes visible. Typed text waits
-  1.5 s before sending. The top bar shows **Saved**, **Saving…** or **Offline – your answers are
+  1.5 s before sending. The top bar shows **Saved**, **Saving…** or **Not sent yet – your answers are
   safe on this phone**. While Finish waits for the network, exits are no longer reported.
 - The store is a factory (`createOutboxStore`) with the network, storage, clock and randomness
   passed in, so tests run it with a fake server, memory storage and fake timers: the server

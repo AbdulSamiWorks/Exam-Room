@@ -5,7 +5,7 @@ import styles from './AnswerStatus.module.css';
 const LABELS: Record<SendingState, string> = {
   saved: 'Saved',
   saving: 'Saving…',
-  offline: 'Offline – your answers are safe on this phone',
+  offline: 'Not sent yet – your answers are safe on this phone',
   session_lost: 'Not sent – open the test again',
 };
 
