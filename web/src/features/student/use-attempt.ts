@@ -1,7 +1,6 @@
 import type { AttemptResponse, AttemptStatus } from '@exam-room/shared';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { ApiError } from '../../api/http-client';
-import { studentAccountQueryKeys } from '../student-account/use-student-account';
 import { saveStoredAttempt } from './attempt-storage';
 import { fetchAttempt, fetchPublicTest, startAttempt } from './student-api';
 
@@ -11,7 +10,6 @@ const WAITING_FOR_OPENING_REFRESH_INTERVAL_MS = 5000;
 const WAITING_ROOM_REFRESH_INTERVAL_MS = 3000;
 const UNAUTHORIZED_STATUS = 401;
 const TEST_NOT_STARTABLE_ERROR_CODES = new Set(['test_not_open', 'test_closed']);
-const STUDENT_LOGIN_NEEDED_ERROR_CODE = 'student_login_needed';
 
 export const studentQueryKeys = {
   publicTest: (testCode: string) => ['public-test', testCode] as const,
@@ -72,9 +70,6 @@ export function useStartAttempt(testCode: string) {
       if (!(error instanceof ApiError)) return;
       if (TEST_NOT_STARTABLE_ERROR_CODES.has(error.code)) {
         return queryClient.invalidateQueries({ queryKey: studentQueryKeys.publicTest(testCode) });
-      }
-      if (error.code === STUDENT_LOGIN_NEEDED_ERROR_CODE) {
-        return queryClient.invalidateQueries({ queryKey: studentAccountQueryKeys.session });
       }
     },
   });

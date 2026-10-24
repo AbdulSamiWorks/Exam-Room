@@ -1,5 +1,5 @@
 import type { PaperKind } from '@exam-room/shared';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '../../../components/Button';
 import { ChoiceGroup, type Choice } from '../../../components/ChoiceGroup';
@@ -18,7 +18,14 @@ import {
 } from './create-test-form';
 import { PdfPicker } from './PdfPicker';
 import { testLimits } from './test-limits';
-import { hasErrors, NEW_TEST_SETTINGS } from './test-settings-form';
+import {
+  forgetNewTestDraft,
+  isEmptyNewTestDraft,
+  readNewTestDraft,
+  saveNewTestDraft,
+  type NewTestDraft,
+} from './new-test-draft';
+import { hasErrors } from './test-settings-form';
 import { TestSettingsFields } from './TestSettingsFields';
 import { usePdfPages } from './use-pdf-pages';
 import { useTestSettingsForm } from './use-test-settings-form';
@@ -31,15 +38,40 @@ const PAPER_KIND_CHOICES: Choice<PaperKind>[] = [
 ];
 
 export function CreateTestPage() {
+  const [formNumber, setFormNumber] = useState(0);
+  return (
+    <NewTestForm
+      key={formNumber}
+      initialDraft={readNewTestDraft()}
+      onStartOver={() => {
+        forgetNewTestDraft();
+        setFormNumber((current) => current + 1);
+      }}
+    />
+  );
+}
+
+type NewTestFormProps = {
+  initialDraft: NewTestDraft;
+  onStartOver: () => void;
+};
+
+function NewTestForm({ initialDraft, onStartOver }: NewTestFormProps) {
   const navigate = useNavigate();
   const createTest = useCreateTest();
-  const [chosenPaperKind, setPaperKind] = useState<PaperKind>('pages');
-  const [offlineMaxMarks, setOfflineMaxMarks] = useState('20');
+  const [chosenPaperKind, setPaperKind] = useState<PaperKind>(initialDraft.paperKind);
+  const [offlineMaxMarks, setOfflineMaxMarks] = useState(initialDraft.offlineMaxMarks);
   const { pdfPages, choosePdf } = usePdfPages();
-  const paperDraft = usePaperDraft();
+  const paperDraft = usePaperDraft(initialDraft.paperText);
   const { values, errors, setErrors, updateValues } = useTestSettingsForm<CreateTestFormErrors>(
-    () => NEW_TEST_SETTINGS,
+    () => initialDraft.values,
   );
+  const [isRestored] = useState(() => !isEmptyNewTestDraft(initialDraft));
+  const paperText = paperDraft.text;
+
+  useEffect(() => {
+    saveNewTestDraft({ values, paperKind: chosenPaperKind, offlineMaxMarks, paperText });
+  }, [values, chosenPaperKind, offlineMaxMarks, paperText]);
   const paperKind =
     chosenPaperKind === 'none' && values.kind !== 'assignment' ? 'pages' : chosenPaperKind;
 
@@ -83,13 +115,27 @@ export function CreateTestPage() {
     if (hasErrors(validationErrors) || !formData) return;
 
     createTest.mutate(formData, {
-      onSuccess: ({ test }) => navigate(`/teacher/tests/${test.id}`),
+      onSuccess: ({ test }) => {
+        forgetNewTestDraft();
+        navigate(`/teacher/tests/${test.id}`);
+      },
     });
   }
 
   return (
     <Page title="New test" backLink={{ to: '/teacher', label: 'All tests' }}>
       <form className={styles.form} onSubmit={handleSubmit} noValidate>
+        {isRestored && (
+          <div className={styles.restoredNote}>
+            <p>
+              Your unfinished test is back.
+              {paperKind === 'pages' && ' Choose the PDF file again.'}
+            </p>
+            <Button variant="secondary" size="small" onClick={onStartOver}>
+              Start over
+            </Button>
+          </div>
+        )}
         <ChoiceGroup
           label="Paper"
           choices={PAPER_KIND_CHOICES}

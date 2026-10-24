@@ -10,11 +10,19 @@
   align-items: center;
   justify-content: center;
   min-height: var(--tap-size);
+  padding: 8px 10px;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius);
+  background: var(--color-bg);
   font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+.choice:not(.selected):hover {
+  border-color: var(--color-primary);
 }
 
 .choice:has(.radio:focus-visible) {

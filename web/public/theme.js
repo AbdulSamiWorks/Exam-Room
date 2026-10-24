@@ -1,6 +1,6 @@
 (function applySavedTheme() {
   const THEME_STORAGE_KEY = 'exam-room:theme';
-  const THEME_COLORS = { light: '#ffffff', dark: '#000000' };
+  const THEME_COLORS = { light: '#f1eee6', dark: '#13110f' };
 
   function readSavedTheme() {
     try {

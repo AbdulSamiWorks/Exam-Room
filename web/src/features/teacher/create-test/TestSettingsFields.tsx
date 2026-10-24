@@ -50,6 +50,13 @@ const START_CHOICES: Choice<StartChoice>[] = [
   { value: 'together', label: 'Together, when I start everyone' },
 ];
 
+type ResultChoice = 'after_finishing' | 'after_release';
+
+const RESULT_CHOICES: Choice<ResultChoice>[] = [
+  { value: 'after_finishing', label: 'Right after finishing' },
+  { value: 'after_release', label: 'When I release results' },
+];
+
 const WRITTEN_ANSWER_CHOICES: Choice<WrittenAnswers>[] = [
   { value: 'on_paper', label: 'On their own paper' },
   { value: 'typed', label: 'Typed on the phone' },
@@ -163,6 +170,19 @@ export function TestSettingsFields({
         ))}
       </SelectField>
 
+      <ChoiceGroup
+        label="Students see their multiple choice result"
+        hint="Right after finishing: each student sees their MCQ marks and the correct answers as soon as they finish, also later in their portal. Written answers always wait for your marking and release."
+        choices={RESULT_CHOICES}
+        selectedValue={values.instantMcqResult ? 'after_finishing' : 'after_release'}
+        onChange={(resultChoice) =>
+          onChange((current) => ({
+            ...current,
+            instantMcqResult: resultChoice === 'after_finishing',
+          }))
+        }
+      />
+
       <details className={fieldStyles.field} open={Boolean(values.bountyNote)}>
         <summary className={fieldStyles.label}>Reward for the top scorer (optional)</summary>
         <TextField
@@ -231,6 +251,7 @@ function ClassFields({ values, errors, onChange }: ClassFieldsProps) {
       />
       {chosenSubject && (
         <ChapterPicker
+          subjectId={chosenSubject.id}
           chapters={chosenSubject.chapters}
           selectedChapterIds={values.chapterIds}
           manageLink={manageClassPath(Number(classId))}

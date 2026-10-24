@@ -1,0 +1,133 @@
+Answer all questions. Write clearly.
+In this paper, A' means NOT A, A·B means A AND B, and A + B means A OR B.
+
+Section A: Multiple choice (25 marks)
+Choose the best answer. Each question has 1 mark.
+1. A signal that has only two fixed levels, such as 0 and 1, is called a/an: [1 mark]
+a) analog signal  b) continuous signal  c) digital signal  d) sine wave
+Answer: c
+2. Which of these is an example of an analog quantity? [1 mark]
+a) Room temperature changing through the day  b) Number of students in a class  c) The binary number 1011  d) Number of pages in a book
+Answer: a
+3. Which logic gate gives output 1 only when all of its inputs are 1? [1 mark]
+a) OR  b) NOR  c) XOR  d) AND
+Answer: d
+4. The output of a NOT gate is 0 when its input is: [1 mark]
+a) 0  b) 1  c) either 0 or 1  d) no input
+Answer: b
+5. A truth table for a Boolean expression with 4 input variables has how many rows? [1 mark]
+a) 4  b) 8  c) 12  d) 16
+Answer: d
+6. Which gate gives output 1 when its two inputs are different? [1 mark]
+a) XNOR  b) AND  c) XOR  d) NAND
+Answer: c
+7. NAND and NOR are called universal gates because: [1 mark]
+a) they are the cheapest gates  b) any other gate can be built using only NAND gates or only NOR gates  c) they can have only one input  d) their output is always 1
+Answer: b
+8. If A = 1 and B = 0, the output of a NOR gate, (A + B)', is: [1 mark]
+a) 0  b) 1  c) 10  d) undefined
+Answer: a
+9. The dual of the Boolean law A + 0 = A is: [1 mark]
+a) A + 1 = 1  b) A·0 = 0  c) A' + 0 = A'  d) A·1 = A
+Answer: d
+10. According to De Morgan's theorem, (A·B)' is equal to: [1 mark]
+a) A'·B'  b) A + B  c) A' + B'  d) A·B
+Answer: c
+11. A K-map for 3 variables has how many cells? [1 mark]
+a) 4  b) 6  c) 8  d) 16
+Answer: c
+12. In a K-map, 1s can be grouped together only in groups of: [1 mark]
+a) 1, 3, 5, 7  b) 1, 2, 4, 8  c) 2, 3, 6, 9  d) any number
+Answer: b
+13. Using Boolean laws, A + A·B simplifies to: [1 mark]
+a) A  b) B  c) A·B  d) A + B
+Answer: a
+14. In which SDLC phase are the users' needs collected and written down? [1 mark]
+a) Testing  b) Maintenance  c) Deployment  d) Requirement analysis
+Answer: d
+15. In the Waterfall model: [1 mark]
+a) phases repeat in short sprints  b) each phase is finished before the next phase starts  c) testing is not done  d) the customer reviews the product after every sprint
+Answer: b
+16. Which SDLC model builds software in short cycles called sprints, adding a small working part each time? [1 mark]
+a) Agile  b) Waterfall  c) Linear-sequential  d) None of these
+Answer: a
+17. Fixing errors and adding small features after the software is released happens in which phase? [1 mark]
+a) Design  b) Coding  c) Planning  d) Maintenance
+Answer: d
+18. In which topology are all devices connected to one main cable called the backbone? [1 mark]
+a) Star  b) Ring  c) Bus  d) Mesh
+Answer: c
+19. In a star topology, what happens if the central switch fails? [1 mark]
+a) Only one computer stops working  b) The whole network stops working  c) The network becomes faster  d) Nothing changes
+Answer: b
+20. How many cables are needed to connect 5 computers in a full mesh topology? [1 mark]
+a) 5  b) 20  c) 25  d) 10
+Answer: d
+21. Entering your password and then a code sent to your phone is an example of: [1 mark]
+a) two-factor authentication  b) encryption  c) a firewall  d) a backup
+Answer: a
+22. Using Google Docs in a web browser, without installing any software, is an example of: [1 mark]
+a) IaaS  b) PaaS  c) SaaS  d) LAN
+Answer: c
+23. A fake email that tricks a user into typing their bank password on a fake website is called: [1 mark]
+a) ransomware  b) a firewall  c) a backup  d) phishing
+Answer: d
+24. Malware that locks a user's files and asks for money to unlock them is called: [1 mark]
+a) spyware  b) ransomware  c) adware  d) a worm
+Answer: b
+25. In asymmetric encryption: [1 mark]
+a) a public key and a private key are used  b) the same key is used to encrypt and decrypt  c) no key is used  d) only a password is used
+Answer: a
+
+Section B: Short answers (15 marks)
+Answer all questions. Each question has 3 marks.
+26. Differentiate between analog and digital signals. Give one example of each. [3 marks]
+Answer: An analog signal is continuous and can take any value within a range, for example a sound wave from a microphone or the temperature changing through the day. A digital signal is discrete and has only two levels, 0 and 1, for example the data a computer stores and processes. (1 mark for each definition, 1 mark for correct examples.)
+27. Draw the truth table for the Boolean expression F = (A + B)·C'. [3 marks]
+Answer:
+| A | B | C | A + B | C' | F = (A + B)·C' |
+|---|---|---|---|---|---|
+| 0 | 0 | 0 | 0 | 1 | 0 |
+| 0 | 0 | 1 | 0 | 0 | 0 |
+| 0 | 1 | 0 | 1 | 1 | 1 |
+| 0 | 1 | 1 | 1 | 0 | 0 |
+| 1 | 0 | 0 | 1 | 1 | 1 |
+| 1 | 0 | 1 | 1 | 0 | 0 |
+| 1 | 1 | 0 | 1 | 1 | 1 |
+| 1 | 1 | 1 | 1 | 0 | 0 |
+(1 mark for all 8 input rows, 1 mark for the A + B and C' columns, 1 mark for the correct F column.)
+28. State the principle of duality. Then write the dual of each expression. [3 marks]
+a) A + A' = 1
+b) A·(B + C) = A·B + A·C
+Answer: If a Boolean statement is true, it stays true when every AND (·) is changed to OR (+), every OR to AND, every 0 to 1 and every 1 to 0. The variables do not change. [1]
+a) A·A' = 0 [1]
+b) A + B·C = (A + B)·(A + C) [1]
+29. A school wants to connect 6 computers in its computer lab. Answer both parts.
+a) How many cables are needed in a full mesh topology? Show your working. [2]
+b) Give one reason the school might choose star topology instead. [1]
+Answer: a) Cables = n(n − 1) ÷ 2 = 6 × 5 ÷ 2 = 15 cables. b) Star needs only 6 cables, one from each computer to the switch, so it is cheaper and new computers are easy to add. A broken cable stops only one computer.
+30. Answer both parts.
+a) Write two differences between symmetric and asymmetric encryption. [2]
+b) Give one way a user can protect themselves from phishing. [1]
+Answer: a) Symmetric encryption uses one shared secret key to both encrypt and decrypt; asymmetric encryption uses a pair of keys, a public key to encrypt and a private key to decrypt. Symmetric is faster and suits large amounts of data; asymmetric is slower but removes the need to share a secret key safely. b) Any one: check the sender's address and the website link before clicking; never type a password on a page opened from an email link; turn on two-factor authentication.
+
+Section C: Detailed answers (10 marks)
+Answer both questions. Each question has 5 marks.
+31. Simplify F(A, B, C) = Σ(0, 2, 4, 5, 6) using a Karnaugh map. Answer all parts.
+a) Draw the K-map and fill in the 1s. [1]
+b) Make the groups and write the simplified expression. [2]
+c) Draw the logic circuit for your simplified expression. [2]
+Answer: a)
+| A \ BC | 00 | 01 | 11 | 10 |
+|---|---|---|---|---|
+| 0 | 1 | 0 | 0 | 1 |
+| 1 | 1 | 1 | 0 | 1 |
+b) Group of four: m0, m2, m4 and m6 (the 00 and 10 columns wrap around) gives C'. Group of two: m4 and m5 gives A·B'. So F = C' + A·B'.
+c) Pass C through a NOT gate to get C'. Pass B through a NOT gate to get B', then feed A and B' into an AND gate to get A·B'. Feed C' and A·B' into an OR gate; its output is F. (1 mark for the NOT and AND gates, 1 mark for the OR gate and correct output.)
+32. Answer all parts about the Software Development Life Cycle (SDLC).
+a) List the main phases of the SDLC in the correct order. [2]
+b) Write two differences between the Waterfall model and the Agile model. [2]
+c) A startup is building an app, and its users will ask for new changes every few weeks. Which model should it use? Give one reason. [1]
+Answer: a) Planning and requirement analysis → design → coding (implementation) → testing → deployment → maintenance. Accept the book's phase names if they match in meaning.
+b) Waterfall finishes each phase fully before the next one starts; Agile works in short, repeated cycles called sprints. In Waterfall, changes are hard and costly once a phase is done; in Agile, changes are expected and added in the next sprint. Also accept: Waterfall tests near the end while Agile tests in every sprint; Waterfall involves the customer mainly at the start while Agile involves them after every sprint.
+c) Agile, because it delivers the app in small parts and takes in user feedback after every sprint.

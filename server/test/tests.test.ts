@@ -77,6 +77,7 @@ describe('tests', () => {
       bountyNote: '',
       bountyPoints: 0,
       waitingRoom: false,
+      instantMcqResult: true,
       resultsReleasedAt: null,
       studentCount: 0,
       createdAt: TEST_START_TIME,

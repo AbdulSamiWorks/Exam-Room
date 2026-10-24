@@ -3,7 +3,8 @@ import { Link } from 'react-router';
 import { describeBounty } from '../../lib/describe-bounty';
 import { describeDateTime } from '../../lib/describe-date-time';
 import { describeDuration } from '../../lib/describe-test-length';
-import { describeStudentTestState, studentTestPath } from './group-student-tests';
+import { classNames } from '../../lib/class-names';
+import { describeStudentTestState, studentTestPath, studentTestTone } from './group-student-tests';
 import styles from './StudentHomePage.module.css';
 
 export function StudentTestList({ tests }: { tests: StudentTestCard[] }) {
@@ -36,7 +37,9 @@ function StudentTestLink({ test }: { test: StudentTestCard }) {
       <span className={styles.testDetails}>
         {test.subjectName} · {timing}
       </span>
-      <span className={styles.testState}>{describeStudentTestState(test)}</span>
+      <span className={classNames(styles.testState, styles[studentTestTone(test)])}>
+        {describeStudentTestState(test)}
+      </span>
       {bounty && <span className={styles.testDetails}>{bounty}</span>}
     </Link>
   );

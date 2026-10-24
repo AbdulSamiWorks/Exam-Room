@@ -1,7 +1,7 @@
 import type {
   AddStudentsResponse,
   MoveStudentsResponse,
-  NewStudent,
+  NewPinsResponse,
   Student,
   StudentListResponse,
   StudentResponse,
@@ -33,9 +33,8 @@ import {
   insertStudents,
   listStudentsOfClass,
   moveStudentsOfClass,
-  replacePinHash,
+  replacePinHashes,
   saveStudent,
-  type StudentToInsert,
 } from './students-repository.js';
 
 const studentFields = {
@@ -68,15 +67,20 @@ const studentIdParamsSchema = idParams('studentId');
 const rollNumberTaken = () =>
   conflict('This roll number is already used in the class.', 'roll_number_taken');
 
-async function giveNewPins(
-  newStudents: readonly NewStudent[],
-): Promise<Array<StudentToInsert & { pin: string }>> {
-  const preparedStudents: Array<StudentToInsert & { pin: string }> = [];
-  for (const newStudent of newStudents) {
-    const pin = createPin();
-    preparedStudents.push({ ...newStudent, pin, pinHash: await hashPin(pin) });
-  }
-  return preparedStudents;
+type NewPin = {
+  pin: string;
+  pinHash: string;
+};
+
+async function createNewPin(): Promise<NewPin> {
+  const pin = createPin();
+  return { pin, pinHash: await hashPin(pin) };
+}
+
+async function withNewPins<Item>(items: readonly Item[]): Promise<Array<Item & NewPin>> {
+  const itemsWithPins: Array<Item & NewPin> = [];
+  for (const item of items) itemsWithPins.push({ ...item, ...(await createNewPin()) });
+  return itemsWithPins;
 }
 
 async function requireStudent(database: Database, request: Request): Promise<Student> {
@@ -115,7 +119,7 @@ export function createClassStudentsRouter(dependencies: AppDependencies): Router
       );
     }
 
-    const preparedStudents = await giveNewPins(newStudents);
+    const preparedStudents = await withNewPins(newStudents);
     const insertedStudents = await saveUnlessDuplicate(
       () => insertStudents(database, schoolClass.id, preparedStudents, clock.now()),
       rollNumberTaken(),
@@ -124,6 +128,19 @@ export function createClassStudentsRouter(dependencies: AppDependencies): Router
       ([student, { pin }]) => ({ student, pin }),
     );
     response.status(201).json({ students: studentsWithPins } satisfies AddStudentsResponse);
+  });
+
+  router.post('/reset-pins', async (request, response) => {
+    const schoolClass = await requireClass(database, request);
+    const students = await listStudentsOfClass(database, schoolClass.id);
+    const studentsWithPins = await withNewPins(students.map((student) => ({ student })));
+    await replacePinHashes(
+      database,
+      studentsWithPins.map(({ student, pinHash }) => ({ studentId: student.id, pinHash })),
+    );
+    response.json({
+      students: studentsWithPins.map(({ student, pin }) => ({ student, pin })),
+    } satisfies NewPinsResponse);
   });
 
   router.post('/move', async (request, response) => {
@@ -172,8 +189,8 @@ export function createStudentsRouter(dependencies: AppDependencies): Router {
 
   router.post('/:studentId/reset-pin', async (request, response) => {
     const student = await requireStudent(database, request);
-    const pin = createPin();
-    await replacePinHash(database, student.id, await hashPin(pin));
+    const { pin, pinHash } = await createNewPin();
+    await replacePinHashes(database, [{ studentId: student.id, pinHash }]);
     response.json({ student, pin } satisfies StudentWithPin);
   });
 

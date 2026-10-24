@@ -22,7 +22,8 @@
 }
 
 .title {
-  font-size: 1.625rem;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
 }
 
 .message {
@@ -59,6 +60,6 @@
 }
 
 .danger {
-  background: var(--color-danger);
+  background: var(--color-danger-solid);
   color: var(--color-on-danger);
 }

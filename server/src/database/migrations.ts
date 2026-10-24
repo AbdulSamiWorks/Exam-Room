@@ -415,4 +415,12 @@ export const migrations: readonly Migration[] = [
          CHECK (waiting_room IN (0, 1))`,
     ],
   },
+  {
+    id: 14,
+    name: 'multiple choice result right after finishing',
+    statements: [
+      `ALTER TABLE tests ADD COLUMN instant_mcq_result INTEGER NOT NULL DEFAULT 0
+         CHECK (instant_mcq_result IN (0, 1))`,
+    ],
+  },
 ];

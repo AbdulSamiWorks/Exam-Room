@@ -23,8 +23,8 @@
 }
 
 .activeTab {
-  border-bottom-color: var(--color-text);
-  color: var(--color-text);
+  border-bottom-color: var(--color-primary);
+  color: var(--color-accent-text);
 }
 
 .tabButton {

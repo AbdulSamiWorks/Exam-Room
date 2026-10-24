@@ -145,7 +145,7 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
 - [ ] Tap answers on a typed paper; the top bar says **Saved**. Tap a chosen answer again to clear
       it.
 - [ ] Turn on airplane mode, tap two more answers and type a written answer: the bar says
-      **Offline – your answers are safe on this phone**. Close the app, turn the network on, open
+      **Not sent yet – your answers are safe on this phone**. Close the app, turn the network on, open
       the app again: the answers are there and the bar says **Saved**.
 - [ ] Turn on airplane mode and tap **Finish**: the dialog waits for the internet. Turn it on: the
       test is submitted.
@@ -199,3 +199,19 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
 - [ ] The teacher's results show **Start for everyone (2 waiting)**. After the tap, both phones
       open the paper within a few seconds and show the same time left.
 - [ ] A third phone that starts later waits until the teacher taps the button again.
+
+## 20. Feedback round (logout, PINs, MCQ result, FBISE papers, colours)
+
+- [ ] Teacher: **Log out** shows the login page at once; logging in again shows the tests.
+- [ ] Student: **Menu → Log out** shows the start page. Another student logs in on the same phone
+      and sees only their own tests; opening a test the first student started shows **Start
+      test**, not the first student's paper.
+- [ ] Manage → class → Students → **New PINs for everyone**: all PINs show once; **Copy all PINs**
+      pastes them into WhatsApp; the old PINs no longer work.
+- [ ] New test → Type or paste → **Start from a sample paper** shows the Computer Science paper:
+      32 questions, 50 marks, the truth table as a table.
+- [ ] Paste your own FBISE paper (options on one line are fine): the preview shows no problems.
+- [ ] A student finishes a test: **See my MCQ result** shows the MCQ marks, right answers in green
+      and wrong answers in red; the portal card says "tap to see your MCQ result".
+- [ ] The colours look calm and readable in light and dark: orange main buttons, green "Open",
+      red "Close now".

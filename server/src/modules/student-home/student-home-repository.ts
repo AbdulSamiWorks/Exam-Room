@@ -14,6 +14,7 @@ export type StudentTestRow = {
   finishReason: FinishReason | null;
   maxMarks: number | null;
   releasedMarks: number | null;
+  hasMcqResult: boolean;
   bountyNote: string;
   bountyPoints: number;
 };
@@ -26,7 +27,8 @@ export async function listTestsOfStudent(
   const { rows } = await database.execute({
     sql: `SELECT tests.code, tests.title, tests.kind, tests.duration_minutes, tests.opens_at,
                  tests.closes_at, tests.max_marks, tests.results_released_at,
-                 tests.bounty_note, tests.bounty_points,
+                 tests.bounty_note, tests.bounty_points, tests.instant_mcq_result,
+                 tests.question_count,
                  subjects.id AS subject_id, subjects.name AS subject_name,
                  attempts.status AS attempt_status,
                  attempts.finish_reason, attempts.total_marks
@@ -51,6 +53,10 @@ export async function listTestsOfStudent(
     maxMarks: row.max_marks === null ? null : Number(row.max_marks),
     releasedMarks:
       row.results_released_at === null || row.total_marks === null ? null : Number(row.total_marks),
+    hasMcqResult:
+      Number(row.instant_mcq_result) === 1 &&
+      Number(row.question_count) > 0 &&
+      row.attempt_status === 'submitted',
     bountyNote: String(row.bounty_note),
     bountyPoints: Number(row.bounty_points),
   }));

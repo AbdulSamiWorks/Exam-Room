@@ -99,6 +99,9 @@ function JoinForm({ test, testCode, onStarted, isResuming }: JoinFormProps) {
               <li>{describeBounty(test.bountyNote, test.bountyPoints)}</li>
             )}
             <li>{describeHowToAnswer(test)}</li>
+            {test.instantMcqResult && test.questionCount > 0 && (
+              <li>You see your multiple choice result as soon as you finish.</li>
+            )}
           </ul>
         </Panel>
 

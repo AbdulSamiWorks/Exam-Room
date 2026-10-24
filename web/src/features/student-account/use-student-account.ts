@@ -4,10 +4,19 @@ import type {
   StudentLoginRequest,
   StudentSessionResponse,
 } from '@exam-room/shared';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { getJson, postJson } from '../../api/http-client';
+import { removeQueriesExcept } from '../../lib/query-cache';
+import { forgetLocalExamData, hasUnsentExamWork } from '../student/local-exam-data';
+import {
+  belongsToAnotherStudent,
+  readDeviceStudentId,
+  saveDeviceStudentId,
+} from './device-student';
 
 const HOME_REFRESH_INTERVAL_MS = 30_000;
+const UNSENT_WORK_MESSAGE =
+  'Some answers or photos are not sent yet. Connect to the internet, wait until they are sent, then log out.';
 
 export const studentAccountQueryKeys = {
   session: ['student-session'] as const,
@@ -31,14 +40,32 @@ export function useLoginClasses() {
   });
 }
 
+export async function enterStudentSession(
+  queryClient: QueryClient,
+  session: StudentSessionResponse,
+): Promise<void> {
+  const studentId = session.student?.id;
+  if (studentId === undefined) return showStudentSession(queryClient, session);
+  if (belongsToAnotherStudent(readDeviceStudentId(), studentId)) await forgetLocalExamData();
+  saveDeviceStudentId(studentId);
+  showStudentSession(queryClient, session);
+}
+
+function showStudentSession(queryClient: QueryClient, session: StudentSessionResponse): void {
+  queryClient.setQueryData(studentAccountQueryKeys.session, session);
+  removeQueriesExcept(queryClient, [
+    studentAccountQueryKeys.session,
+    studentAccountQueryKeys.loginClasses,
+  ]);
+}
+
 export function useStudentLogin() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (login: StudentLoginRequest) =>
-      postJson<StudentSessionResponse>('/student-auth/login', login),
-    onSuccess: (session) => {
-      queryClient.removeQueries({ queryKey: studentAccountQueryKeys.home });
-      queryClient.setQueryData(studentAccountQueryKeys.session, session);
+    mutationFn: async (login: StudentLoginRequest) => {
+      const session = await postJson<StudentSessionResponse>('/student-auth/login', login);
+      await enterStudentSession(queryClient, session);
+      return session;
     },
   });
 }
@@ -46,11 +73,14 @@ export function useStudentLogin() {
 export function useStudentLogout() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => postJson<StudentSessionResponse>('/student-auth/logout'),
-    onSuccess: (session) => {
-      queryClient.removeQueries({ queryKey: studentAccountQueryKeys.home });
-      queryClient.setQueryData(studentAccountQueryKeys.session, session);
+    mutationFn: async () => {
+      if (hasUnsentExamWork()) throw new Error(UNSENT_WORK_MESSAGE);
+      const session = await postJson<StudentSessionResponse>('/student-auth/logout');
+      await forgetLocalExamData();
+      saveDeviceStudentId(undefined);
+      return session;
     },
+    onSuccess: (session) => showStudentSession(queryClient, session),
   });
 }
 

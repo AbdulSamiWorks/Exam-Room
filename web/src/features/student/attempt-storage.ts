@@ -47,6 +47,17 @@ export function updateStoredAttempt(testCode: string, changes: Partial<StoredAtt
   if (storedAttempt) saveStoredAttempt(testCode, { ...storedAttempt, ...changes });
 }
 
+export function forgetAllStoredAttempts(): void {
+  try {
+    const storedKeys = Object.keys(window.localStorage).filter((key) =>
+      key.startsWith(STORAGE_KEY_PREFIX),
+    );
+    for (const key of storedKeys) window.localStorage.removeItem(key);
+  } catch {
+    return;
+  }
+}
+
 export function forgetStoredAttempt(testCode: string): void {
   try {
     window.localStorage.removeItem(storageKey(testCode));

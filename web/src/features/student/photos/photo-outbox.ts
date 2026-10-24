@@ -143,6 +143,23 @@ export function createPhotoOutbox(dependencies: PhotoOutboxDependencies) {
     for (const testCode of snapshots.keys()) void sendPending(testCode);
   }
 
+  function hasPendingPhotos(): boolean {
+    return [...snapshots.values()].some(
+      (snapshot) => snapshot.sendingState !== 'session_lost' && snapshot.pending.length > 0,
+    );
+  }
+
+  async function forgetEverything(): Promise<void> {
+    for (const timer of retryTimers.values()) clearTimeout(timer);
+    retryTimers.clear();
+    failureCounts.clear();
+    snapshots.clear();
+    for (const listener of listeners) listener();
+    for (const key of await storage.listKeys(RECORD_PREFIX)) {
+      await storage.remove(key).catch(() => undefined);
+    }
+  }
+
   return {
     subscribe(listener: () => void): () => void {
       listeners.add(listener);
@@ -150,6 +167,8 @@ export function createPhotoOutbox(dependencies: PhotoOutboxDependencies) {
     },
     snapshotOf: (testCode: string) => snapshots.get(testCode) ?? EMPTY_SNAPSHOT,
     addPhoto,
+    hasPendingPhotos,
+    forgetEverything,
     sendAllNow: () => {
       for (const testCode of snapshots.keys()) void sendPending(testCode);
     },
@@ -169,7 +188,8 @@ const photoOutbox = createPhotoOutbox({
   createId: createRandomId,
 });
 
-export const { addPhoto } = photoOutbox;
+export const { addPhoto, hasPendingPhotos } = photoOutbox;
+export const forgetAllPendingPhotos = photoOutbox.forgetEverything;
 
 export function usePhotoOutbox(testCode: string): PhotoOutboxSnapshot {
   return useSyncExternalStore(photoOutbox.subscribe, () => photoOutbox.snapshotOf(testCode));

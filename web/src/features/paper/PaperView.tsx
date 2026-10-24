@@ -3,6 +3,7 @@ import { numberQuestions, optionLetter } from '@exam-room/shared/paper-rules';
 import type { ReactNode } from 'react';
 import { classNames } from '../../lib/class-names';
 import { describeMarks } from '../../lib/describe-marks';
+import { InlineText, RichText } from './RichText';
 import styles from './PaperView.module.css';
 
 export type PaperViewProps = {
@@ -13,6 +14,25 @@ export type PaperViewProps = {
   onChooseOption?: (questionId: string, option: number) => void;
   renderQuestionExtra?: (question: NumberedQuestion) => ReactNode;
 };
+
+type OptionState = 'chosenOption' | 'rightChoice' | 'wrongChoice' | 'correctOption';
+
+const OPTION_STATE_LABELS: Record<OptionState, string> = {
+  chosenOption: '',
+  rightChoice: '✓ Your answer',
+  wrongChoice: '✗ Your answer',
+  correctOption: '✓ Correct answer',
+};
+
+function optionState(
+  isChosen: boolean,
+  correctOption: number | undefined,
+  isCorrect: boolean,
+): OptionState | undefined {
+  if (correctOption === undefined) return isChosen ? 'chosenOption' : undefined;
+  if (isChosen) return isCorrect ? 'rightChoice' : 'wrongChoice';
+  return isCorrect ? 'correctOption' : undefined;
+}
 
 export function PaperView({
   paper,
@@ -27,9 +47,9 @@ export function PaperView({
   return (
     <article className={styles.paper}>
       {paper.instructions && (
-        <p className={styles.paperInstructions} dir="auto">
-          {paper.instructions}
-        </p>
+        <div className={styles.paperInstructions} dir="auto">
+          <RichText text={paper.instructions} />
+        </div>
       )}
       {paper.sections.map((section, sectionIndex) => (
         <section key={sectionIndex} className={styles.section}>
@@ -39,9 +59,9 @@ export function PaperView({
             </h2>
           )}
           {section.instructions && (
-            <p className={styles.sectionInstructions} dir="auto">
-              {section.instructions}
-            </p>
+            <div className={styles.sectionInstructions} dir="auto">
+              <RichText text={section.instructions} />
+            </div>
           )}
           <ol className={styles.questions}>
             {numberedQuestions
@@ -91,9 +111,9 @@ function QuestionView({
     <li className={styles.question}>
       <div className={styles.questionHeader}>
         <span className={styles.questionNumber}>{question.number}.</span>
-        <p id={textId} className={styles.questionText} dir="auto">
-          {question.text}
-        </p>
+        <div id={textId} className={styles.questionText} dir="auto">
+          <RichText text={question.text} />
+        </div>
         <span className={styles.marks}>{describeMarks(question.marks)}</span>
       </div>
       {picture}
@@ -105,27 +125,28 @@ function QuestionView({
           aria-readonly={onChooseOption ? undefined : true}
         >
           {question.options.map((option, optionIndex) => {
-            const isChosen = chosenOption === optionIndex;
-            const isCorrect = correctOption === optionIndex;
+            const state = optionState(
+              chosenOption === optionIndex,
+              correctOption,
+              correctOption === optionIndex,
+            );
             return (
               <button
                 key={optionIndex}
                 type="button"
                 role="radio"
-                aria-checked={isChosen}
+                aria-checked={chosenOption === optionIndex}
                 disabled={!onChooseOption}
-                className={classNames(
-                  styles.option,
-                  isChosen && styles.chosenOption,
-                  isCorrect && styles.correctOption,
-                )}
+                className={classNames(styles.option, state && styles[state])}
                 onClick={() => onChooseOption?.(question.id, optionIndex)}
               >
                 <span className={styles.optionLetter}>{optionLetter(optionIndex)}</span>
                 <span className={styles.optionText} dir="auto">
-                  {option}
+                  <InlineText text={option} />
                 </span>
-                {isCorrect && <span className={styles.correctMark}>✓ Correct</span>}
+                {state && OPTION_STATE_LABELS[state] && (
+                  <span className={styles.optionMark}>{OPTION_STATE_LABELS[state]}</span>
+                )}
               </button>
             );
           })}

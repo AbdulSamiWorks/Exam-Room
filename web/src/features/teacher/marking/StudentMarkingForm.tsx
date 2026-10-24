@@ -6,6 +6,7 @@ import { Button } from '../../../components/Button';
 import { FormError } from '../../../components/FormError';
 import { describeMarks } from '../../../lib/describe-marks';
 import { useSaveMarks } from './use-marking';
+import { RichText } from '../../paper/RichText';
 import styles from './MarkingPage.module.css';
 
 type StudentMarkingFormProps = {
@@ -53,12 +54,22 @@ export function StudentMarkingForm({ testId, marking, attempt, onSaved }: Studen
         {questions.map((question) => {
           const answer = answers.get(question.id);
           const correctOption = marking.answerKey[question.id]?.option;
+          const modelAnswer = marking.answerKey[question.id]?.text;
           return (
             <li key={question.id} className={styles.questionRow}>
-              <p className={styles.questionText} dir="auto">
-                <strong>{question.number}.</strong> {question.text}{' '}
+              <div className={styles.questionText} dir="auto">
+                <strong>{question.number}.</strong>{' '}
                 <span className={styles.muted}>({describeMarks(question.marks)})</span>
-              </p>
+                <RichText text={question.text} />
+              </div>
+              {modelAnswer && (
+                <details className={styles.modelAnswer}>
+                  <summary>Model answer</summary>
+                  <div dir="auto">
+                    <RichText text={modelAnswer} />
+                  </div>
+                </details>
+              )}
               {question.kind === 'mcq' ? (
                 <p className={styles.answerLine}>
                   Chose{' '}

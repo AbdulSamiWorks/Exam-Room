@@ -22,6 +22,7 @@ export type TestSettingsFormValues = {
   bountyNote: string;
   bountyPoints: string;
   waitingRoom: boolean;
+  instantMcqResult: boolean;
 };
 
 export type TestSettingsFormErrors = Partial<
@@ -41,6 +42,7 @@ export const NEW_TEST_SETTINGS: TestSettingsFormValues = {
   bountyNote: '',
   bountyPoints: '0',
   waitingRoom: false,
+  instantMcqResult: true,
 };
 
 export function settingsFormValuesOf(test: TestSummary): TestSettingsFormValues {
@@ -57,6 +59,7 @@ export function settingsFormValuesOf(test: TestSummary): TestSettingsFormValues 
     bountyNote: test.bountyNote,
     bountyPoints: String(test.bountyPoints),
     waitingRoom: test.waitingRoom,
+    instantMcqResult: test.instantMcqResult,
   };
 }
 
@@ -132,6 +135,7 @@ export function toTestSettings(values: TestSettingsFormValues): TestSettings {
     bountyNote: values.bountyNote.trim(),
     bountyPoints: Number(values.bountyPoints || 0),
     waitingRoom: values.kind !== 'assignment' && values.waitingRoom,
+    instantMcqResult: values.instantMcqResult,
   };
 }
 
@@ -141,8 +145,9 @@ export function toUpdateTestRequest(
 ): UpdateTestRequest {
   const settings = toTestSettings(values);
   if (!areRulesFixed) return settings;
-  const { subjectId, kind, chapterIds, title, bountyNote, bountyPoints } = settings;
-  return { subjectId, kind, chapterIds, title, bountyNote, bountyPoints };
+  const { subjectId, kind, chapterIds, title, bountyNote, bountyPoints, instantMcqResult } =
+    settings;
+  return { subjectId, kind, chapterIds, title, bountyNote, bountyPoints, instantMcqResult };
 }
 
 export function hasErrors(errors: object): boolean {

@@ -8,7 +8,7 @@ type FinishDialogProps = {
 };
 
 const OFFLINE_MESSAGE =
-  'No internet right now. Your answers and Finish are saved on this phone and are sent by themselves as soon as the internet is back. Keep this page open, or open the app again later.';
+  'The server cannot be reached right now (no internet, or the server is waking up). Your answers and Finish are saved on this phone and are sent by themselves as soon as it answers. Keep this page open, or open the app again later.';
 
 export function FinishDialog({ isFinishing, isOffline, onCancel, onConfirm }: FinishDialogProps) {
   return (
@@ -20,7 +20,7 @@ export function FinishDialog({ isFinishing, isOffline, onCancel, onConfirm }: Fi
           : 'After you finish, you cannot open the paper again.'
       }
       confirmLabel="Finish test"
-      busyLabel={isOffline ? 'Waiting for internet…' : 'Sending your answers…'}
+      busyLabel={isOffline ? 'Waiting for the server…' : 'Sending your answers…'}
       cancelLabel="Keep working"
       isBusy={isFinishing}
       onCancel={onCancel}

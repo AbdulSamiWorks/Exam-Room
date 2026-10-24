@@ -1,6 +1,10 @@
 import type { StudentTestCard } from '@exam-room/shared';
 import { describe, expect, it } from 'vitest';
-import { describeStudentTestState, groupStudentTests } from './group-student-tests';
+import {
+  describeStudentTestState,
+  groupStudentTests,
+  studentTestTone,
+} from './group-student-tests';
 
 function card(overrides: Partial<StudentTestCard>): StudentTestCard {
   return {
@@ -17,11 +21,25 @@ function card(overrides: Partial<StudentTestCard>): StudentTestCard {
     finishReason: null,
     maxMarks: null,
     releasedMarks: null,
+    hasMcqResult: false,
     bountyNote: '',
     bountyPoints: 0,
     ...overrides,
   };
 }
+
+describe('studentTestTone', () => {
+  it('colours a test by what the student can do with it', () => {
+    expect(studentTestTone(card({}))).toBe('open');
+    expect(studentTestTone(card({ attemptStatus: 'waiting' }))).toBe('active');
+    expect(studentTestTone(card({ attemptStatus: 'locked' }))).toBe('danger');
+    expect(studentTestTone(card({ attemptStatus: 'submitted', releasedMarks: 4 }))).toBe('result');
+    expect(studentTestTone(card({ availability: 'closed' }))).toBe('quiet');
+    expect(studentTestTone(card({ attemptStatus: 'submitted', hasMcqResult: true }))).toBe(
+      'result',
+    );
+  });
+});
 
 describe('groupStudentTests', () => {
   it('puts open and unfinished tests now, scheduled ones by opening time, the rest finished', () => {

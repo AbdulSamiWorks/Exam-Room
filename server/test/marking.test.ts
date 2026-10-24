@@ -127,7 +127,42 @@ describe('marking and releasing results', () => {
     expect(attempts.map((attempt) => attempt.score.totalMarks)).toEqual([0, 1]);
   });
 
-  it('shows students their result only after release, with the chosen details', async () => {
+  it('shows the multiple choice result right after finishing, without written marks', async () => {
+    const student = await logInAsStudent(context.app, classIdOfTest(context.app, test.code));
+    const [ayesha] = (await marking()).attempts;
+    await teacher.put(`/api/attempts/${ayesha?.attemptId}/marks`).send({
+      questionMarks: { q3: { marks: 3, comment: 'Perfect.' } },
+      comment: 'Great work.',
+    });
+
+    const result = await student.get(`/api/student/results/${test.code}`);
+
+    expect(result.body).toMatchObject({
+      isFinal: false,
+      totalMarks: 1,
+      maxMarks: 2,
+      comment: '',
+      topScorers: null,
+      releasedAt: null,
+    });
+    expect(
+      result.body.questions.map((question: { marks: number | null }) => question.marks),
+    ).toEqual([1, 0, null]);
+    expect(result.body.questions[1]).toMatchObject({ chosenOption: null, correctOption: 2 });
+    const home = await student.get('/api/student/home');
+    expect(home.body.tests[0]).toMatchObject({ hasMcqResult: true, releasedMarks: null });
+  });
+
+  it('keeps every result hidden until release when the test asks for it', async () => {
+    await teacher.patch(`/api/tests/${test.id}`).send({ instantMcqResult: false });
+    const student = await logInAsStudent(context.app, classIdOfTest(context.app, test.code));
+    expect((await student.get(`/api/student/results/${test.code}`)).status).toBe(403);
+    const home = await student.get('/api/student/home');
+    expect(home.body.tests[0]).toMatchObject({ hasMcqResult: false });
+  });
+
+  it('shows students their full result after release, with the chosen details', async () => {
+    await teacher.patch(`/api/tests/${test.id}`).send({ instantMcqResult: false });
     const student = await logInAsStudent(context.app, classIdOfTest(context.app, test.code));
     const before = await student.get(`/api/student/results/${test.code}`);
     expect(before.status).toBe(403);
@@ -144,6 +179,7 @@ describe('marking and releasing results', () => {
 
     const result = await student.get(`/api/student/results/${test.code}`);
     expect(result.body).toMatchObject({
+      isFinal: true,
       totalMarks: 4,
       maxMarks: 5,
       comment: 'Great work.',

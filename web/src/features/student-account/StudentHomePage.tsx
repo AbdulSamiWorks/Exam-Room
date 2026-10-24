@@ -88,8 +88,9 @@ function ProfileDetails({ student, points, leaders }: ProfileDetailsProps) {
         )}
       </dl>
       <ThemeToggle />
+      {logout.error && <FormError>{logout.error.message}</FormError>}
       <Button variant="secondary" onClick={() => logout.mutate()} disabled={logout.isPending}>
-        Log out
+        {logout.isPending ? 'Logging out…' : 'Log out'}
       </Button>
     </>
   );

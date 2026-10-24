@@ -8,19 +8,25 @@ import {
 } from './imported-paper';
 
 const SECTION_LINE = /^#+\s*(.*)$/;
-const QUESTION_LINE = /^(?:Q(?:uestion)?\s*)?\d{1,3}\s*[.):]\s*(.+)$/i;
+const NAMED_SECTION_LINE = /^((?:section|part)\s+[a-z0-9]{1,3}\s*[:.\-–—]\s*.*)$/i;
+const QUESTION_LINE = /^(?:Q(?:uestion)?\s*)?(\d{1,3})\s*[.):]\s*(.+)$/i;
 const OPTION_LINE = /^\(?([a-f])[.)]\s+(.+)$/i;
 const ANSWER_LINE = /^(?:answer|ans|correct answer)\s*[:-]\s*(.*)$/i;
+const ANSWER_LETTER = /^\(?([a-f])(?:[).](?:\s.*)?)?$/i;
+const INLINE_OPTION_MARKER = /(?:^|\s)\(?([a-f])\)\s+/gi;
+const FILL_IN_BLANKS = /_{3,}/;
 const MARKS_AT_END = /\s*[[(]\s*(\d+(?:\.5)?)\s*(?:marks?|m)?\s*[\])]\s*$/i;
 const DEFAULT_MARKS = 1;
 
 type DraftQuestion = {
   lineNumber: number;
+  number: number;
   textLines: string[];
   marks: number | undefined;
   options: string[];
   answerLetter: string | undefined;
   answerLineNumber: number;
+  hasModelAnswer: boolean;
   modelAnswerLines: string[];
   subPartCount: number;
   subPartMarks: number;
@@ -51,7 +57,7 @@ export function parsePaperText(text: string): ImportedPaper {
     const line = rawLine.trim();
     if (!line) return;
 
-    const sectionMatch = SECTION_LINE.exec(line);
+    const sectionMatch = SECTION_LINE.exec(line) ?? NAMED_SECTION_LINE.exec(line);
     if (sectionMatch) {
       sections.push({ title: sectionMatch[1] ?? '', instructionLines: [], questions: [] });
       currentQuestion = undefined;
@@ -59,8 +65,9 @@ export function parsePaperText(text: string): ImportedPaper {
     }
 
     const questionMatch = QUESTION_LINE.exec(line);
-    if (questionMatch) {
-      currentQuestion = newQuestion(questionMatch[1] ?? '', lineNumber);
+    const questionNumber = Number(questionMatch?.[1]);
+    if (questionMatch && startsNewQuestion(currentQuestion, questionNumber)) {
+      currentQuestion = newQuestion(questionMatch[2] ?? '', questionNumber, lineNumber);
       currentSection().questions.push(currentQuestion);
       return;
     }
@@ -71,11 +78,17 @@ export function parsePaperText(text: string): ImportedPaper {
         problems.push({ lineNumber, message: 'this answer comes before any question.' });
         return;
       }
-      if (currentQuestion.answerLetter !== undefined || currentQuestion.modelAnswerLines.length) {
+      if (currentQuestion.answerLetter !== undefined || currentQuestion.hasModelAnswer) {
         problems.push({ lineNumber, message: 'this question already has an answer.' });
         return;
       }
       setAnswer(currentQuestion, answerMatch[1] ?? '', lineNumber);
+      return;
+    }
+
+    const inlineOptions = splitInlineOptions(line);
+    if (inlineOptions && currentQuestion && isNextOption('a', currentQuestion)) {
+      currentQuestion.options.push(...inlineOptions);
       return;
     }
 
@@ -101,7 +114,7 @@ export function parsePaperText(text: string): ImportedPaper {
       continueQuestion(currentQuestion, line);
     } else if (sections.length > 0) {
       currentSection().instructionLines.push(line);
-    } else {
+    } else if (!FILL_IN_BLANKS.test(line)) {
       paperInstructionLines.push(line);
     }
   });
@@ -109,14 +122,36 @@ export function parsePaperText(text: string): ImportedPaper {
   return buildImportedPaper(paperInstructionLines, sections, problems);
 }
 
-function newQuestion(firstLine: string, lineNumber: number): DraftQuestion {
+function startsNewQuestion(question: DraftQuestion | undefined, number: number): boolean {
+  return !question?.hasModelAnswer || number === question.number + 1;
+}
+
+function splitInlineOptions(line: string): string[] | undefined {
+  const markers = [...line.matchAll(INLINE_OPTION_MARKER)];
+  const inOrder = markers.filter(
+    (marker, markerIndex) => optionIndexOf(marker[1] ?? '') === markerIndex,
+  );
+  if (inOrder.length < 2 || inOrder.length !== markers.length || markers[0]?.index !== 0) {
+    return undefined;
+  }
+  const options = inOrder.map((marker, markerIndex) => {
+    const start = (marker.index ?? 0) + marker[0].length;
+    const end = inOrder[markerIndex + 1]?.index ?? line.length;
+    return line.slice(start, end).trim();
+  });
+  return options.every(Boolean) ? options : undefined;
+}
+
+function newQuestion(firstLine: string, number: number, lineNumber: number): DraftQuestion {
   const question: DraftQuestion = {
     lineNumber,
+    number,
     textLines: [],
     marks: undefined,
     options: [],
     answerLetter: undefined,
     answerLineNumber: 0,
+    hasModelAnswer: false,
     modelAnswerLines: [],
     subPartCount: 0,
     subPartMarks: 0,
@@ -126,7 +161,7 @@ function newQuestion(firstLine: string, lineNumber: number): DraftQuestion {
 }
 
 function continueQuestion(question: DraftQuestion, line: string): void {
-  if (question.modelAnswerLines.length > 0) {
+  if (question.hasModelAnswer) {
     question.modelAnswerLines.push(line);
     return;
   }
@@ -145,25 +180,35 @@ function continueQuestion(question: DraftQuestion, line: string): void {
 
 function setAnswer(question: DraftQuestion, answer: string, lineNumber: number): void {
   question.answerLineNumber = lineNumber;
-  const letter = answer.replace(/[().]/g, '').trim();
-  if (question.options.length > 0 && optionIndexOf(letter) !== undefined) {
+  const answerText = answer.trim();
+  const letter = ANSWER_LETTER.exec(answerText)?.[1];
+  if (question.options.length > 0 && letter) {
     question.answerLetter = letter;
-  } else if (question.options.length > 0) {
-    question.answerLetter = letter || '?';
-  } else if (answer.trim()) {
-    question.modelAnswerLines.push(answer.trim());
+  } else if (question.options.length > 0 && !/\s/.test(answerText)) {
+    question.answerLetter = answerText || '?';
+  } else {
+    turnOptionsIntoParts(question);
+    question.hasModelAnswer = true;
+    if (answerText) question.modelAnswerLines.push(answerText);
   }
 }
 
+function turnOptionsIntoParts(question: DraftQuestion): void {
+  question.options.forEach((option, optionIndex) => {
+    question.textLines.push(`${optionLetter(optionIndex).toLowerCase()}) ${option}`);
+  });
+  question.options = [];
+}
+
 function isNextOption(letter: string, question: DraftQuestion): boolean {
-  if (question.answerLetter !== undefined || question.modelAnswerLines.length > 0) return false;
+  if (question.answerLetter !== undefined || question.hasModelAnswer) return false;
   return optionIndexOf(letter) === question.options.length;
 }
 
 function isNextSubPart(line: string, letter: string, question: DraftQuestion): boolean {
   return (
     question.options.length === 0 &&
-    question.modelAnswerLines.length === 0 &&
+    !question.hasModelAnswer &&
     MARKS_AT_END.test(line) &&
     optionIndexOf(letter) === question.subPartCount
   );
