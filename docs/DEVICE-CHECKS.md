@@ -215,3 +215,15 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
       and wrong answers in red; the portal card says "tap to see your MCQ result".
 - [ ] The colours look calm and readable in light and dark: orange main buttons, green "Open",
       red "Close now".
+
+## 21. Second feedback round
+
+- [ ] Manage → a class with students and tests → **Delete**: the dialog lists what goes with it;
+      **Delete everything** works only after typing the class name.
+- [ ] The teacher's test list shows Running, Finished · to mark and Results out in different
+      colours, how many finished, and the average after release.
+- [ ] A student finishes a test with MCQs: the finished screen shows the MCQ score with right,
+      wrong and not answered, and **See which answers were right** opens the details.
+- [ ] After you mark the short and long questions and release, the student sees each mark and
+      the model answer under their own answer.
+- [ ] The student home shows the three tiles and one coloured pill per test.
