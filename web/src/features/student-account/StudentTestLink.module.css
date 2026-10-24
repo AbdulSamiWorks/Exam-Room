@@ -11,13 +11,16 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
   padding: 12px 14px;
   border: 1px solid var(--color-border);
   border-left-width: 4px;
   border-radius: var(--radius);
   background: var(--color-bg);
   color: var(--color-text);
+  text-align: start;
   text-decoration: none;
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 

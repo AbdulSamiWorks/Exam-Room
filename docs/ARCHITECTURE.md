@@ -665,6 +665,7 @@ the real-device checks in §15.
 | D69 | Students see tests that are not open yet under Coming up (Not open yet, or the opening date and time), with the type, subject and chapters on every card and on the start page | Students should know what is coming and what each test covers | — |
 | D70 | Per-test mixed order for typed papers (on for new tests): the server gives each attempt a mixing number (its id); the phone mixes the questions inside each section and the MCQ options with a seeded shuffle, keeping options like All of the above in place, and stores answers in the teacher's order. Paste, drop, laptop shortcuts and printing are blocked during the test | Stops neighbours copying "5 is c" with no extra server work; a website still cannot block other apps (§9), so leaving is detected and counted | Shared figures between questions → teacher picks Same for everyone |
 | D71 | A Marks and results panel near the top of every test page with students, and a Mark button per finished student that opens that student on the marking page; answer photos sit inside each student's marking form | The owner could not find where to mark or see photos | — |
+| D72 | Tapping a Coming up card shows a popup (Not open yet, or the opening date and time) and the student stays on the dashboard; only open, started and finished tests open a page | The not-open page had no way back and looked blank to students; the dashboard refreshes every 30 s, so a test that just opened shows Start soon after | Shared test links still open the not-open page, which opens the test by itself |
 
 ## 14. Future extension points (not built now)
 
@@ -903,6 +904,7 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 - **Anti-cheating**: mixed question and option order per student, no paste, no shortcuts, no
   printing (D70).
 - **Marking is easy to find**, with answer photos next to the marks (D71).
+- **Coming up cards** show a popup instead of a page with no way back (D72).
 
 ### M21 Owner's second feedback round (built 2026-10-24)
 

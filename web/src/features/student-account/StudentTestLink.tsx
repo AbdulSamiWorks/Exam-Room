@@ -1,22 +1,34 @@
 import type { StudentTestCard } from '@exam-room/shared';
 import { Link } from 'react-router';
+import { useConfirmation } from '../../components/use-confirmation';
 import { classNames } from '../../lib/class-names';
 import { describeBounty } from '../../lib/describe-bounty';
 import { describeDateTime } from '../../lib/describe-date-time';
 import { describeDuration } from '../../lib/describe-test-length';
 import { describeChapterNames, describeTestKind } from '../../lib/describe-test-kind';
-import { studentTestPath, studentTestPill } from './group-student-tests';
+import {
+  isComingUp,
+  notOpenNotice,
+  studentTestPath,
+  studentTestPill,
+  type StudentTestPill,
+} from './group-student-tests';
 import styles from './StudentTestLink.module.css';
 
 export function StudentTestList({ tests }: { tests: StudentTestCard[] }) {
+  const { showNotice, confirmationDialog } = useConfirmation();
+
   return (
-    <ul className={styles.testList}>
-      {tests.map((test) => (
-        <li key={test.code}>
-          <StudentTestLink test={test} />
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className={styles.testList}>
+        {tests.map((test) => (
+          <li key={test.code}>
+            <StudentTestLink test={test} onNotOpen={() => showNotice(notOpenNotice(test))} />
+          </li>
+        ))}
+      </ul>
+      {confirmationDialog}
+    </>
   );
 }
 
@@ -27,17 +39,36 @@ function describeTiming(test: StudentTestCard): string {
   return test.closesAt === null ? 'No timer' : `Due ${describeDateTime(test.closesAt)}`;
 }
 
-function isComingUp(test: StudentTestCard): boolean {
-  return test.attemptStatus === null && ['scheduled', 'not_open'].includes(test.availability);
-}
+type StudentTestLinkProps = {
+  test: StudentTestCard;
+  onNotOpen: () => void;
+};
 
-function StudentTestLink({ test }: { test: StudentTestCard }) {
-  const bounty = describeBounty(test.bountyNote, test.bountyPoints);
-  const chapters = describeChapterNames(test.chapterNames);
+function StudentTestLink({ test, onNotOpen }: StudentTestLinkProps) {
   const pill = studentTestPill(test);
+  const cardClassName = classNames(styles.testCard, styles[pill.tone]);
+
+  if (isComingUp(test)) {
+    return (
+      <button type="button" className={cardClassName} onClick={onNotOpen}>
+        <StudentTestCardContent test={test} pill={pill} />
+      </button>
+    );
+  }
 
   return (
-    <Link to={studentTestPath(test)} className={classNames(styles.testCard, styles[pill.tone])}>
+    <Link to={studentTestPath(test)} className={cardClassName}>
+      <StudentTestCardContent test={test} pill={pill} />
+    </Link>
+  );
+}
+
+function StudentTestCardContent({ test, pill }: { test: StudentTestCard; pill: StudentTestPill }) {
+  const bounty = describeBounty(test.bountyNote, test.bountyPoints);
+  const chapters = describeChapterNames(test.chapterNames);
+
+  return (
+    <>
       <span className={styles.testText}>
         <span className={styles.testTitle}>{test.title}</span>
         <span className={styles.testDetails}>
@@ -49,6 +80,6 @@ function StudentTestLink({ test }: { test: StudentTestCard }) {
         {bounty && <span className={styles.bounty}>{bounty}</span>}
       </span>
       <span className={classNames(styles.pill, styles[`${pill.tone}Pill`])}>{pill.label}</span>
-    </Link>
+    </>
   );
 }

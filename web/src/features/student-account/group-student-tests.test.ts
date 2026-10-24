@@ -1,6 +1,11 @@
 import type { StudentTestCard } from '@exam-room/shared';
 import { describe, expect, it } from 'vitest';
-import { groupStudentTests, studentTestPill } from './group-student-tests';
+import {
+  groupStudentTests,
+  isComingUp,
+  notOpenNotice,
+  studentTestPill,
+} from './group-student-tests';
 
 function card(overrides: Partial<StudentTestCard>): StudentTestCard {
   return {
@@ -67,5 +72,30 @@ describe('studentTestPill', () => {
     expect(studentTestPill(card({ ...finished, releasedMarks: 9.5 })).tone).toBe('okay');
     expect(studentTestPill(card({ ...finished, releasedMarks: 4 })).tone).toBe('low');
     expect(studentTestPill(card({ ...finished, hasMcqResult: true })).label).toBe('MCQ result');
+  });
+});
+
+describe('isComingUp', () => {
+  it('is true only for tests the student has not started and that are not open yet', () => {
+    expect(isComingUp(card({ availability: 'scheduled' }))).toBe(true);
+    expect(isComingUp(card({ availability: 'not_open' }))).toBe(true);
+    expect(isComingUp(card({}))).toBe(false);
+    expect(isComingUp(card({ availability: 'closed' }))).toBe(false);
+    expect(isComingUp(card({ availability: 'not_open', attemptStatus: 'waiting' }))).toBe(false);
+  });
+});
+
+describe('notOpenNotice', () => {
+  it('tells the student when the test opens', () => {
+    const notice = notOpenNotice(card({ availability: 'scheduled', opensAt: 1_800_000_000_000 }));
+    expect(notice.title).toBe('Coming soon');
+    expect(notice.message).toMatch(/^Quiz opens .+\. Come back then\.$/);
+  });
+
+  it('says the teacher opens a test that has no opening time', () => {
+    expect(notOpenNotice(card({ availability: 'not_open', opensAt: null }))).toEqual({
+      title: 'Not open yet',
+      message: 'Quiz is not open yet. Come back when your teacher opens it.',
+    });
   });
 });
