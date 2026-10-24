@@ -2,7 +2,9 @@ import type { ClassSummary } from '@exam-room/shared';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createChapter, createClass, createSubject } from './support/catalog-fixtures.js';
-import { publishTest } from './support/exam-fixtures.js';
+import { publishTest, startAttemptToken, studentRequests } from './support/exam-fixtures.js';
+import { createBlankPageImage } from './support/page-image-fixtures.js';
+import { publishTypedTest } from './support/paper-fixtures.js';
 import { logInAsTeacher, type TeacherAgent } from './support/teacher-agent.js';
 import { createTestContext, type TestContext } from './support/test-context.js';
 
@@ -111,6 +113,37 @@ describe('classes', () => {
       message: 'Class 9 still has 2 students and 1 subject. Move or delete them first.',
     });
     expect(await listClasses()).toHaveLength(1);
+  });
+
+  it('deletes a class with everything in it when the teacher asks for that', async () => {
+    const { test } = await publishTypedTest(context.app, {
+      images: [await createBlankPageImage()],
+    });
+    const otherTest = await publishTest(context.app);
+    const ayesha = studentRequests(context.app, await startAttemptToken(context.app, test.code));
+    await ayesha.post('/api/attempt/answers').send({
+      answers: [{ questionId: 'q1', choice: 1, text: null, sequence: 1, answeredAt: 1 }],
+    });
+    await startAttemptToken(context.app, otherTest.code, {
+      studentName: 'Bilal',
+      rollNumber: '2',
+    });
+    const classId = test.schoolClass.id;
+    await createChapter(teacher, test.subject.id, 'Chapter 1');
+
+    const response = await teacher.delete(`/api/classes/${classId}?withContents=true`);
+
+    expect(response.status).toBe(204);
+    expect((await listClasses()).map((schoolClass) => schoolClass.id)).toEqual([
+      otherTest.schoolClass.id,
+    ]);
+    const tests = (await teacher.get('/api/tests')).body.tests as Array<{ id: number }>;
+    expect(tests.map((remaining) => remaining.id)).toEqual([otherTest.id]);
+    const { rows } = await context.database.execute(
+      `SELECT (SELECT COUNT(*) FROM attempts) AS attempts, (SELECT COUNT(*) FROM answers) AS answers,
+              (SELECT COUNT(*) FROM students) AS students, (SELECT COUNT(*) FROM chapters) AS chapters`,
+    );
+    expect(rows[0]).toMatchObject({ attempts: 1, answers: 0, students: 1, chapters: 0 });
   });
 
   it('rejects an empty name and an unknown class', async () => {

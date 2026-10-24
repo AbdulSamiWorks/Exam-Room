@@ -65,7 +65,11 @@ export function useRenameClass(classId: number) {
 }
 
 export function useDeleteClass(classId: number, onDeleted: () => void) {
-  return useManageChange(() => deleteResource(`/classes/${classId}`), { onChanged: onDeleted });
+  return useManageChange(
+    (withContents: boolean) =>
+      deleteResource(`/classes/${classId}${withContents ? '?withContents=true' : ''}`),
+    { changesTests: true, onChanged: onDeleted },
+  );
 }
 
 export function useCreateSubject(classId: number) {

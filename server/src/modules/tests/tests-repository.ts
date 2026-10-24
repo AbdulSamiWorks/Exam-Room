@@ -7,7 +7,7 @@ import type {
   TestSchedule,
   WrittenAnswers,
 } from '@exam-room/shared';
-import type { Row, Transaction } from '@libsql/client';
+import type { InStatement, InValue, Row, Transaction } from '@libsql/client';
 import type { Database } from '../../database/connection.js';
 import { requireFirstRow } from '../../database/query-helpers.js';
 import type { PageImage } from './page-images.js';
@@ -294,36 +294,26 @@ export async function saveTestSchedule(
   });
 }
 
+const ATTEMPT_TABLES = ['exits', 'answers', 'answer_photos', 'question_marks'] as const;
+const TEST_TABLES = ['attempts', 'test_pages', 'paper_images', 'test_chapters', 'points'] as const;
+
+export function testDeletionStatements(testIdsQuery: string, args: InValue[]): InStatement[] {
+  const attemptIdsQuery = `SELECT id FROM attempts WHERE test_id IN (${testIdsQuery})`;
+  return [
+    ...ATTEMPT_TABLES.map((table) => ({
+      sql: `DELETE FROM ${table} WHERE attempt_id IN (${attemptIdsQuery})`,
+      args,
+    })),
+    ...TEST_TABLES.map((table) => ({
+      sql: `DELETE FROM ${table} WHERE test_id IN (${testIdsQuery})`,
+      args,
+    })),
+    { sql: `DELETE FROM tests WHERE id IN (${testIdsQuery})`, args },
+  ];
+}
+
 export async function deleteTestWithResults(database: Database, testId: number): Promise<void> {
-  await database.batch(
-    [
-      {
-        sql: 'DELETE FROM exits WHERE attempt_id IN (SELECT id FROM attempts WHERE test_id = ?)',
-        args: [testId],
-      },
-      {
-        sql: 'DELETE FROM answers WHERE attempt_id IN (SELECT id FROM attempts WHERE test_id = ?)',
-        args: [testId],
-      },
-      {
-        sql: `DELETE FROM answer_photos
-              WHERE attempt_id IN (SELECT id FROM attempts WHERE test_id = ?)`,
-        args: [testId],
-      },
-      {
-        sql: `DELETE FROM question_marks
-              WHERE attempt_id IN (SELECT id FROM attempts WHERE test_id = ?)`,
-        args: [testId],
-      },
-      { sql: 'DELETE FROM attempts WHERE test_id = ?', args: [testId] },
-      { sql: 'DELETE FROM test_pages WHERE test_id = ?', args: [testId] },
-      { sql: 'DELETE FROM paper_images WHERE test_id = ?', args: [testId] },
-      { sql: 'DELETE FROM test_chapters WHERE test_id = ?', args: [testId] },
-      { sql: 'DELETE FROM points WHERE test_id = ?', args: [testId] },
-      { sql: 'DELETE FROM tests WHERE id = ?', args: [testId] },
-    ],
-    'write',
-  );
+  await database.batch(testDeletionStatements('SELECT ?', [testId]), 'write');
 }
 
 export async function isTestCodeTaken(database: Database, code: string): Promise<boolean> {

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Button } from './Button';
 import { Dialog } from './Dialog';
 
@@ -9,6 +10,8 @@ type ConfirmDialogProps = {
   cancelLabel?: string;
   isBusy: boolean;
   errorMessage?: string;
+  isConfirmDisabled?: boolean;
+  children?: ReactNode;
   onCancel: () => void;
   onConfirm: () => void;
 };
@@ -21,6 +24,8 @@ export function ConfirmDialog({
   cancelLabel = 'Cancel',
   isBusy,
   errorMessage,
+  isConfirmDisabled = false,
+  children,
   onCancel,
   onConfirm,
 }: ConfirmDialogProps) {
@@ -34,11 +39,13 @@ export function ConfirmDialog({
           <Button variant="secondary" onClick={onCancel} disabled={isBusy} autoFocus>
             {cancelLabel}
           </Button>
-          <Button variant="danger" onClick={onConfirm} disabled={isBusy}>
+          <Button variant="danger" onClick={onConfirm} disabled={isBusy || isConfirmDisabled}>
             {isBusy ? busyLabel : confirmLabel}
           </Button>
         </>
       }
-    />
+    >
+      {children}
+    </Dialog>
   );
 }

@@ -7,9 +7,10 @@ type DialogProps = {
   message: string;
   errorMessage?: string;
   actions: ReactNode;
+  children?: ReactNode;
 };
 
-export function Dialog({ title, message, errorMessage, actions }: DialogProps) {
+export function Dialog({ title, message, errorMessage, actions, children }: DialogProps) {
   const titleId = useId();
   const messageId = useId();
 
@@ -28,6 +29,7 @@ export function Dialog({ title, message, errorMessage, actions }: DialogProps) {
         <p id={messageId} className={styles.message}>
           {message}
         </p>
+        {children}
         {errorMessage && <FormError>{errorMessage}</FormError>}
         <div className={styles.actions}>{actions}</div>
       </div>

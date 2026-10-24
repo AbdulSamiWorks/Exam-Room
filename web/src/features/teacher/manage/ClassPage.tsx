@@ -10,7 +10,7 @@ import { TabLinks } from '../../../components/TabLinks';
 import { useConfirmation } from '../../../components/use-confirmation';
 import { classLimits } from './manage-limits';
 import { classSectionOf, MANAGE_PATH, manageClassPath } from './manage-paths';
-import { classDeletionBlocker, describeClassContents } from './manage-rules';
+import { describeClassContents, describeClassDeletion, isEmptyClass } from './manage-rules';
 import { NameForm } from './NameForm';
 import { PointsSection } from './PointsSection';
 import { StudentsSection } from './StudentsSection';
@@ -68,20 +68,17 @@ function ClassView({ schoolClass, classes }: ClassViewProps) {
   const deleteClass = useDeleteClass(schoolClass.id, () =>
     navigate(MANAGE_PATH, { replace: true }),
   );
-  const { askToConfirm, showNotice, confirmationDialog } = useConfirmation();
+  const { askToConfirm, confirmationDialog } = useConfirmation();
 
   function confirmDelete() {
-    const blocker = classDeletionBlocker(schoolClass);
-    if (blocker) {
-      showNotice({ title: `${schoolClass.name} cannot be deleted yet`, message: blocker });
-      return;
-    }
+    const isEmpty = isEmptyClass(schoolClass);
     askToConfirm({
       title: `Delete ${schoolClass.name}?`,
-      message: 'The class is empty, so nothing else is deleted. This cannot be undone.',
-      confirmLabel: 'Delete class',
+      message: describeClassDeletion(schoolClass),
+      confirmLabel: isEmpty ? 'Delete class' : 'Delete everything',
       busyLabel: 'Deleting…',
-      onConfirm: () => deleteClass.mutateAsync(),
+      typedConfirmation: isEmpty ? undefined : schoolClass.name,
+      onConfirm: () => deleteClass.mutateAsync(!isEmpty),
     });
   }
 

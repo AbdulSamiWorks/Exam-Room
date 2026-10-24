@@ -14,6 +14,7 @@ import { buildClassTree } from './class-tree.js';
 import {
   countClassContents,
   deleteClass,
+  deleteClassWithContents,
   findClassById,
   insertClass,
   readClassTreeRows,
@@ -25,6 +26,13 @@ const classNameSchema = z.object({
 });
 
 const classIdParamsSchema = idParams('classId');
+
+const classDeletionQuerySchema = z.object({
+  withContents: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+});
 
 const classExists = () => conflict('A class with this name already exists.', 'class_exists');
 
@@ -64,6 +72,12 @@ export function createClassesRouter(dependencies: AppDependencies): Router {
 
   router.delete('/:classId', async (request, response) => {
     const schoolClass = await requireClass(database, request);
+    const { withContents } = parseInput(classDeletionQuerySchema, request.query);
+    if (withContents) {
+      await deleteClassWithContents(database, schoolClass.id);
+      response.status(204).end();
+      return;
+    }
     const blocker = classDeletionBlocker(
       schoolClass.name,
       await countClassContents(database, schoolClass.id),

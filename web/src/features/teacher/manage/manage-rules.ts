@@ -16,13 +16,31 @@ export type StudentFormValues = {
   classId: number;
 };
 
-export function classDeletionBlocker(schoolClass: ClassSummary): string | undefined {
-  const contents = [
-    schoolClass.studentCount > 0 ? countOf(schoolClass.studentCount, 'student') : undefined,
-    schoolClass.subjects.length > 0 ? countOf(schoolClass.subjects.length, 'subject') : undefined,
-  ].filter((part) => part !== undefined);
-  if (contents.length === 0) return undefined;
-  return `${schoolClass.name} still has ${joinWithAnd(contents)}. Move or delete them first.`;
+export function isEmptyClass(schoolClass: ClassSummary): boolean {
+  return schoolClass.studentCount === 0 && schoolClass.subjects.length === 0;
+}
+
+export function describeClassDeletion(schoolClass: ClassSummary): string {
+  if (isEmptyClass(schoolClass)) {
+    return 'The class is empty, so nothing else is deleted. This cannot be undone.';
+  }
+  const subjects = schoolClass.subjects;
+  const testCount = subjects.reduce((total, subject) => total + subject.testCount, 0);
+  const chapterCount = subjects.reduce((total, subject) => total + subject.chapters.length, 0);
+  const subjectDetails = [
+    chapterCount > 0 && countOf(chapterCount, 'chapter'),
+    testCount > 0 && `${countOf(testCount, 'test')} with all their results and photos`,
+  ].filter((part): part is string => Boolean(part));
+  const subjectsPart =
+    subjectDetails.length > 0
+      ? `${countOf(subjects.length, 'subject')} (${joinWithAnd(subjectDetails)})`
+      : countOf(subjects.length, 'subject');
+  const parts = [
+    subjects.length > 0 && subjectsPart,
+    schoolClass.studentCount > 0 &&
+      `${countOf(schoolClass.studentCount, 'student')} with their PINs and points`,
+  ].filter((part): part is string => Boolean(part));
+  return `This also deletes ${joinWithAnd(parts)}. Results the students have in other classes stay. This cannot be undone.`;
 }
 
 export function subjectDeletionBlocker(subject: ClassSubjectSummary): string | undefined {

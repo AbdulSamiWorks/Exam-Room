@@ -3,6 +3,8 @@ import type { Row } from '@libsql/client';
 import type { Database } from '../../database/connection.js';
 import { requireFirstRow } from '../../database/query-helpers.js';
 import { compareNaturally } from '../../lib/text.js';
+import { studentDeletionStatements } from '../students/students-repository.js';
+import { testDeletionStatements } from '../tests/tests-repository.js';
 import type { ClassTreeRows } from './class-tree.js';
 
 export type ClassContents = {
@@ -103,6 +105,28 @@ export async function countClassContents(
 
 export async function deleteClass(database: Database, classId: number): Promise<void> {
   await database.execute({ sql: 'DELETE FROM classes WHERE id = ?', args: [classId] });
+}
+
+const CLASS_TEST_IDS = `SELECT tests.id FROM tests
+                        JOIN subjects ON subjects.id = tests.subject_id
+                        WHERE subjects.class_id = ?`;
+const CLASS_STUDENT_IDS = 'SELECT id FROM students WHERE class_id = ?';
+const CLASS_SUBJECT_IDS = 'SELECT id FROM subjects WHERE class_id = ?';
+
+export async function deleteClassWithContents(database: Database, classId: number): Promise<void> {
+  await database.batch(
+    [
+      ...testDeletionStatements(CLASS_TEST_IDS, [classId]),
+      ...studentDeletionStatements(CLASS_STUDENT_IDS, [classId]),
+      {
+        sql: `DELETE FROM chapters WHERE subject_id IN (${CLASS_SUBJECT_IDS})`,
+        args: [classId],
+      },
+      { sql: 'DELETE FROM subjects WHERE class_id = ?', args: [classId] },
+      { sql: 'DELETE FROM classes WHERE id = ?', args: [classId] },
+    ],
+    'write',
+  );
 }
 
 function toSchoolClass(row: Row): SchoolClass {
