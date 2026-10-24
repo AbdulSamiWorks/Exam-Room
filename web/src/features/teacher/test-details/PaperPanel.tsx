@@ -50,7 +50,7 @@ export function PaperPanel({ test }: { test: TestSummary }) {
     <Panel title="Answer sheet">
       <p className={styles.note}>
         {questionSummary ??
-          'No answer sheet yet. Add one so students tap their MCQ answers and the app marks them.'}
+          'No answer sheet yet. Add one to mark this test: students tap their MCQ answers and the app marks them, and you give marks for the short and long questions next to their answer photos.'}
       </p>
       <div className={styles.actions}>
         <ButtonLink to={paperPath} variant="secondary">

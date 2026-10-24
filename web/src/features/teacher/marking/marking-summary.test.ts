@@ -30,6 +30,9 @@ describe('marking summary', () => {
     expect(describeMarkingProgress(marking(0, 0))).toBe('Marked automatically');
     expect(describeMarkingProgress(marking(1, 2))).toBe('1 of 2 written answers marked');
     expect(describeMarkingProgress(marking(2, 2))).toBe('Marked');
+    expect(describeMarkingProgress({ ...marking(0, 2), photoCount: 3 })).toBe(
+      '0 of 2 written answers marked · 3 photos',
+    );
     expect(unmarkedStudentCount([marking(1, 2), marking(2, 2)])).toBe(1);
   });
 });
