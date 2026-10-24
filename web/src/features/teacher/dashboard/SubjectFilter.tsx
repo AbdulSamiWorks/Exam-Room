@@ -1,6 +1,6 @@
 import type { TestKind } from '@exam-room/shared';
 import { Chip } from '../../../components/Chip';
-import type { SubjectOption } from './group-tests-by-subject';
+import type { SubjectOption } from '../manage/subject-options';
 import styles from './SubjectFilter.module.css';
 
 type SubjectFilterProps = {
@@ -33,6 +33,7 @@ const KIND_CHOICES: Array<{ kind: TestKind | undefined; label: string }> = [
   { kind: undefined, label: 'All types' },
   { kind: 'test', label: 'Tests' },
   { kind: 'quiz', label: 'Quizzes' },
+  { kind: 'assignment', label: 'Assignments' },
 ];
 
 type KindFilterProps = {

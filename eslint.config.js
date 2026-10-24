@@ -17,7 +17,7 @@ export default defineConfig(
     },
   },
   {
-    files: ['server/**/*.ts', 'shared/**/*.ts', '*.js', 'web/vite.config.ts'],
+    files: ['server/**/*.{ts,mjs}', 'shared/**/*.ts', '*.js', 'web/vite.config.ts'],
     languageOptions: { globals: globals.node },
   },
   {

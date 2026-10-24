@@ -41,6 +41,16 @@ export function useEndAttempt(testId: number) {
   });
 }
 
+export function useStartEveryone(testId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => postJson<AttemptResultListResponse>(`/tests/${testId}/attempts/start`),
+    onSuccess: (results) => {
+      queryClient.setQueryData(resultsQueryKey(testId), results);
+    },
+  });
+}
+
 export function useEndExamForEveryone(testId: number) {
   const queryClient = useQueryClient();
   return useMutation({

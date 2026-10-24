@@ -1,22 +1,28 @@
 import { queryOptions, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { ApiError } from '../../../api/http-client';
-import { fetchPageImage } from '../student-api';
+import { fetchPageImage, fetchPaperPicture } from '../student-api';
 import { studentQueryKeys } from '../use-attempt';
 
 const PAPER_CLOSED_STATUS = 410;
 
-function pageImageQuery(
+export type ExamImage = {
+  kind: 'page' | 'picture';
+  number: number;
+};
+
+function examImageQuery(
   queryClient: QueryClient,
   testCode: string,
   attemptToken: string,
-  pageNumber: number,
+  { kind, number }: ExamImage,
 ) {
+  const fetchImage = kind === 'page' ? fetchPageImage : fetchPaperPicture;
   return queryOptions({
-    queryKey: studentQueryKeys.pageImage(testCode, pageNumber),
+    queryKey: [...studentQueryKeys.pageImages(testCode), kind, number],
     queryFn: async () => {
       try {
-        return URL.createObjectURL(await fetchPageImage(attemptToken, pageNumber));
+        return URL.createObjectURL(await fetchImage(attemptToken, number));
       } catch (error) {
         if (isPaperClosedError(error)) {
           void queryClient.invalidateQueries({ queryKey: studentQueryKeys.attempt(testCode) });
@@ -33,26 +39,27 @@ function isPaperClosedError(error: unknown): boolean {
   return error instanceof ApiError && error.status === PAPER_CLOSED_STATUS;
 }
 
-export function usePageImage(testCode: string, attemptToken: string, pageNumber: number) {
+export function useExamImage(testCode: string, attemptToken: string, image: ExamImage) {
   const queryClient = useQueryClient();
-  return useQuery(pageImageQuery(queryClient, testCode, attemptToken, pageNumber));
+  return useQuery(examImageQuery(queryClient, testCode, attemptToken, image));
 }
 
-export function usePrefetchAllPageImages(
+export function usePrefetchExamImages(
   testCode: string,
   attemptToken: string,
-  pageCount: number,
+  kind: ExamImage['kind'],
+  imageCount: number,
 ) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
     let isStopped = false;
 
-    async function prefetchPagesInOrder(): Promise<void> {
-      for (let pageNumber = 1; pageNumber <= pageCount && !isStopped; pageNumber++) {
+    async function prefetchImagesInOrder(): Promise<void> {
+      for (let number = 1; number <= imageCount && !isStopped; number++) {
         try {
           await queryClient.fetchQuery(
-            pageImageQuery(queryClient, testCode, attemptToken, pageNumber),
+            examImageQuery(queryClient, testCode, attemptToken, { kind, number }),
           );
         } catch (error) {
           if (isPaperClosedError(error)) return;
@@ -60,17 +67,18 @@ export function usePrefetchAllPageImages(
       }
     }
 
-    void prefetchPagesInOrder();
+    void prefetchImagesInOrder();
     return () => {
       isStopped = true;
     };
-  }, [queryClient, testCode, attemptToken, pageCount]);
+  }, [queryClient, testCode, attemptToken, kind, imageCount]);
 }
 
-export function forgetPageImages(queryClient: QueryClient, testCode: string): void {
+export function forgetPaper(queryClient: QueryClient, testCode: string): void {
   const queryKey = studentQueryKeys.pageImages(testCode);
   for (const [, objectUrl] of queryClient.getQueriesData<string>({ queryKey })) {
     if (objectUrl) URL.revokeObjectURL(objectUrl);
   }
   queryClient.removeQueries({ queryKey });
+  queryClient.removeQueries({ queryKey: studentQueryKeys.paper(testCode) });
 }

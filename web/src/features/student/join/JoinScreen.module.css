@@ -22,3 +22,28 @@
   margin: 0;
   color: var(--color-muted);
 }
+
+.lockSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.lockSteps summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lockPlatform {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.lockTitle {
+  font-size: 1rem;
+}

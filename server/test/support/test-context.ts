@@ -8,6 +8,7 @@ import type { Clock } from '../../src/lib/clock.js';
 export const IN_MEMORY_DATABASE_URL = ':memory:';
 export const TEST_TEACHER_PASSWORD = 'correct-horse-battery';
 export const TEST_START_TIME = Date.UTC(2026, 0, 12, 9, 0, 0);
+export const TEST_PUBLIC_ORIGIN = 'http://localhost:5173';
 
 export type FakeClock = Clock & {
   advanceBy: (milliseconds: number) => void;
@@ -40,6 +41,7 @@ export async function createTestContext(options: AppOptions = {}): Promise<TestC
     port: 0,
     teacherPassword: TEST_TEACHER_PASSWORD,
     sessionSecret: 'test-session-secret-that-is-long-enough',
+    publicOrigin: TEST_PUBLIC_ORIGIN,
     database: { url: IN_MEMORY_DATABASE_URL, authToken: undefined },
   };
 

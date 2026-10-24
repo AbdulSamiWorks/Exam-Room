@@ -1,22 +1,23 @@
 import type { PublicTest } from '@exam-room/shared';
-import { useState, type FormEvent } from 'react';
-import { Button } from '../../../components/Button';
+import { useState } from 'react';
+import { Button, ButtonLink } from '../../../components/Button';
 import { FormError } from '../../../components/FormError';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { Page } from '../../../components/Page';
 import { Panel } from '../../../components/Panel';
-import { TextField } from '../../../components/TextField';
 import { ThemeToggle } from '../../../components/ThemeToggle';
 import { describeDateTime } from '../../../lib/describe-date-time';
-import { describeDuration, describePageCount } from '../../../lib/describe-test-length';
+import { describeDuration, describePaperSize } from '../../../lib/describe-test-length';
 import { enterFullscreen } from '../fullscreen';
 import { ErrorScreen } from '../screens/ErrorScreen';
 import { TestNotOpenScreen } from '../screens/TestNotOpenScreen';
 import { usePublicTest, useStartAttempt } from '../use-attempt';
-import { studentLimits } from '../../../lib/student-limits';
+import { studentLoginPath, studentTestPath } from '../../student-account/student-paths';
+import { useStudentSession } from '../../student-account/use-student-account';
+import { describeBounty } from '../../../lib/describe-bounty';
+import { describeHowToAnswer } from '../answers/answer-rules';
+import { PhoneLockSteps } from './PhoneLockSteps';
 import styles from './JoinScreen.module.css';
-
-type JoinErrors = Partial<Record<'studentName' | 'rollNumber', string>>;
 
 type JoinScreenProps = {
   testCode: string;
@@ -53,76 +54,74 @@ type JoinFormProps = JoinScreenProps & {
 };
 
 function JoinForm({ test, testCode, onStarted, isResuming }: JoinFormProps) {
+  const session = useStudentSession();
   const startAttempt = useStartAttempt(testCode);
-  const [studentName, setStudentName] = useState('');
-  const [rollNumber, setRollNumber] = useState('');
-  const [errors, setErrors] = useState<JoinErrors>({});
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const validationErrors: JoinErrors = {
-      studentName: studentName.trim() ? undefined : 'Enter your name.',
-      rollNumber: rollNumber.trim() ? undefined : 'Enter your roll number.',
-    };
-    setErrors(validationErrors);
-    if (validationErrors.studentName || validationErrors.rollNumber) return;
-
+  function start() {
     enterFullscreen();
-    startAttempt.mutate(
-      { studentName: studentName.trim(), rollNumber: rollNumber.trim() },
-      { onSuccess: ({ attemptToken }) => onStarted(attemptToken) },
-    );
+    startAttempt.mutate(undefined, { onSuccess: ({ attemptToken }) => onStarted(attemptToken) });
   }
+
+  if (session.isPending) return <LoadingScreen />;
+  const student = session.data;
 
   return (
     <Page title={test.title} subtitle={test.subjectName} actions={<ThemeToggle />}>
       <div className={styles.sections}>
         <Panel title="Before you start">
           <ul className={styles.rules}>
-            <li>
-              Time limit: <strong>{describeDuration(test.durationMinutes)}</strong> (
-              {describePageCount(test.pageCount)}). The timer starts when you tap Start test and
-              never stops.
-            </li>
-            {test.closesAt !== null && !isResuming && (
+            {test.kind === 'assignment' ? (
+              <li>
+                No time limit ({describePaperSize(test)}). You can leave and come back.
+                {test.closesAt !== null && (
+                  <>
+                    {' '}
+                    Hand it in before <strong>{describeDateTime(test.closesAt)}</strong>.
+                  </>
+                )}
+              </li>
+            ) : (
+              <li>
+                Time limit: <strong>{describeDuration(test.durationMinutes)}</strong> (
+                {describePaperSize(test)}).{' '}
+                {test.waitingRoom
+                  ? 'After you tap Start test you wait until your teacher starts everyone together. Then the timer starts and never stops.'
+                  : 'The timer starts when you tap Start test and never stops.'}
+              </li>
+            )}
+            {test.closesAt !== null && !isResuming && test.kind !== 'assignment' && (
               <li>
                 You can start until <strong>{describeDateTime(test.closesAt)}</strong>.
               </li>
             )}
-            <li>{describeExitRule(test)}</li>
-            <li>Answer on your own paper. When you are done, tap Finish.</li>
+            {test.kind !== 'assignment' && <li>{describeExitRule(test)}</li>}
+            {describeBounty(test.bountyNote, test.bountyPoints) && (
+              <li>{describeBounty(test.bountyNote, test.bountyPoints)}</li>
+            )}
+            <li>{describeHowToAnswer(test)}</li>
           </ul>
         </Panel>
 
-        <form className={styles.form} onSubmit={handleSubmit} noValidate>
-          {isResuming && (
+        {test.kind !== 'assignment' && <PhoneLockSteps />}
+
+        {student ? (
+          <div className={styles.form}>
             <p className={styles.note}>
-              Enter the same name and roll number you used when you started.
+              {student.name} · {student.schoolClass.name} · Roll number {student.rollNumber}
             </p>
-          )}
-          <TextField
-            label="Your name"
-            autoComplete="name"
-            value={studentName}
-            maxLength={studentLimits.maxNameLength}
-            onChange={(event) => setStudentName(event.target.value)}
-            errorMessage={errors.studentName}
-          />
-          <TextField
-            label="Roll number"
-            autoComplete="off"
-            value={rollNumber}
-            maxLength={studentLimits.maxRollNumberLength}
-            onChange={(event) => setRollNumber(event.target.value)}
-            errorMessage={errors.rollNumber}
-          />
-
-          {startAttempt.error && <FormError>{startAttempt.error.message}</FormError>}
-
-          <Button type="submit" size="large" fullWidth disabled={startAttempt.isPending}>
-            {describeStartButton(startAttempt.isPending, isResuming)}
-          </Button>
-        </form>
+            {startAttempt.error && <FormError>{startAttempt.error.message}</FormError>}
+            <Button size="large" fullWidth disabled={startAttempt.isPending} onClick={start}>
+              {describeStartButton(startAttempt.isPending, isResuming)}
+            </Button>
+          </div>
+        ) : (
+          <div className={styles.form}>
+            <p className={styles.note}>Log in with your roll number and PIN to start this test.</p>
+            <ButtonLink to={studentLoginPath(studentTestPath(testCode))} size="large" fullWidth>
+              Log in to start
+            </ButtonLink>
+          </div>
+        )}
       </div>
     </Page>
   );

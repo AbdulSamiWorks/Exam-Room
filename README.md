@@ -8,16 +8,21 @@ Architecture, decisions and roadmap: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md
 
 ## How it works
 
-1. **Teacher** logs in, taps **New test**, picks the PDF, subject, title, time limit and allowed
-   exits (0, 1 or 2). The PDF is turned into page images in the teacher's browser.
-2. The test page shows a link and a code. Send the link with **Copy link** or **Send on WhatsApp**.
-3. **Student** opens the link, enters name and roll number and taps **Start test**. The timer
-   starts and never stops. Every page shows the student's name and roll number.
-4. If the student leaves the page or switches apps, a red warning appears. After the allowed
+1. **Teacher** logs in and opens **Manage** once to add classes, their subjects and chapters, and
+   the students (one by one or a pasted list). Every student gets a 6-digit PIN, shown once.
+2. The teacher taps **New test**, picks the PDF, class, subject, chapters, title, time limit and
+   allowed exits (0, 1 or 2). The PDF is turned into page images in the teacher's browser.
+3. The test page shows a link and a code. Send the link with **Copy link** or **Send on WhatsApp**.
+4. **Student** logs in once with class, roll number and PIN (the phone stays logged in for 60
+   days), opens the test from the student home or the link and taps **Start test**. The timer
+   starts and never stops. If the teacher chose **Students start: Together**, the students wait
+   until the teacher taps **Start for everyone** in the results, and then all start at the same
+   moment.
+5. If the student leaves the page or switches apps, a red warning appears. After the allowed
    exits the test locks. The teacher can tap **Unlock** in the results.
-5. The student taps **Finish**, or the test is submitted when the time is up. After that the paper
+6. The student taps **Finish**, or the test is submitted when the time is up. After that the paper
    cannot be opened again.
-6. The teacher's results list updates every 5 seconds.
+7. The teacher's results list updates every 5 seconds.
 
 ## Requirements
 
@@ -81,6 +86,9 @@ The server creates all tables itself on the first start.
    - `DATABASE_URL`: the Turso URL from step 1
    - `DATABASE_AUTH_TOKEN`: the Turso token from step 1
    - `SESSION_SECRET` is created by Render automatically.
+   - The fingerprint login uses the `onrender.com` address that Render gives automatically. Only
+     if you later use your own domain, set `PUBLIC_ORIGIN` to it (students then set up the
+     fingerprint again).
 4. Click **Apply**. The first build takes a few minutes.
 5. Open the `https://exam-room-....onrender.com` address and log in as the teacher.
 
@@ -92,6 +100,12 @@ Every push to `main` deploys again automatically.
   one minute. **Open the site 2–3 minutes before the exam starts.** During the exam the students
   keep it awake.
 - Restarts never lose data: everything lives in the Turso database.
+- Answers are never lost: each answer is saved on the student's phone first and sent again and
+  again until the server confirms it, also after the app was closed. Answers made before the end
+  of the test still count when they arrive up to 10 minutes later.
+- Optional: to keep the site awake during school hours, add a free uptime monitor (for example
+  UptimeRobot) that opens `https://<your-site>.onrender.com/api/health` every 10 minutes. One
+  service awake all month uses about 744 of Render's 750 free hours.
 
 ### Test on real phones before the first real exam
 

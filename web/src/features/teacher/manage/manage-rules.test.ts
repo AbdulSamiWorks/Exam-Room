@@ -5,8 +5,8 @@ import {
   classDeletionBlocker,
   describeChapterDeletion,
   describeSubjectDeletion,
-  otherSubjectChoices,
   pinListText,
+  studentChanges,
   subjectDeletionBlocker,
 } from './manage-rules';
 
@@ -64,19 +64,6 @@ describe('chapterIdsAfterMove', () => {
   });
 });
 
-describe('otherSubjectChoices', () => {
-  it('lists every other subject, with the class name when there are several classes', () => {
-    const classNine = schoolClass({ subjects: [subject(), subject({ id: 12, name: 'Math' })] });
-    expect(otherSubjectChoices([classNine], 11)).toEqual([{ subjectId: 12, label: 'Math' }]);
-
-    const classTen = schoolClass({ id: 2, name: 'Class 10', subjects: [subject({ id: 21 })] });
-    expect(otherSubjectChoices([classNine, classTen], 11)).toEqual([
-      { subjectId: 12, label: 'Math · Class 9' },
-      { subjectId: 21, label: 'Physics · Class 10' },
-    ]);
-  });
-});
-
 describe('pinListText', () => {
   it('lists every student with the new PIN under the class name', () => {
     expect(
@@ -85,5 +72,18 @@ describe('pinListText', () => {
         { student: { id: 2, classId: 1, rollNumber: '2', name: 'Bilal' }, pin: '987654' },
       ]),
     ).toBe('Class 9 – login PINs\nRoll 1 · Ayesha · PIN 012345\nRoll 2 · Bilal · PIN 987654');
+  });
+});
+
+describe('studentChanges', () => {
+  const student = { id: 5, classId: 1, rollNumber: '7', name: 'Ayesha' };
+
+  it('sends only the fields that changed', () => {
+    expect(studentChanges(student, { rollNumber: ' 7 ', name: 'Ayesha', classId: 1 })).toEqual({});
+    expect(studentChanges(student, { rollNumber: '8', name: 'Ayesha Khan ', classId: 2 })).toEqual({
+      rollNumber: '8',
+      name: 'Ayesha Khan',
+      classId: 2,
+    });
   });
 });

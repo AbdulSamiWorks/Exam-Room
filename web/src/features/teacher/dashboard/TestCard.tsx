@@ -1,6 +1,6 @@
 import type { TestSummary } from '@exam-room/shared';
 import { Link } from 'react-router';
-import { describeDuration, describePageCount } from '../../../lib/describe-test-length';
+import { describeDuration, describePaperSize } from '../../../lib/describe-test-length';
 import { AvailabilityBadge } from '../tests/AvailabilityBadge';
 import {
   describeAllowedExits,
@@ -12,12 +12,15 @@ import {
 import styles from './TestCard.module.css';
 
 export function TestCard({ test }: { test: TestSummary }) {
+  const isAssignment = test.kind === 'assignment';
   const testDetails = [
     describeTestKind(test.kind),
-    describePageCount(test.pageCount),
-    describeDuration(test.durationMinutes),
-    describeAllowedExits(test.allowedExits),
-  ].join(' · ');
+    describePaperSize(test),
+    isAssignment ? 'No timer' : describeDuration(test.durationMinutes),
+    isAssignment ? undefined : describeAllowedExits(test.allowedExits),
+  ]
+    .filter(Boolean)
+    .join(' · ');
   const chapters = describeChapters(test.chapters);
   const activity = [
     describeStudentCount(test.studentCount),

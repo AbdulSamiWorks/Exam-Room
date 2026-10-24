@@ -13,6 +13,7 @@ import {
   describeResultStatus,
   sortByRollNumber,
 } from './describe-result';
+import { describeTotalMarks } from './results-csv';
 import { useTestResults } from './use-results';
 import styles from './PrintResultsPage.module.css';
 
@@ -49,6 +50,7 @@ type PrintableResultsProps = {
 };
 
 function PrintableResults({ test, results, printedAt }: PrintableResultsProps) {
+  const hasMarks = test.maxMarks !== null && test.maxMarks > 0;
   const details = [
     test.schoolClass.name,
     test.subject.name,
@@ -80,6 +82,7 @@ function PrintableResults({ test, results, printedAt }: PrintableResultsProps) {
               <th>Finished</th>
               <th>Exits</th>
               <th>Away</th>
+              {hasMarks && <th>Marks /{test.maxMarks}</th>}
             </tr>
           </thead>
           <tbody>
@@ -93,6 +96,7 @@ function PrintableResults({ test, results, printedAt }: PrintableResultsProps) {
                 <td>{describeClockTime(result.finishedAt)}</td>
                 <td>{describeExits(result)}</td>
                 <td>{describeAwayTime(result.awayMs)}</td>
+                {hasMarks && <td>{describeTotalMarks(result)}</td>}
               </tr>
             ))}
           </tbody>

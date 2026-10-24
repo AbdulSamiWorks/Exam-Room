@@ -6,6 +6,8 @@ import { finishByStudent } from '../src/modules/attempts/attempt-rules.js';
 import { changeAttempt } from '../src/modules/attempts/attempt-service.js';
 import { findAttemptByTokenHash } from '../src/modules/attempts/attempts-repository.js';
 import {
+  classIdOfTest,
+  logInAsStudent,
   publishTest,
   startAttempt,
   startAttemptToken,
@@ -51,12 +53,20 @@ describe('student attempts', () => {
       expect(response.body).toEqual({
         test: {
           code: test.code,
+          kind: 'test',
           title: 'Chapter 3 Quiz',
           subjectName: test.subject.name,
           durationMinutes: 45,
           allowedExits: 2,
           leaveRule: 'lock',
+          paperKind: 'pages',
           pageCount: 2,
+          questionCount: 0,
+          maxMarks: null,
+          writtenAnswers: 'on_paper',
+          bountyNote: '',
+          bountyPoints: 0,
+          waitingRoom: false,
           opensAt: TEST_START_TIME,
           closesAt: null,
           availability: 'open',
@@ -93,10 +103,7 @@ describe('student attempts', () => {
     });
 
     it('starts an attempt and returns a secret token with the exam state', async () => {
-      const response = await startAttempt(context.app, test.code, {
-        studentName: '  Ayesha   Khan ',
-        rollNumber: ' 17 ',
-      });
+      const response = await startAttempt(context.app, test.code);
 
       expect(response.status).toBe(201);
       expect(response.body.attemptToken).toEqual(expect.stringMatching(/^[\w-]{43}$/));
@@ -107,12 +114,20 @@ describe('student attempts', () => {
         rollNumber: '17',
         test: {
           code: test.code,
+          kind: 'test',
           title: test.title,
           subjectName: test.subject.name,
           durationMinutes: 30,
           allowedExits: 1,
           leaveRule: 'lock',
+          paperKind: 'pages',
           pageCount: 2,
+          questionCount: 0,
+          maxMarks: null,
+          writtenAnswers: 'on_paper',
+          bountyNote: '',
+          bountyPoints: 0,
+          waitingRoom: false,
           opensAt: TEST_START_TIME,
           closesAt: null,
           availability: 'open',
@@ -141,20 +156,33 @@ describe('student attempts', () => {
       expect(response.body.test.studentCount).toBe(1);
     });
 
-    it.each([
-      [{ studentName: '   ', rollNumber: '17' }],
-      [{ studentName: 'Ayesha', rollNumber: '' }],
-      [{ studentName: 'A'.repeat(61), rollNumber: '17' }],
-      [{ studentName: 'Ayesha', rollNumber: '1'.repeat(31) }],
-    ])('rejects invalid student details %j', async (student) => {
-      const response = await startAttempt(context.app, test.code, student);
-      expect(response.status).toBe(400);
-      expect(response.body.error.code).toBe('invalid_input');
+    it('needs a student login', async () => {
+      const response = await request(context.app).post(`/api/public/tests/${test.code}/attempts`);
+      expect(response.status).toBe(401);
+      expect(response.body.error.code).toBe('student_login_needed');
+    });
+
+    it('refuses a student of another class', async () => {
+      const otherTest = await publishTwoPageTest();
+      const student = await logInAsStudent(context.app, classIdOfTest(context.app, otherTest.code));
+
+      const response = await student.post(`/api/public/tests/${test.code}/attempts`);
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe('other_class');
     });
 
     it('returns 404 when the test does not exist', async () => {
-      const response = await startAttempt(context.app, 'ZZZZZZ');
+      const student = await logInAsStudent(context.app, classIdOfTest(context.app, test.code));
+      const response = await student.post('/api/public/tests/ZZZZZZ/attempts');
       expect(response.status).toBe(404);
+    });
+
+    it('links the attempt to the student account', async () => {
+      await startAttemptToken(context.app, test.code);
+      const { rows } = await context.database.execute(
+        'SELECT attempts.student_id, students.name FROM attempts JOIN students ON students.id = attempts.student_id',
+      );
+      expect(rows.map((row) => row.name)).toEqual([STUDENT.studentName]);
     });
   });
 
@@ -192,10 +220,7 @@ describe('student attempts', () => {
       const firstToken = await startAttemptToken(context.app, test.code);
       context.clock.advanceBy(60_000);
 
-      const resumed = await startAttempt(context.app, test.code, {
-        studentName: 'ayesha khan',
-        rollNumber: '17 ',
-      });
+      const resumed = await startAttempt(context.app, test.code);
       expect(resumed.status).toBe(201);
       expect(resumed.body.attemptToken).not.toBe(firstToken);
       expect(resumed.body.attempt).toMatchObject({
@@ -226,22 +251,6 @@ describe('student attempts', () => {
         '/api/attempt/pages/1',
       );
       expect(page.status).toBe(410);
-    });
-
-    it('refuses the roll number when the name does not match', async () => {
-      const test = await publishTwoPageTest();
-      const firstToken = await startAttemptToken(context.app, test.code);
-
-      const response = await startAttempt(context.app, test.code, {
-        studentName: 'Someone Else',
-        rollNumber: STUDENT.rollNumber,
-      });
-      expect(response.status).toBe(409);
-      expect(response.body.error.code).toBe('roll_number_taken');
-
-      const original = await studentRequests(context.app, firstToken).get('/api/attempt');
-      expect(original.body.attempt).toMatchObject({ status: 'in_progress', exitsUsed: 0 });
-      expect(await readExits()).toEqual([]);
     });
 
     it('shows a finished attempt again without counting an exit', async () => {

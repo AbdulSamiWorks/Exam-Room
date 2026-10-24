@@ -1,8 +1,7 @@
 # Exam Room — Architecture
 
-> Status: **approved plan, v1** (2026-10-22). Milestones M0–M9 are built (2026-10-24); the
-> real-device checks in §15 are still to do. M10–M19 are planned in §16 (2026-10-24). Update this
-> file whenever a decision below changes.
+> Status: **approved plan, v1** (2026-10-22). Milestones M0–M19 are all built (2026-10-25); the
+> real-device checks in §15 are still to do. Update this file whenever a decision below changes.
 
 Exam Room is a small mobile-first web app. A teacher uploads a test paper (PDF), shares a link, and
 students read the paper on their phones inside the website — with a timer and exit detection. Expected scale: **one teacher, 5–10 students per test.**
@@ -119,21 +118,65 @@ All timestamps are **UTC epoch milliseconds (INTEGER)** — no timezone bugs. Fo
 happens only in the browser.
 
 ```sql
-subjects   (id PK, name UNIQUE COLLATE NOCASE, created_at)
+classes    (id PK, name UNIQUE COLLATE NOCASE, created_at)
+
+subjects   (id PK, class_id → classes, name, created_at,
+            UNIQUE (class_id, name COLLATE NOCASE))      -- a subject belongs to one class (D36)
+
+chapters   (id PK, subject_id → subjects, name, position, created_at,
+            UNIQUE (subject_id, name COLLATE NOCASE))    -- position orders the chapters
+
+students   (id PK, class_id → classes, name, roll_no, roll_no_key,   -- key = trimmed + lowercased
+            pin_hash,                       -- scrypt hash of the 6-digit PIN (D26)
+            session_version DEFAULT 0,      -- Reset PIN increases it (D39)
+            created_at, UNIQUE (class_id, roll_no_key))
 
 tests      (id PK, code UNIQUE,            -- 6-char share code, e.g. K7M2QX (no 0/O/1/I)
-            subject_id → subjects, title, duration_minutes,
-            allowed_exits CHECK (0..2), page_count, created_at,
-            opens_at NULL, closes_at NULL)   -- NULL opens_at = not open yet (see 6.8)
+            subject_id → subjects, kind CHECK IN ('test','quiz','assignment'), title,
+            duration_minutes, allowed_exits CHECK (0..2), leave_rule,
+            paper_kind CHECK IN ('pages','typed'), page_count >= 0,
+            paper JSON NULL,               -- typed paper, or the answer sheet of a PDF test (D44)
+            answer_key JSON DEFAULT '{}',  -- never sent to students before release
+            question_count, max_marks NULL, -- stored when the paper is saved, for cheap lists
+            written_answers CHECK IN ('on_paper','typed','photos','typed_and_photos'),
+            created_at, opens_at NULL, closes_at NULL)   -- NULL opens_at = not open yet (6.8)
+
+paper_images (test_id → tests, image_no, image BLOB (WebP, max 1000 px wide), width, height,
+            UNIQUE (test_id, image_no))
+
+answers    (attempt_id → attempts, question_id, choice NULL, text NULL,
+            sequence,                      -- grows with every change on the phone; newest wins (D45)
+            answered_at, received_at,      -- server-clock time on the phone, and arrival time
+            PRIMARY KEY (attempt_id, question_id)) WITHOUT ROWID
+
+question_marks (attempt_id → attempts, question_id, marks NULL, comment,
+            PRIMARY KEY (attempt_id, question_id)) WITHOUT ROWID   -- teacher marks overrule auto marks
+
+attempts   + mcq_marks, written_marks, total_marks (D48), teacher_comment
+tests      + results_released_at, show_correct_answers, show_comments, show_top_scorer (D49, D50),
+             bounty_note, bounty_points (D51); paper_kind may be 'none' for an offline
+             assignment (rebuilt in migration 12), waiting_room 0/1 (migration 13, D58)
+
+points     (id PK, student_id → students, test_id NULL → tests, points, reason, created_at)
+             -- test_id set: a bounty, replaced on every release; NULL: given by hand
+
+answer_photos (id PK, attempt_id → attempts, photo_no, client_photo_id, image BLOB (as sent),
+            media_type, width, height, created_at,
+            UNIQUE (attempt_id, photo_no), UNIQUE (attempt_id, client_photo_id))
+
+test_chapters (test_id → tests, chapter_id → chapters, PRIMARY KEY (test_id, chapter_id))
+
+student_passkeys (id PK, student_id → students, credential_id UNIQUE, public_key BLOB,
+            sign_count, transports, created_at, last_used_at)   -- fingerprint login (D42)
 
 test_pages (test_id → tests ON DELETE CASCADE, page_no,
             image BLOB, width, height,
             PRIMARY KEY (test_id, page_no))
 
-attempts   (id PK, test_id → tests, student_name, roll_no, roll_no_key,  -- key = trimmed + lowercased
+attempts   (id PK, test_id → tests, student_name, roll_no, roll_no_key,
             token_hash UNIQUE,              -- sha256 of the student's secret token
-            status CHECK IN ('in_progress','submitted','locked'),
-            finish_reason CHECK IN ('student','time_up') NULL,
+            status CHECK IN ('waiting','in_progress','submitted','locked'),
+            finish_reason CHECK IN ('student','time_up','teacher','left_test') NULL,
             started_at, deadline_at, finished_at NULL,
             exit_count DEFAULT 0, forgiven_exits DEFAULT 0,
             version DEFAULT 0,              -- optimistic locking for concurrent updates
@@ -166,18 +209,20 @@ Size check: a page is ~150–250 KB as WebP, so Turso's 5 GB free storage holds 
 
 ### 6.2 Starting / resuming (student)
 
-1. Student opens `/t/<code>`, sees title + subject + time limit, enters name and roll number.
-   If the test is not open, a waiting or closed screen shows instead (see 6.8).
+1. Student opens `/t/<code>` (or taps the test on the student home), sees title + subject + time
+   limit. A student who is not logged in is sent to `/login?next=/t/<code>` first (class, roll
+   number, PIN). If the test is not open, a waiting or closed screen shows instead (see 6.8).
 2. Tapping **Start Test** requests fullscreen _first_ (browsers only allow it inside a tap), then
-   calls the server.
-3. For a new roll number the server first checks that the test is open (6.8). It creates the
-   attempt: `deadline_at = now + duration`, generates a random secret token,
-   stores only its hash, returns the token. The phone keeps it in `localStorage` (per test code)
-   and sends it as `Authorization: Bearer <token>`.
-4. **Same roll number again:**
+   calls the server with the student session cookie.
+3. The server checks that the student belongs to the test's class (`403 other_class`). For a
+   student without an attempt it checks that the test is open (6.8) and creates the attempt with
+   `student_id`, a copy of the name and roll number, and `deadline_at = now + duration`. It
+   generates a random secret token, stores only its hash and returns the token. The phone keeps it
+   in `localStorage` (per test code) and sends it as `Authorization: Bearer <token>` (D41).
+4. **Same student again** (another phone, or the token was lost):
    - attempt submitted or locked → show the final screen (never the paper);
-   - attempt in progress and the name matches → resume on the new device, **count it as an exit**
-     (`device_change`) and rotate the token so the old device is logged out.
+   - attempt in progress → resume on the new device, **count it as an exit** (`device_change`)
+     and rotate the token so the old device is logged out.
 
 ### 6.3 Time limit
 
@@ -299,16 +344,39 @@ Teacher (session cookie required, except login):
 POST   /api/auth/login            { password }
 POST   /api/auth/logout
 GET    /api/auth/session
-GET    /api/subjects
-POST   /api/subjects              { name }
+GET    /api/classes                   → classes with subjects, chapters and counts (3 queries)
+POST   /api/classes                   { name }
+PATCH  /api/classes/:id               { name }
+DELETE /api/classes/:id               → only when it has no subjects and no students
+POST   /api/classes/:id/subjects      { name }
+GET    /api/classes/:id/students
+POST   /api/classes/:id/students      { students: [{ rollNumber, name }] } → each with a new PIN
+POST   /api/classes/:id/students/move { toClassId }
+PATCH  /api/subjects/:id              { name?, classId? }
+DELETE /api/subjects/:id              → only without tests; its chapters go with it
+POST   /api/subjects/:id/move-tests   { toSubjectId } (any class; chapter tags are removed)
+POST   /api/subjects/:id/chapters     { name }
+PUT    /api/subjects/:id/chapters/order { chapterIds }
+PATCH  /api/chapters/:id              { name }
+DELETE /api/chapters/:id              → removes only its tags from tests
+PATCH  /api/students/:id              { name?, rollNumber?, classId? }
+POST   /api/students/:id/reset-pin    → a new PIN, shown once; old phones are logged out
+DELETE /api/students/:id              → old results stay by name and roll number
 GET    /api/tests?subjectId=
-POST   /api/tests                 multipart: subjectId, title, durationMinutes, allowedExits,
-                                  leaveRule, pages[]
+POST   /api/tests                 multipart: subjectId, kind, chapterIds, title, durationMinutes,
+                                  allowedExits, leaveRule, writtenAnswers, paperKind, and
+                                  pages[] (PDF) or paper + answerKey + paperImages[] (typed)
 GET    /api/tests/:id
-PATCH  /api/tests/:id                 { subjectId?, title?, durationMinutes?, allowedExits?, leaveRule? }
+PATCH  /api/tests/:id                 { subjectId?, kind?, chapterIds?, title?, durationMinutes?,
+                                        allowedExits?, leaveRule? }
 PUT    /api/tests/:id/pages           multipart: pages[] (only before any student starts)
+GET    /api/tests/:id/paper           → { paper, answerKey, imageCount }
+PUT    /api/tests/:id/paper           multipart: paper, answerKey, paperImages[] (before any start)
+PUT    /api/tests/:id/answer-key      { answerKey } (any time)
+GET    /api/tests/:id/paper-images/:n
 GET    /api/tests/:id/attempts        → results with exit history
-POST   /api/tests/:id/attempts/end    → ends every running attempt and closes the test
+POST   /api/tests/:id/attempts/start  → starts every waiting student at the same moment (D58)
+POST   /api/tests/:id/attempts/end    → ends every running or waiting attempt and closes the test
 POST   /api/attempts/:id/unlock
 POST   /api/attempts/:id/end
 POST   /api/tests/:id/open
@@ -316,16 +384,56 @@ POST   /api/tests/:id/close
 PUT    /api/tests/:id/schedule        { opensAt, closesAt | null }
 DELETE /api/tests/:id                 → test, pages, attempts and exits
 DELETE /api/attempts/:id              → one attempt and its exits (frees the roll number)
+GET    /api/tests/:id/marking         → paper, key and every attempt's answers, marks and score
+PUT    /api/attempts/:id/marks        { questionMarks: { q3: { marks, comment } }, comment }
+PUT    /api/tests/:id/release         { showCorrectAnswers, showComments, showTopScorer }
+DELETE /api/tests/:id/release         → hides the results again (and takes the bounty back)
+GET    /api/tests/:id/offline-marks   → the class list with the entered marks
+PUT    /api/tests/:id/offline-marks   { marks: [{ studentId, marks | null }] }
+GET    /api/classes/:id/points        → every student's points
+GET    /api/students/:id/points       → one student's points history
+GET    /api/students/:id/progress     → every marked result of one student (released or not)
+POST   /api/students/:id/points       { points, reason }
+GET    /api/attempts/:id/photos       → the student's answer photos
+GET    /api/attempts/:id/photos/:n
 ```
 
-Student (public by test code, then `Authorization: Bearer <token>`):
+Student account (student session cookie, D39):
+
+```
+GET    /api/student-auth/classes           → class names for the login form (public)
+POST   /api/student-auth/login             { classId, rollNumber, pin } → profile + cookie
+GET    /api/student-auth/session           → profile or null
+POST   /api/student-auth/logout
+GET    /api/student/home                   → profile + tests of the class with the own attempt state
+                                              and the released marks
+GET    /api/student/results/:code          → the own released result (403 before release)
+GET    /api/student/progress               → released results with chapters, and the class subjects
+POST   /api/student-auth/passkeys/registration-options   (student cookie) → WebAuthn options
+POST   /api/student-auth/passkeys/registrations          (student cookie) the phone's answer
+POST   /api/student-auth/passkeys/login-options          → WebAuthn options (public)
+POST   /api/student-auth/passkeys/login                  the phone's answer → profile + cookie
+```
+
+The passkey request and response bodies are the standard WebAuthn JSON shapes from
+`@simplewebauthn` (browser and server), so they are not repeated in `shared/`.
+
+Student exam (public by test code, then `Authorization: Bearer <token>`):
 
 ```
 GET    /api/public/tests/:code             → title, subject, durationMinutes, pageCount, allowedExits,
                                               availability, opensAt, closesAt
-POST   /api/public/tests/:code/attempts    { name, rollNo }  → token + state
+POST   /api/public/tests/:code/attempts    (student cookie) → token + state
 GET    /api/attempt                        → state (status, deadlineAt, serverNow, exits, pageCount…)
 GET    /api/attempt/pages/:n               → page image (in progress only)
+GET    /api/attempt/paper                  → the typed paper without answers (in progress only)
+GET    /api/attempt/paper-images/:n        → a picture of the typed paper (in progress only)
+GET    /api/attempt/answers                → the saved answers (in progress only)
+POST   /api/attempt/answers                { answers: [{ questionId, choice, text, sequence,
+                                              answeredAt }] } → { savedCount, tooLateCount }
+GET    /api/attempt/photos                 → saved photos and photosOpenUntil
+PUT    /api/attempt/photos/:clientPhotoId  raw image body (after finishing, 30 minutes, max 10)
+DELETE /api/attempt/photos/:clientPhotoId
 POST   /api/attempt/exits                  { clientExitId, reason }
 POST   /api/attempt/return                 { clientExitId, reason, awayMsClient }
 POST   /api/attempt/finish
@@ -338,7 +446,12 @@ Other: `GET /api/health`. Errors always use one JSON shape: `{ error: { code, me
 - **Teacher auth:** one password (`TEACHER_PASSWORD`), compared in constant time. Success sets an
   HMAC-signed session cookie (`httpOnly`, `SameSite=Strict`, `Secure` in production, 12 h expiry).
   Login is rate-limited.
-- **Student auth:** random 256-bit token per attempt; only its SHA-256 hash is stored.
+- **Student login:** class + roll number + 6-digit PIN (scrypt hash, D26). Success sets an
+  HMAC-signed cookie with the student id, the session version and the expiry (60 days, D39);
+  Reset PIN raises the version, which logs out every phone. Wrong PINs: 10 per account per 15
+  minutes (in memory) and 100 failed logins per network per 15 minutes (D40). An unknown roll
+  number gets the same answer and takes as long as a wrong PIN.
+- **Student exam auth:** random 256-bit token per attempt; only its SHA-256 hash is stored.
 - **Validation:** every request body/param is parsed with zod at the route boundary.
 - **Uploads:** size/count limits; every image decoded and re-encoded by `sharp` (never stored as-is).
 - **Headers:** helmet with a strict CSP (`default-src 'self'`, `img-src 'self' blob: data:`,
@@ -399,13 +512,14 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 
 ### Environment variables
 
-| Name                  | Required | Example / default                                                |
-| --------------------- | -------- | ---------------------------------------------------------------- |
-| `PORT`                | no       | `3000`                                                           |
-| `TEACHER_PASSWORD`    | yes      | —                                                                |
-| `SESSION_SECRET`      | yes      | 32+ random characters                                            |
-| `DATABASE_URL`        | no       | `file:data/exam-room.db` (dev) / `libsql://<db>.turso.io` (prod) |
-| `DATABASE_AUTH_TOKEN` | prod     | Turso token                                                      |
+| Name                  | Required | Example / default                                                                            |
+| --------------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `PORT`                | no       | `3000`                                                                                       |
+| `TEACHER_PASSWORD`    | yes      | —                                                                                            |
+| `SESSION_SECRET`      | yes      | 32+ random characters                                                                        |
+| `DATABASE_URL`        | no       | `file:data/exam-room.db` (dev) / `libsql://<db>.turso.io` (prod)                             |
+| `DATABASE_AUTH_TOKEN` | prod     | Turso token                                                                                  |
+| `PUBLIC_ORIGIN`       | no       | Site address for passkeys; else Render's `RENDER_EXTERNAL_URL`, else `http://localhost:5173` |
 
 ## 11. Quality and workflow
 
@@ -458,70 +572,72 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 | M18 | Dashboard and progress for students and the teacher                                                    |
 | M19 | Waiting room: the teacher starts everyone at the same time                                             |
 
-Status (2026-10-24): M0–M9 are built and tested (unit tests, API tests and a smoke test of the
-production build). Still to do by hand: the real-device checks in §15. M10–M19 are planned in §16.
+Status (2026-10-25): M0–M19 are built and tested (unit tests, API tests and a smoke test of the
+production build). Still to do by hand: the real-device checks in §15.
 
 ## 13. Decision log
 
-| #   | Decision                                                                                                                                                                                                             | Reason                                                                                                                                                            | Revisit when                                                           |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| D1  | Single process serves API + SPA                                                                                                                                                                                      | Same origin, one deploy unit                                                                                                                                      | Never at this scale                                                    |
-| D2  | SQLite via libSQL (file locally, Turso in prod)                                                                                                                                                                      | Free, simple, same SQL in both places                                                                                                                             | > hundreds of concurrent users                                         |
-| D3  | Page images stored in the DB                                                                                                                                                                                         | Host has no persistent disk; tiny data volume                                                                                                                     | Storage > ~3 GB → move to object storage (R2)                          |
-| D4  | PDF → images in the teacher's browser                                                                                                                                                                                | Free server CPU is tiny; PDF never leaves the teacher's device                                                                                                    | Never                                                                  |
-| D5  | No watermark (changed 2026-10-23; was: an SVG overlay drawn by the browser, and before that burned in with sharp)                                                                                                    | The project owner decided it is not needed                                                                                                                        | Papers leak → bring back the browser overlay                           |
-| D6  | Server-authoritative timer and status                                                                                                                                                                                | Client can't be trusted                                                                                                                                           | —                                                                      |
-| D7  | Refresh counts as an exit                                                                                                                                                                                            | Browser can't distinguish refresh from leaving                                                                                                                    | Teacher feedback                                                       |
-| D8  | Timer never pauses (away, locked, unlocked)                                                                                                                                                                          | Simple and fair                                                                                                                                                   | Teacher feedback                                                       |
-| D9  | Resume on another device allowed but counts as an exit                                                                                                                                                               | Dead-battery case without a free pass                                                                                                                             | Teacher feedback                                                       |
-| D10 | Teacher results by 5 s polling, no WebSockets                                                                                                                                                                        | Simpler; enough for 10 students                                                                                                                                   | Many concurrent tests                                                  |
-| D11 | Single teacher password, no user table                                                                                                                                                                               | Spec: one teacher                                                                                                                                                 | Multiple teachers needed → add `teachers` table behind the auth module |
-| D12 | Original PDF never stored                                                                                                                                                                                            | Can't leak what we don't keep                                                                                                                                     | —                                                                      |
-| D13 | TypeScript pinned to 6.0                                                                                                                                                                                             | typescript-eslint does not support TS 7 yet                                                                                                                       | typescript-eslint supports TS 7                                        |
-| D14 | Server bundled with esbuild; `tsc` only type-checks                                                                                                                                                                  | One output file, no `rootDir`/workspace build issues                                                                                                              | —                                                                      |
-| D15 | `shared/` is types-only                                                                                                                                                                                              | Erased at build → nothing to build or deploy for it                                                                                                               | Runtime sharing needed (e.g. zod schemas on both sides)                |
-| D16 | Stateless HMAC session cookie (no sessions table)                                                                                                                                                                    | One teacher; nothing to store                                                                                                                                     | Need to revoke sessions → rotate `SESSION_SECRET` or add a table       |
-| D17 | A return can record a lost exit; exits are idempotent by `clientExitId`                                                                                                                                              | Phones often drop the request sent while the page goes to the background                                                                                          | —                                                                      |
-| D18 | Teacher results apply the time rule for display, without writing                                                                                                                                                     | Reads stay cheap; the student's next request writes it                                                                                                            | —                                                                      |
-| D19 | pdf.js wasm decoders, fonts and CMaps are shipped as static files (`web/public/pdfjs`, copied at build start) and the CSP allows `'wasm-unsafe-eval'`                                                                | Scanned PDFs often use JBIG2 / JPEG 2000 images, which pdf.js can only decode with these files                                                                    | pdf.js stops needing them                                              |
-| D20 | One page at a time in the viewer                                                                                                                                                                                     | Zoom and pan stay simple and "Page X of Y" is exact                                                                                                               | Teacher feedback                                                       |
-| D21 | Unlock forgives exactly one exit, so the next exit locks again                                                                                                                                                       | Simple and fair; the teacher decides each time                                                                                                                    | Teacher feedback                                                       |
-| D22 | Hold a Screen Wake Lock during the exam                                                                                                                                                                              | A screen that turns off makes the page hidden, which would count as an exit                                                                                       | Browsers change the API                                                |
-| D23 | New tests start closed; `opens_at` / `closes_at` on `tests` serve both the buttons and the schedule                                                                                                                  | The link can be shared early without showing the paper; one pair of columns, one pure rule                                                                        | —                                                                      |
-| D24 | Closing only stops new students; students who started keep their full time                                                                                                                                           | "Who may start" and "end everyone's exam" are different actions                                                                                                   | An "end the exam now" feature is added                                 |
-| D25 | Deletes remove dependent rows explicitly in one batch                                                                                                                                                                | libSQL turns `PRAGMA foreign_keys` on, but plain SQLite does not; explicit deletes work with both                                                                 | —                                                                      |
-| D26 | Students log in with class + roll number + a 6-digit PIN the teacher hands out; PINs stored as scrypt hashes; the phone stays logged in for 60 days                                                                  | Owner's choice: easy on phones, no email needed                                                                                                                   | Students forget PINs often                                             |
-| D27 | Classes own subjects; a test is given to one class                                                                                                                                                                   | Owner's choice: matches how a school works                                                                                                                        | One test for several classes                                           |
-| D28 | Leave rule per test: `lock` (teacher can unlock) or `finish` (submitted, no way back)                                                                                                                                | Owner's choice                                                                                                                                                    | —                                                                      |
-| D29 | Only registered students can open a test once accounts exist                                                                                                                                                         | Owner's choice: full control over who joins                                                                                                                       | —                                                                      |
-| D30 | Answer photos are shrunk on the phone; the server checks them with `sharp` metadata but never re-encodes them                                                                                                        | ~0.1 vCPU cannot re-encode many photos when a whole class finishes at once                                                                                        | Bad files get through                                                  |
-| D31 | CSV export and the print page are built in the browser from the results data                                                                                                                                         | No extra server work or endpoint                                                                                                                                  | Results get too big for the browser                                    |
-| D32 | New finish reasons (`teacher`, `left_test`) come from rebuilding `attempts`, backing up `exits` first                                                                                                                | libSQL enforces foreign keys, so dropping `attempts` would cascade-delete every exit                                                                              | —                                                                      |
-| D33 | Black and white theme: light and dark token sets on `:root`, chosen by `data-theme`; `web/public/theme.js` sets it before the first paint                                                                            | Owner's request; no white flash for dark users, and the CSP allows a same-origin script but not an inline one                                                     | —                                                                      |
-| D34 | Web pure functions get Vitest tests (`web/vitest.config.ts` without the pdf.js copy plugin)                                                                                                                          | Business logic such as the CSV export must be tested like the server rules                                                                                        | —                                                                      |
-| D35 | A migration that changes a table's constraints rebuilds it with `database.migrate()` (foreign keys off for that one batch) and ends with a check that aborts the batch if any row points nowhere                     | Child rows stay untouched (D32 had to copy them); `migrate()` works on a local file and on Turso                                                                  | —                                                                      |
-| D36 | Subjects belong to one class (name unique per class) and chapters to one subject; a test's class is its subject's class                                                                                              | Each class has its own book per subject with its own chapters; replaces the planned `class_subjects` table; no class column on tests that could disagree          | One subject shared by several classes                                  |
-| D37 | The M10 migration puts every existing subject into a new class called "My class"                                                                                                                                     | Old tests and results keep working; the teacher only renames the class                                                                                            | —                                                                      |
-| D38 | Safe delete: a class with subjects or students and a subject with tests cannot be deleted (the app offers to move them); a chapter takes only its tags; a deleted student's old results stay by name and roll number | Nothing is lost by accident, and every delete is explained before it happens                                                                                      | Teacher feedback                                                       |
-| D39 | Student session: an HMAC-signed cookie with the student id, a session version and the expiry (60 days); each request checks the version with one indexed read                                                        | Resetting the PIN logs out old phones without a sessions table                                                                                                    | —                                                                      |
-| D40 | Wrong PINs are limited per account (10 per 15 minutes) and per network, in memory                                                                                                                                    | A 6-digit PIN is easy to guess without a limit; counting per account means one school Wi-Fi does not block the whole class                                        | Restarts are used for guessing → keep the counters in the database     |
-| D41 | An attempt keeps its own token per device; the student account only decides who may start                                                                                                                            | The proven exam flow (exits, leave rule, unlock, another phone) stays unchanged                                                                                   | —                                                                      |
-| D42 | Fingerprint and face login use WebAuthn passkeys (`@simplewebauthn`), discoverable, on the Render address (`RENDER_EXTERNAL_URL`); the challenge lives in a 5-minute signed cookie                                   | No database write for challenges; the PIN always stays as a fallback                                                                                              | The address changes → students set the fingerprint up again            |
-| D43 | A small hand-written service worker: hashed `/assets` from the cache, pages from the network with the saved `index.html` when offline, never `/api` or paper content                                                 | The app reopens without network, the CSP stays strict (same-origin worker), and the paper never stays on the phone                                                | The paper must work offline                                            |
-| D44 | A typed paper, or a PDF test's answer sheet, is one JSON question list on the test; the answer key is a separate column that is never sent before release; the paper schema and text parser are shared runtime code  | One row read shows the whole paper; marking is the same for both kinds of paper                                                                                   | A paper grows past ~200 KB                                             |
-| D45 | Answers: one row per attempt and question; the newest wins by a sequence number the phone increases with every change                                                                                                | Repeated or out-of-order batches can never overwrite a newer answer, without storing batch ids (fewer writes)                                                     | —                                                                      |
-| D46 | An answer counts if the phone recorded it before the attempt ended (server clock offset, 2 s tolerance) and it arrives within 10 minutes after the end                                                               | Owner's choice; covers a ~1 minute cold start and short internet cuts. Trade-off: a student who goes offline and changes the phone clock gains at most 10 minutes | Cheating is seen                                                       |
-| D47 | Outbox on the phone: IndexedDB (localStorage fallback), first in first out, retries with exponential backoff and jitter (1 s up to 60 s), also on app start, on `online` and when the page is visible                | Answers and the finish survive a sleeping server, no network or a closed app                                                                                      | —                                                                      |
-| D48 | Scores are stored on the attempt and recomputed by one pure function whenever answers, the key or the teacher's marks change                                                                                         | Results and dashboards read one row per attempt; a new answer key re-marks automatically                                                                          | —                                                                      |
-| D49 | Results stay hidden until the teacher releases them; the release chooses what students see (marks, correct answers, comments, top scorer)                                                                            | Owner's request                                                                                                                                                   | —                                                                      |
-| D50 | Students see only the top scorer (ties together), and the teacher can switch it off per test                                                                                                                         | Owner's choice: no full ranking                                                                                                                                   | Teacher feedback                                                       |
-| D51 | Bounties: a reward note and points per test; after release the top scorer(s) get the points; the teacher can add points by hand; students see their own points and the class leader                                  | Owner chose both the note and points; consistent with D50                                                                                                         | Teacher feedback                                                       |
-| D52 | Assignments are offline (the teacher enters marks, saved as a finished attempt without a device token) or done in the app (open for days, no timer, no exit detection)                                               | Owner chose both; every score lives in one table                                                                                                                  | —                                                                      |
-| D53 | Written answers are chosen per test: typed, photos after finishing, both, or on paper                                                                                                                                | Owner's choice                                                                                                                                                    | —                                                                      |
-| D54 | Charts are small SVG components with the theme colours                                                                                                                                                               | No chart library to download on phones                                                                                                                            | Complex charts are needed                                              |
-| D55 | Progress statistics are computed in the browser from the student's released results (pure functions)                                                                                                                 | No server CPU; the data is small                                                                                                                                  | Hundreds of results per student                                        |
-| D56 | Short, transient database errors are retried (3 tries within about 1 s) around idempotent writes only; the phone hears "saved" only after the commit                                                                 | A Turso hiccup must not lose an answer or count it twice                                                                                                          | —                                                                      |
-| D57 | Before a test the app shows how to lock the phone to the app (Android App pinning, iPhone Guided Access)                                                                                                             | A website cannot block other apps (§9)                                                                                                                            | Browsers offer a lock API                                              |
+| #   | Decision                                                                                                                                                                                                                                                                                                                                                | Reason                                                                                                                                                            | Revisit when                                                           |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| D1  | Single process serves API + SPA                                                                                                                                                                                                                                                                                                                         | Same origin, one deploy unit                                                                                                                                      | Never at this scale                                                    |
+| D2  | SQLite via libSQL (file locally, Turso in prod)                                                                                                                                                                                                                                                                                                         | Free, simple, same SQL in both places                                                                                                                             | > hundreds of concurrent users                                         |
+| D3  | Page images stored in the DB                                                                                                                                                                                                                                                                                                                            | Host has no persistent disk; tiny data volume                                                                                                                     | Storage > ~3 GB → move to object storage (R2)                          |
+| D4  | PDF → images in the teacher's browser                                                                                                                                                                                                                                                                                                                   | Free server CPU is tiny; PDF never leaves the teacher's device                                                                                                    | Never                                                                  |
+| D5  | No watermark (changed 2026-10-23; was: an SVG overlay drawn by the browser, and before that burned in with sharp)                                                                                                                                                                                                                                       | The project owner decided it is not needed                                                                                                                        | Papers leak → bring back the browser overlay                           |
+| D6  | Server-authoritative timer and status                                                                                                                                                                                                                                                                                                                   | Client can't be trusted                                                                                                                                           | —                                                                      |
+| D7  | Refresh counts as an exit                                                                                                                                                                                                                                                                                                                               | Browser can't distinguish refresh from leaving                                                                                                                    | Teacher feedback                                                       |
+| D8  | Timer never pauses (away, locked, unlocked)                                                                                                                                                                                                                                                                                                             | Simple and fair                                                                                                                                                   | Teacher feedback                                                       |
+| D9  | Resume on another device allowed but counts as an exit                                                                                                                                                                                                                                                                                                  | Dead-battery case without a free pass                                                                                                                             | Teacher feedback                                                       |
+| D10 | Teacher results by 5 s polling, no WebSockets                                                                                                                                                                                                                                                                                                           | Simpler; enough for 10 students                                                                                                                                   | Many concurrent tests                                                  |
+| D11 | Single teacher password, no user table                                                                                                                                                                                                                                                                                                                  | Spec: one teacher                                                                                                                                                 | Multiple teachers needed → add `teachers` table behind the auth module |
+| D12 | Original PDF never stored                                                                                                                                                                                                                                                                                                                               | Can't leak what we don't keep                                                                                                                                     | —                                                                      |
+| D13 | TypeScript pinned to 6.0                                                                                                                                                                                                                                                                                                                                | typescript-eslint does not support TS 7 yet                                                                                                                       | typescript-eslint supports TS 7                                        |
+| D14 | Server bundled with esbuild; `tsc` only type-checks                                                                                                                                                                                                                                                                                                     | One output file, no `rootDir`/workspace build issues                                                                                                              | —                                                                      |
+| D15 | `shared/` holds the API types plus one runtime module, `@exam-room/shared/paper-rules` (the paper zod schema and pure paper functions); `server/build.mjs` bundles it and keeps only real dependencies external (changed 2026-10-25, was: types only)                                                                                                   | The browser preview and the server must judge a paper by the same rules                                                                                           | More runtime code needs sharing                                        |
+| D16 | Stateless HMAC session cookie (no sessions table)                                                                                                                                                                                                                                                                                                       | One teacher; nothing to store                                                                                                                                     | Need to revoke sessions → rotate `SESSION_SECRET` or add a table       |
+| D17 | A return can record a lost exit; exits are idempotent by `clientExitId`                                                                                                                                                                                                                                                                                 | Phones often drop the request sent while the page goes to the background                                                                                          | —                                                                      |
+| D18 | Teacher results apply the time rule for display, without writing                                                                                                                                                                                                                                                                                        | Reads stay cheap; the student's next request writes it                                                                                                            | —                                                                      |
+| D19 | pdf.js wasm decoders, fonts and CMaps are shipped as static files (`web/public/pdfjs`, copied at build start) and the CSP allows `'wasm-unsafe-eval'`                                                                                                                                                                                                   | Scanned PDFs often use JBIG2 / JPEG 2000 images, which pdf.js can only decode with these files                                                                    | pdf.js stops needing them                                              |
+| D20 | One page at a time in the viewer                                                                                                                                                                                                                                                                                                                        | Zoom and pan stay simple and "Page X of Y" is exact                                                                                                               | Teacher feedback                                                       |
+| D21 | Unlock forgives exactly one exit, so the next exit locks again                                                                                                                                                                                                                                                                                          | Simple and fair; the teacher decides each time                                                                                                                    | Teacher feedback                                                       |
+| D22 | Hold a Screen Wake Lock during the exam                                                                                                                                                                                                                                                                                                                 | A screen that turns off makes the page hidden, which would count as an exit                                                                                       | Browsers change the API                                                |
+| D23 | New tests start closed; `opens_at` / `closes_at` on `tests` serve both the buttons and the schedule                                                                                                                                                                                                                                                     | The link can be shared early without showing the paper; one pair of columns, one pure rule                                                                        | —                                                                      |
+| D24 | Closing only stops new students; students who started keep their full time                                                                                                                                                                                                                                                                              | "Who may start" and "end everyone's exam" are different actions                                                                                                   | An "end the exam now" feature is added                                 |
+| D25 | Deletes remove dependent rows explicitly in one batch                                                                                                                                                                                                                                                                                                   | libSQL turns `PRAGMA foreign_keys` on, but plain SQLite does not; explicit deletes work with both                                                                 | —                                                                      |
+| D26 | Students log in with class + roll number + a 6-digit PIN the teacher hands out; PINs stored as scrypt hashes; the phone stays logged in for 60 days                                                                                                                                                                                                     | Owner's choice: easy on phones, no email needed                                                                                                                   | Students forget PINs often                                             |
+| D27 | Classes own subjects; a test is given to one class                                                                                                                                                                                                                                                                                                      | Owner's choice: matches how a school works                                                                                                                        | One test for several classes                                           |
+| D28 | Leave rule per test: `lock` (teacher can unlock) or `finish` (submitted, no way back)                                                                                                                                                                                                                                                                   | Owner's choice                                                                                                                                                    | —                                                                      |
+| D29 | Only registered students can open a test once accounts exist                                                                                                                                                                                                                                                                                            | Owner's choice: full control over who joins                                                                                                                       | —                                                                      |
+| D30 | Answer photos are shrunk on the phone; the server checks them with `sharp` metadata but never re-encodes them                                                                                                                                                                                                                                           | ~0.1 vCPU cannot re-encode many photos when a whole class finishes at once                                                                                        | Bad files get through                                                  |
+| D31 | CSV export and the print page are built in the browser from the results data                                                                                                                                                                                                                                                                            | No extra server work or endpoint                                                                                                                                  | Results get too big for the browser                                    |
+| D32 | New finish reasons (`teacher`, `left_test`) come from rebuilding `attempts`, backing up `exits` first                                                                                                                                                                                                                                                   | libSQL enforces foreign keys, so dropping `attempts` would cascade-delete every exit                                                                              | —                                                                      |
+| D33 | Black and white theme: light and dark token sets on `:root`, chosen by `data-theme`; `web/public/theme.js` sets it before the first paint                                                                                                                                                                                                               | Owner's request; no white flash for dark users, and the CSP allows a same-origin script but not an inline one                                                     | —                                                                      |
+| D34 | Web pure functions get Vitest tests (`web/vitest.config.ts` without the pdf.js copy plugin)                                                                                                                                                                                                                                                             | Business logic such as the CSV export must be tested like the server rules                                                                                        | —                                                                      |
+| D35 | A migration that changes a table's constraints rebuilds it with `database.migrate()` (foreign keys off for that one batch) and ends with a check that aborts the batch if any row points nowhere                                                                                                                                                        | Child rows stay untouched (D32 had to copy them); `migrate()` works on a local file and on Turso                                                                  | —                                                                      |
+| D36 | Subjects belong to one class (name unique per class) and chapters to one subject; a test's class is its subject's class                                                                                                                                                                                                                                 | Each class has its own book per subject with its own chapters; replaces the planned `class_subjects` table; no class column on tests that could disagree          | One subject shared by several classes                                  |
+| D37 | The M10 migration puts every existing subject into a new class called "My class"                                                                                                                                                                                                                                                                        | Old tests and results keep working; the teacher only renames the class                                                                                            | —                                                                      |
+| D38 | Safe delete: a class with subjects or students and a subject with tests cannot be deleted (the app offers to move them); a chapter takes only its tags; a deleted student's old results stay by name and roll number                                                                                                                                    | Nothing is lost by accident, and every delete is explained before it happens                                                                                      | Teacher feedback                                                       |
+| D39 | Student session: an HMAC-signed cookie with the student id, a session version and the expiry (60 days); each request checks the version with one indexed read                                                                                                                                                                                           | Resetting the PIN logs out old phones without a sessions table                                                                                                    | —                                                                      |
+| D40 | Wrong PINs are limited per account (10 per 15 minutes) and per network, in memory                                                                                                                                                                                                                                                                       | A 6-digit PIN is easy to guess without a limit; counting per account means one school Wi-Fi does not block the whole class                                        | Restarts are used for guessing → keep the counters in the database     |
+| D41 | An attempt keeps its own token per device; the student account only decides who may start                                                                                                                                                                                                                                                               | The proven exam flow (exits, leave rule, unlock, another phone) stays unchanged                                                                                   | —                                                                      |
+| D42 | Fingerprint and face login use WebAuthn passkeys (`@simplewebauthn`), discoverable, on the Render address (`RENDER_EXTERNAL_URL`); the challenge lives in a 5-minute signed cookie                                                                                                                                                                      | No database write for challenges; the PIN always stays as a fallback                                                                                              | The address changes → students set the fingerprint up again            |
+| D43 | A small hand-written service worker: hashed `/assets` from the cache, pages from the network with the saved `index.html` when offline, never `/api` or paper content                                                                                                                                                                                    | The app reopens without network, the CSP stays strict (same-origin worker), and the paper never stays on the phone                                                | The paper must work offline                                            |
+| D44 | A typed paper, or a PDF test's answer sheet, is one JSON question list on the test; the answer key is a separate column that is never sent before release; the paper schema and text parser are shared runtime code                                                                                                                                     | One row read shows the whole paper; marking is the same for both kinds of paper                                                                                   | A paper grows past ~200 KB                                             |
+| D45 | Answers: one row per attempt and question; the newest wins by a sequence number the phone increases with every change                                                                                                                                                                                                                                   | Repeated or out-of-order batches can never overwrite a newer answer, without storing batch ids (fewer writes)                                                     | —                                                                      |
+| D46 | An answer counts if the phone recorded it before the attempt ended (server clock offset, 2 s tolerance) and it arrives within 10 minutes after the end                                                                                                                                                                                                  | Owner's choice; covers a ~1 minute cold start and short internet cuts. Trade-off: a student who goes offline and changes the phone clock gains at most 10 minutes | Cheating is seen                                                       |
+| D47 | Outbox on the phone: IndexedDB (localStorage fallback), first in first out, retries with exponential backoff and jitter (1 s up to 60 s), also on app start, on `online` and when the page is visible                                                                                                                                                   | Answers and the finish survive a sleeping server, no network or a closed app                                                                                      | —                                                                      |
+| D48 | Scores (MCQ, written, total) are stored on the attempt and computed by one pure function (`scoreAttempt`) when the teacher opens the marking page, saves marks or changes the answer key, when results are released, and for late answers after release; nothing is computed while students write (changed 2026-10-25, was: recomputed on every answer) | Exam time stays cheap on 0.1 vCPU; results, CSV and dashboards read one stored row per attempt                                                                    | The teacher needs live scores during the exam                          |
+| D49 | Results stay hidden until the teacher releases them; the release chooses what students see (marks, correct answers, comments, top scorer)                                                                                                                                                                                                               | Owner's request                                                                                                                                                   | —                                                                      |
+| D50 | Students see only the top scorer (ties together), and the teacher can switch it off per test                                                                                                                                                                                                                                                            | Owner's choice: no full ranking                                                                                                                                   | Teacher feedback                                                       |
+| D51 | Bounties: a reward note and points per test; after release the top scorer(s) get the points; the teacher can add points by hand; students see their own points and the class leader                                                                                                                                                                     | Owner chose both the note and points; consistent with D50                                                                                                         | Teacher feedback                                                       |
+| D52 | Assignments are offline (the teacher enters marks, saved as a finished attempt without a device token) or done in the app (open for days, no timer, no exit detection)                                                                                                                                                                                  | Owner chose both; every score lives in one table                                                                                                                  | —                                                                      |
+| D53 | Written answers are chosen per test: typed, photos after finishing, both, or on paper                                                                                                                                                                                                                                                                   | Owner's choice                                                                                                                                                    | —                                                                      |
+| D54 | Charts are small SVG components with the theme colours                                                                                                                                                                                                                                                                                                  | No chart library to download on phones                                                                                                                            | Complex charts are needed                                              |
+| D55 | Progress statistics are computed in the browser from the student's released results (pure functions)                                                                                                                                                                                                                                                    | No server CPU; the data is small                                                                                                                                  | Hundreds of results per student                                        |
+| D56 | Short, transient database errors are retried (3 tries within about 1 s) around idempotent writes only; the phone hears "saved" only after the commit                                                                                                                                                                                                    | A Turso hiccup must not lose an answer or count it twice                                                                                                          | —                                                                      |
+| D57 | Before a test the app shows how to lock the phone to the app (Android App pinning, iPhone Guided Access)                                                                                                                                                                                                                                                | A website cannot block other apps (§9)                                                                                                                            | Browsers offer a lock API                                              |
+
+| D58 | Waiting room: **Start for everyone** is one `UPDATE` of all waiting attempts of the test with the same `started_at` and `deadline_at`. A student who arrives after it waits for the next tap; ending the exam also submits anyone still waiting. Only tests and quizzes use it, and the switch is fixed once a student has started | One write, exactly equal times for everyone, nothing runs on the server while students wait (phones ask every 3 s); the teacher decides about late students | Teacher wants late students to join at once with the shared deadline |
 
 ## 14. Future extension points (not built now)
 
@@ -614,8 +730,8 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 - **Safe deleting** (D38). The app always asks first and says what goes with it:
   - a class with subjects or students cannot be deleted: move its students to another class, or
     delete them first;
-  - a subject with tests cannot be deleted: **Move its tests** to another subject of the same
-    class (their chapter tags are removed) or delete the tests first; its chapters go with it;
+  - a subject with tests cannot be deleted: **Move its tests** to another subject (of any class;
+    their chapter tags are removed) or delete the tests first; its chapters go with it;
   - deleting a chapter removes only its tags from tests;
   - deleting a student keeps their old results in each test by name and roll number.
 - Tests get a **type** (test or quiz) and **chapter tags**. The test list is grouped by class and
@@ -751,6 +867,171 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 | Render hours     | One service awake all month ≈ 744 hours                               | 750 hours / month                  |
 
 ## 17. Built milestones
+
+### M19 Waiting room (built 2026-10-25)
+
+- A test or quiz can be set to **Students start: Together, when I start everyone** (migration 13
+  adds `tests.waiting_room`). A student who taps **Start test** gets status `waiting` and sees
+  "Waiting for your teacher"; the phone asks the server every 3 s and keeps the screen on.
+- While waiting there is no paper and no answers (409 `not_started`), and exits and Finish do
+  nothing. The time has not started.
+- The results show each waiting student and a **Start for everyone (N waiting)** button. One tap
+  gives all of them the same start and deadline (D58); their phones open the paper within 3 s.
+  Students who come later wait for the next tap. **End exam for everyone** also submits waiting
+  students.
+
+### M18 Dashboard and progress (built 2026-10-25)
+
+- **Student dashboard** (`/`): open, upcoming and the last finished tests, then **Progress**
+  (tests done, average, best subject, trend, a line chart of the scores) and **Subjects** with an
+  average bar each. **Menu** opens a side drawer with the profile, points, class leader, theme
+  and log out.
+- **Subject page** (`/subjects/:id`): scores over time, progress per chapter from the tests
+  tagged with it, and all tests, quizzes and assignments of the subject.
+- **Teacher's student profile** (`/teacher/students/:id`, from the student's name in Manage):
+  the same overview over every marked result (also before release), the results list and the
+  points history.
+- The server returns one list of results (D55); `progress-stats.ts` computes averages, the best
+  subject, the trend (last three against the three before, 5 points apart) and chapter progress
+  in the browser, with tests. Charts are two small SVG components that use the theme colours
+  (D54).
+
+### M17 Assignments, bounties and points (built 2026-10-25)
+
+- **Assignments** (D52) are tests with the type **Assignment**. Done in the app (PDF or typed
+  paper): no timer and no exit detection; the deadline is the closing time, or 30 days after the
+  start when no closing time is set (`deadlineFor`, pure and tested). The server ignores exit
+  reports for assignments. **No paper** makes an offline assignment: the teacher gives the total
+  marks and later types each student's marks on **Enter marks and release**; they are stored as
+  finished attempts without a device token (`token_hash` NULL since M11).
+- **Bounties** (D51): any test can have a reward note and points. Releasing the results gives the
+  points to the top scorer(s) (`points` rows with the `test_id`), replacing earlier ones, so a new
+  release after a mark change moves the points; **Hide results** takes them back.
+- **Points**: the class page has a **Points** tab with every student's points and **Give or take
+  points** with a reason. Students see their own points and the class leader on their home.
+- Migration 12 rebuilt `tests` (paper kind `none`, bounty columns, the CHECKs that tie them
+  together) and added `points`.
+
+### M16 Marking and results (built 2026-10-25)
+
+- **Marks and release** (`/teacher/tests/:id/marking`): every student with the score so far and
+  how far the marking is. Opening a student shows each question with the chosen option (and the
+  correct one) or the typed answer, and the answer photos; the teacher enters marks (whole or
+  half, up to the question's marks) and a comment per question, plus a comment for the student.
+  Saving opens the next student. A teacher mark overrules the automatic MCQ mark.
+- `scoreAttempt` (pure, tested) adds MCQ marks from the key and the teacher's written marks;
+  scores are stored on the attempt as described in D48, so a new answer key re-marks every
+  student at once.
+- **Release** chooses what students see: the correct MCQ answers, the comments and the top scorer
+  (D49, D50; ties are shown together and nobody is top with 0 marks). **Hide results** takes it
+  back. Students see **Marks: 4.5 of 5** on their home and a result page with the paper, their
+  answers, the marks and the comments.
+- The results CSV and the print page get a **Marks** column when the test has marks.
+
+### M15 Photo answers (built 2026-10-25)
+
+- Tests whose written answers are **photos** (or **typed and photos**) show **Photos of your
+  written answers** after Finish: up to 10 photos within 30 minutes (`photo-rules.ts`, pure and
+  tested). The phone shrinks each photo to 1600 px JPEG (about 200–300 KB) and keeps it in a
+  **photo outbox** (IndexedDB) that sends one photo at a time with the same backoff as answers,
+  also after the app was closed.
+- The server checks the type and the size with `sharp` metadata and stores the bytes as they came
+  (D30). Each photo carries a random id from the phone, so a repeated upload is stored once.
+  Counting and numbering happen in one `INSERT … SELECT … HAVING COUNT(*) < 10` statement.
+- The teacher's results show **Photos N** and **See the answer photos**.
+
+### M14 Answering and never losing an answer (built 2026-10-25)
+
+- Students tap multiple choice answers (tap again to clear) on the typed paper or on the
+  **Answer sheet** tab under a PDF, and type written answers when the test allows it (D53).
+- **Outbox** (D47, `web/src/features/student/answers/`): every change is saved on the phone
+  first (IndexedDB through `lib/durable-store.ts`, localStorage when IndexedDB fails), keeping
+  only the newest unsent answer per question. A sender posts batches of up to 50 answers, then
+  the Finish, in that order; it retries with exponential backoff and jitter from 1 s up to 60 s,
+  and starts again on app start, on `online` and when the page becomes visible. Typed text waits
+  1.5 s before sending. The top bar shows **Saved**, **Saving…** or **Offline – your answers are
+  safe on this phone**. While Finish waits for the network, exits are no longer reported.
+- The store is a factory (`createOutboxStore`) with the network, storage, clock and randomness
+  passed in, so tests run it with a fake server, memory storage and fake timers: the server
+  asleep and back, a phone closed and opened again, an answer changed while it was being sent,
+  Finish after the answers, and a logged-out phone.
+- **Server** (D45, D46, D56): one upsert per answer in one batch, kept only when its sequence is
+  higher, so repeated and out-of-order batches change nothing. `isAnswerInTime` (pure, tested)
+  counts an answer when the phone recorded it before the end (2 s tolerance; a phone time later
+  than the arrival is never trusted) and it arrives within 10 minutes after the end. Short Turso
+  errors are retried up to 3 times within about 0.6 s around these idempotent writes and the
+  finish. A new phone restores the saved answers from `GET /api/attempt/answers`.
+- The teacher's results show **Answered N of M** per student.
+
+### M13 Typed papers and answer sheets (built 2026-10-25)
+
+- **New test → Paper → Type or paste**: the teacher pastes plain text or JSON
+  (`docs/PAPER-FORMAT.md` has both formats with a full sample, and a test checks that the samples
+  stay valid). The editor shows the problems with line numbers, warnings (missing marks count 1),
+  a summary (questions, marks, answered MCQs) and a live preview with the correct options
+  marked, where pictures are added per question (shrunk to 1000 px WebP in the browser).
+- The text reader is forgiving: `# Section`, `1.` / `Q1.` / `1)`, `a)` / `(A)` / `A.`, marks as
+  `[2]`, `[2 marks]` or `(2 marks)`, `Answer: b`, model answers over several lines, and written
+  questions with parts that carry their own marks. `paperToText` writes a paper back in the same
+  format, so editing an existing paper starts from its text.
+- One `Paper` shape for both kinds (D44): typed tests store it as their paper; a PDF test can store
+  it as its **answer sheet** (built from "N MCQs with options A–D, M marks each; K written
+  questions"). The answer key is a separate column, changed any time on **Questions and
+  answers** (letters in order like `BCAD?`, or tap per question), never sent to students.
+  `question_count` and `max_marks` are stored with the paper so lists stay one query.
+- Migration 8 rebuilt `tests` (page count may be 0, the duration has no upper limit in the
+  database any more, and the new paper columns) and added `paper_images`.
+- Students see the typed paper as a real exam paper: instructions, sections, numbered questions,
+  marks on the right and large option buttons, right-to-left text where needed. The paper and its
+  pictures load when the exam opens and are dropped from memory when it closes, like PDF pages.
+- How written questions are answered is chosen per test (D53); answering itself comes in M14.
+
+### M12 Installable app, fingerprint login and phone-lock steps (built 2026-10-25)
+
+- **Installable app:** `manifest.webmanifest` with black and white icons (normal and maskable,
+  plus an Apple touch icon) and `display: standalone`. `public/service-worker.js` (D43) keeps the
+  app page and the hashed `/assets` files, takes pages from the network and the saved page when
+  offline, and never touches `/api` (so the paper and answers are never cached). It is registered
+  only in the production build. Android shows **Install app** (the `beforeinstallprompt` event is
+  caught in `main.tsx`); iPhone shows the **Share → Add to Home Screen** steps.
+- **Fingerprint or face login** (D42): after a PIN login the student home offers **Use
+  fingerprint**. Only the public key is stored, with user verification required and a platform
+  passkey that the phone keeps. The challenge lives in a signed 5-minute cookie that is cleared
+  when it is used. **Reset PIN** and deleting a student also remove the student's passkeys, so a
+  lost phone cannot log in any more. Tests use a small software authenticator
+  (`test/support/software-authenticator.ts`) that signs real WebAuthn answers.
+- **Locking the phone** (D57): the start page has a **Lock your phone to this test** section with
+  Android App pinning and iPhone Guided Access steps for the student's phone.
+
+### M11 Student login and home (built 2026-10-25)
+
+- `/login`: class, roll number and PIN (the class is chosen for you when there is only one).
+  `/` shows the student home when logged in: name, class and roll number, then **Open now**
+  (open tests and unfinished attempts), **Upcoming** (sorted by the nearest opening time) and
+  **Finished** (finished or missed). The grouping is a pure, tested function.
+- The test link asks for the login first, then shows **Start test** with the student's name; no
+  typing of names any more. A student of another class gets a clear message.
+- Migration 6 rebuilt `attempts`: `student_id` (NULL for attempts made before accounts), one
+  attempt per student per test, and a nullable `token_hash` for the offline assignments of M17.
+  Deleting a student sets `student_id` to NULL, so old results stay by name and roll number.
+- The teacher's results list **Not started yet** with the class's students who have no attempt.
+
+### M10 Manage (built 2026-10-25)
+
+- **Manage** tab for the teacher: `/teacher/manage` lists the classes; `/teacher/manage/classes/:id`
+  has two tabs, **Subjects** (rename, move to another class, move its tests, delete; chapters with
+  add, rename, up and down, delete) and **Students** (add one, paste a list with a preview and line
+  numbers for problems, new PINs shown once with **Copy all PINs**, edit, Reset PIN, delete, move
+  all students to another class).
+- Every delete asks first and says what goes with it; a blocked delete explains why (D38). The
+  explanations are pure functions in `manage/manage-rules.ts` with tests.
+- The class tree (`GET /api/classes`) is the one source for the Manage pages, the test form's class
+  and subject pickers and the test list's subject filter, so a change in Manage refreshes them all
+  with one request.
+- Tests have a type (test or quiz) and chapter tags; the test list is grouped by class and subject
+  and can be filtered by subject and type.
+- Migration 5 rebuilt `subjects` with `class_id` and added `classes`, `chapters`, `students`,
+  `test_chapters` and `tests.kind`; existing subjects went into "My class" (D37).
 
 ### M9 Quick wins (built 2026-10-24)
 

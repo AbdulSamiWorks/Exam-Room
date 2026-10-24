@@ -128,7 +128,7 @@ describe('runMigrations', () => {
       'write',
     );
 
-    expect(await runMigrations(database)).toEqual([5]);
+    expect(await runMigrations(database, migrationsUpTo(5))).toEqual([5]);
 
     const classes = await database.execute('SELECT id, name, created_at FROM classes');
     expect(classes.rows.map((row) => [row.name, row.created_at])).toEqual([['My class', 500]]);
@@ -153,6 +153,35 @@ describe('runMigrations', () => {
     await expect(database.execute('DELETE FROM subjects WHERE id = 3')).rejects.toThrow(
       /FOREIGN KEY/,
     );
+  });
+
+  it('keeps attempts and their exits when attempts get a student account column', async () => {
+    await runMigrations(database, migrationsUpTo(5));
+    await database.batch(
+      [
+        "INSERT INTO classes (id, name, created_at) VALUES (1, 'Class 9', 0)",
+        "INSERT INTO subjects (id, class_id, name, created_at) VALUES (1, 1, 'Physics', 0)",
+        `INSERT INTO tests (id, code, subject_id, title, duration_minutes, allowed_exits,
+                            page_count, created_at, opens_at)
+         VALUES (1, 'K7M2QX', 1, 'Quiz', 30, 1, 1, 0, 0)`,
+        `INSERT INTO attempts (id, test_id, student_name, roll_no, roll_no_key, token_hash, status,
+                               started_at, deadline_at)
+         VALUES (7, 1, 'Ayesha', '17', '17', 'hash', 'in_progress', 0, 1800000)`,
+        `INSERT INTO exits (attempt_id, client_exit_id, reason, left_at)
+         VALUES (7, 'exit-one-01', 'hidden', 1000)`,
+      ],
+      'write',
+    );
+
+    expect(await runMigrations(database, migrationsUpTo(6))).toEqual([6]);
+
+    const attempts = await database.execute('SELECT id, student_id, token_hash FROM attempts');
+    expect(attempts.rows.map((row) => [row.id, row.student_id, row.token_hash])).toEqual([
+      [7, null, 'hash'],
+    ]);
+    await database.execute('DELETE FROM attempts WHERE id = 7');
+    const exits = await database.execute('SELECT COUNT(*) AS total FROM exits');
+    expect(exits.rows[0]?.total).toBe(0);
   });
 
   it('creates no class when there were no subjects yet', async () => {

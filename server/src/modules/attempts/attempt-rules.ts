@@ -36,7 +36,8 @@ export function finishByStudent(attempt: AttemptRecord, currentTime: number): At
 
 export function endByTeacher(attempt: AttemptRecord, currentTime: number): AttemptChange {
   const timeLimitChange = applyTimeLimit(attempt, currentTime);
-  if (timeLimitChange.attempt.status !== 'in_progress') return timeLimitChange;
+  const isStillOpen = ['waiting', 'in_progress'].includes(timeLimitChange.attempt.status);
+  if (!isStillOpen) return timeLimitChange;
   return {
     attempt: {
       ...attempt,
@@ -95,4 +96,37 @@ export function resumeOnNewDevice(
 ): AttemptChange {
   const withNewToken = { ...attempt, tokenHash: newTokenHash };
   return registerExit(withNewToken, exitRules, deviceChange);
+}
+
+const MILLISECONDS_PER_MINUTE = 60_000;
+export const LONGEST_ASSIGNMENT_MS = 30 * 24 * 60 * MILLISECONDS_PER_MINUTE;
+
+export type DeadlineRules = {
+  kind: 'test' | 'quiz' | 'assignment';
+  durationMinutes: number;
+  closesAt: number | null;
+};
+
+export type StartRules = Pick<DeadlineRules, 'kind'> & { waitingRoom: boolean };
+
+export function deadlineFor(test: DeadlineRules, startedAt: number): number {
+  if (test.kind !== 'assignment') return startedAt + test.durationMinutes * MILLISECONDS_PER_MINUTE;
+  return test.closesAt ?? startedAt + LONGEST_ASSIGNMENT_MS;
+}
+
+export function watchesExits(test: Pick<DeadlineRules, 'kind'>): boolean {
+  return test.kind !== 'assignment';
+}
+
+export function startsInWaitingRoom(test: StartRules): boolean {
+  return test.waitingRoom && test.kind !== 'assignment';
+}
+
+export type StartTimes = {
+  startedAt: number;
+  deadlineAt: number;
+};
+
+export function startTimesFor(test: DeadlineRules, startedAt: number): StartTimes {
+  return { startedAt, deadlineAt: deadlineFor(test, startedAt) };
 }

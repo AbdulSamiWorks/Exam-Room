@@ -1,0 +1,98 @@
+.headerActions {
+  display: flex;
+  gap: 8px;
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.emptyMessage {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.testList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.testCard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.testCard:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+.testCard:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.testTitle {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.testDetails,
+.testState {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.testState {
+  font-weight: 600;
+}
+
+.offerActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.points {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.profile {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  margin: 0;
+}
+
+.profile dt {
+  color: var(--color-muted);
+}
+
+.profile dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}

@@ -1,0 +1,19 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.emptyMessage {
+  margin: 0;
+  color: var(--color-muted);
+}

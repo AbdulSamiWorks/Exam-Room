@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import type { AppDependencies } from './app-dependencies.js';
 import { notFound } from './lib/http-errors.js';
+import { createStudentPhotosRouter } from './modules/answer-photos/student-photos-router.js';
+import { createTeacherPhotosRouter } from './modules/answer-photos/teacher-photos-router.js';
 import { createAttemptRouter } from './modules/attempts/attempt-router.js';
 import { createPublicTestsRouter } from './modules/attempts/public-tests-router.js';
 import {
@@ -14,6 +16,22 @@ import {
 } from './modules/chapters/chapters-router.js';
 import { createClassesRouter } from './modules/classes/classes-router.js';
 import { createHealthRouter } from './modules/health/health-router.js';
+import {
+  createAttemptMarksRouter,
+  createTestMarkingRouter,
+} from './modules/marking/marking-router.js';
+import { createStudentResultsRouter } from './modules/marking/student-results-router.js';
+import {
+  createOwnProgressRouter,
+  createStudentProgressRouter,
+} from './modules/progress/progress-router.js';
+import {
+  createClassPointsRouter,
+  createStudentPointsRouter,
+} from './modules/points/points-router.js';
+import { createPasskeysRouter } from './modules/passkeys/passkeys-router.js';
+import { createStudentAuthRouter } from './modules/student-auth/student-auth-router.js';
+import { createStudentHomeRouter } from './modules/student-home/student-home-router.js';
 import {
   createClassStudentsRouter,
   createStudentsRouter,
@@ -29,17 +47,29 @@ export function createApiRouter(dependencies: AppDependencies): Router {
 
   apiRouter.use('/health', createHealthRouter());
   apiRouter.use('/auth', createAuthRouter(dependencies));
+  apiRouter.use('/student-auth/passkeys', createPasskeysRouter(dependencies));
+  apiRouter.use('/student-auth', createStudentAuthRouter(dependencies));
+  apiRouter.use('/student/results', createStudentResultsRouter(dependencies));
+  apiRouter.use('/student/progress', createOwnProgressRouter(dependencies));
+  apiRouter.use('/student', createStudentHomeRouter(dependencies));
   apiRouter.use('/classes/:classId/subjects', createClassSubjectsRouter(dependencies));
   apiRouter.use('/classes/:classId/students', createClassStudentsRouter(dependencies));
+  apiRouter.use('/classes/:classId/points', createClassPointsRouter(dependencies));
   apiRouter.use('/classes', createClassesRouter(dependencies));
   apiRouter.use('/subjects/:subjectId/chapters', createSubjectChaptersRouter(dependencies));
   apiRouter.use('/subjects', createSubjectsRouter(dependencies));
   apiRouter.use('/chapters', createChaptersRouter(dependencies));
+  apiRouter.use('/students/:studentId/points', createStudentPointsRouter(dependencies));
+  apiRouter.use('/students/:studentId/progress', createStudentProgressRouter(dependencies));
   apiRouter.use('/students', createStudentsRouter(dependencies));
   apiRouter.use('/tests/:testId/attempts', createTestResultsRouter(dependencies));
+  apiRouter.use('/tests/:testId', createTestMarkingRouter(dependencies));
   apiRouter.use('/tests', createTestsRouter(dependencies));
+  apiRouter.use('/attempts/:attemptId/photos', createTeacherPhotosRouter(dependencies));
+  apiRouter.use('/attempts/:attemptId/marks', createAttemptMarksRouter(dependencies));
   apiRouter.use('/attempts', createTeacherAttemptsRouter(dependencies));
   apiRouter.use('/public/tests', createPublicTestsRouter(dependencies));
+  apiRouter.use('/attempt/photos', createStudentPhotosRouter(dependencies));
   apiRouter.use('/attempt', createAttemptRouter(dependencies));
 
   apiRouter.use((_request, _response, next) => next(notFound()));

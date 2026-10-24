@@ -3,3 +3,14 @@
   flex-direction: column;
   gap: 16px;
 }
+
+.note {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

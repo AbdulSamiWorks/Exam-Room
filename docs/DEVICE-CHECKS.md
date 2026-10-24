@@ -93,3 +93,109 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
       **Test closed on this phone**; **Open the test here** lets them start again with full time.
 - [ ] Teacher deletes a test: the teacher goes back to the test list, and the student link says the
       test does not exist.
+
+## 10. Manage (classes, subjects, chapters, students)
+
+- [ ] **Manage** → add a class, open it, add two subjects and three chapters. Move a chapter up
+      and down with the arrows; the order stays after a reload.
+- [ ] **Students** → **Paste a list** from a spreadsheet (roll number and name columns). The
+      preview shows every student; a line without a name or a repeated roll number is explained
+      with its line number.
+- [ ] Add the list: the new PINs show once. **Copy all PINs** and paste them into WhatsApp; every
+      line has the roll number, name and PIN.
+- [ ] **Reset PIN** on one student shows one new PIN. **Delete** a class that still has students:
+      the app explains why it cannot be deleted yet.
+- [ ] Create a test: the class and subject can be chosen, chapters can be tapped, and the test list
+      groups the test under its subject.
+
+## 11. Student login
+
+- [ ] On a student phone open the site: **Student login** → class, roll number and PIN. A wrong
+      PIN says so; the right PIN opens the student home with the student's name and class.
+- [ ] Close the browser and open the site again the next day: the student is still logged in.
+- [ ] Open a test link while logged out: it asks to log in, then comes back to the test.
+- [ ] The teacher taps **Reset PIN**: the student phone is logged out and only the new PIN works.
+- [ ] The teacher's results list **Not started yet** with the students who have not started.
+
+## 12. Installed app and fingerprint
+
+- [ ] Android Chrome: the student home shows **Install app**. Install it; it opens without the
+      browser bar. iPhone Safari: follow the **Add to Home Screen** steps.
+- [ ] Open the installed app with airplane mode on: the app opens (it says it cannot reach the
+      server, which is expected).
+- [ ] In the installed app, start a test and do not touch the phone for 3 minutes: the screen
+      stays on and there is no exit (older iPhones had a wake lock bug in home screen apps).
+- [ ] Tap **Use fingerprint** on the student home. Log out, then **Log in with fingerprint**.
+- [ ] The teacher taps **Reset PIN**: the fingerprint login on that phone stops working and asks
+      for the PIN.
+- [ ] Follow **Lock your phone to this test** on Android (App pinning) and iPhone (Guided Access).
+
+## 13. Typed papers
+
+- [ ] **New test → Type or paste → Start from a sample paper**: the preview shows the paper; a
+      broken line (for example `Answer: e` for four options) shows a problem with its line number.
+- [ ] Add a picture from the phone's camera roll to a question; it shows in the preview.
+- [ ] Create the test, then open it on a student phone: the paper is easy to read, Urdu text runs
+      right to left, the picture shows, and no correct answer is visible.
+- [ ] On a PDF test, **Add an answer sheet** (for example 10 MCQs with A–D) and type the answers
+      as letters.
+
+## 14. Answering
+
+- [ ] Tap answers on a typed paper; the top bar says **Saved**. Tap a chosen answer again to clear
+      it.
+- [ ] Turn on airplane mode, tap two more answers and type a written answer: the bar says
+      **Offline – your answers are safe on this phone**. Close the app, turn the network on, open
+      the app again: the answers are there and the bar says **Saved**.
+- [ ] Turn on airplane mode and tap **Finish**: the dialog waits for the internet. Turn it on: the
+      test is submitted.
+- [ ] On a PDF test with an answer sheet, switch between **Paper** and **Answer sheet**.
+- [ ] The teacher's results show **Answered N of M** for each student.
+
+## 15. Photo answers
+
+- [ ] On a test with photo answers, finish the test: **Photos of your written answers** shows.
+      **Take a photo** opens the camera; the photo shows as saved.
+- [ ] Turn on airplane mode and take a photo: it waits on the phone. Turn the network on: it is
+      sent by itself.
+- [ ] The teacher's results show the photo count and **See the answer photos** shows them sharp
+      enough to read.
+
+## 16. Marking and results
+
+- [ ] After a test with questions, open **Marks and release**: MCQs are marked; enter marks and a
+      comment for a written answer and save. The next student opens.
+- [ ] Change one answer in **Questions and answers**: the marks change for every student.
+- [ ] Before release, a student phone shows no marks. Tap **Release results**: the student home
+      shows **Marks: N of M**; tapping it shows the paper with marks and comments.
+- [ ] Release without **Show the correct MCQ answers**: the student does not see them.
+
+## 17. Assignments, rewards and points
+
+- [ ] Create an **Assignment** with a typed paper and a closing time two days ahead: the student
+      sees **Due …** instead of a timer, can switch apps without a warning, and can come back
+      later to continue.
+- [ ] Create an assignment with **No paper**, enter marks for the class and release: the students
+      see their marks.
+- [ ] Give a test a reward (for example 10 points), release it: the top scorer's home shows the
+      points and the class leader. **Hide results** takes the points back.
+- [ ] On **Manage → class → Points**, give 5 points and take 2 away with a reason.
+
+## 18. Dashboard and progress
+
+- [ ] After a few released results, the student home shows **Progress** with a line chart and
+      **Subjects** with bars; it is readable in light and dark.
+- [ ] **Menu** opens the profile drawer; **Close** and the back gesture close it.
+- [ ] A subject page shows the chapters with their bars.
+- [ ] In **Manage → class → Students**, tap a name: the teacher sees that student's progress and
+      points.
+
+## 19. Waiting room
+
+- [ ] Make a test with **Students start: Together, when I start everyone** and open it.
+- [ ] On two phones, tap **Start test**: both show "Waiting for your teacher" and the screen stays
+      on.
+- [ ] Switching apps while waiting gives no warning and uses no exit.
+- [ ] The teacher's results show **Start for everyone (2 waiting)**. After the tap, both phones
+      open the paper within a few seconds and show the same time left.
+- [ ] A third phone that starts later waits until the teacher taps the button again.

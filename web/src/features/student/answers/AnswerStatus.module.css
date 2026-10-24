@@ -1,0 +1,18 @@
+.status {
+  margin: 0;
+  padding: 4px var(--page-padding);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-success);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.saving {
+  color: var(--color-muted);
+}
+
+.offline,
+.session_lost {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}

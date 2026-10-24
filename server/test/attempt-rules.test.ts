@@ -8,12 +8,15 @@ import {
   finishByStudent,
   registerExit,
   resumeOnNewDevice,
+  startsInWaitingRoom,
+  startTimesFor,
   unlockByTeacher,
   type ExitRules,
 } from '../src/modules/attempts/attempt-rules.js';
 import {
   attemptRecord,
   DEADLINE_AT,
+  DURATION_MS,
   exitEvent,
   STARTED_AT,
 } from './support/attempt-record-fixtures.js';
@@ -201,8 +204,33 @@ describe('endByTeacher', () => {
     });
   });
 
+  it('submits a student who is still in the waiting room', () => {
+    const attempt = attemptRecord({ status: 'waiting' });
+    expect(endByTeacher(attempt, DEADLINE_AT + 1).attempt).toMatchObject({
+      status: 'submitted',
+      finishReason: 'teacher',
+      finishedAt: DEADLINE_AT + 1,
+    });
+  });
+
   it.each(['submitted', 'locked'] as const)('leaves an attempt that is %s unchanged', (status) => {
     const attempt = attemptRecord({ status });
     expect(endByTeacher(attempt, STARTED_AT + 60_000).attempt).toBe(attempt);
+  });
+});
+
+describe('waiting room rules', () => {
+  it('uses the waiting room only for timed tests that switch it on', () => {
+    expect(startsInWaitingRoom({ kind: 'test', waitingRoom: true })).toBe(true);
+    expect(startsInWaitingRoom({ kind: 'quiz', waitingRoom: false })).toBe(false);
+    expect(startsInWaitingRoom({ kind: 'assignment', waitingRoom: true })).toBe(false);
+  });
+
+  it('gives the same start a deadline after the time limit', () => {
+    const test = { kind: 'test', durationMinutes: 30, closesAt: null } as const;
+    expect(startTimesFor(test, STARTED_AT)).toEqual({
+      startedAt: STARTED_AT,
+      deadlineAt: STARTED_AT + DURATION_MS,
+    });
   });
 });

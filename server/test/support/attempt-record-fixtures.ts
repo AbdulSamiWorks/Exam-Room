@@ -8,6 +8,7 @@ export function attemptRecord(overrides: Partial<AttemptRecord> = {}): AttemptRe
   return {
     id: 1,
     testId: 1,
+    studentId: 1,
     studentName: 'Ayesha Khan',
     rollNumber: '17',
     tokenHash: 'original-token-hash',
@@ -18,6 +19,7 @@ export function attemptRecord(overrides: Partial<AttemptRecord> = {}): AttemptRe
     finishedAt: null,
     exitCount: 0,
     forgivenExits: 0,
+    totalMarks: null,
     version: 0,
     ...overrides,
   };

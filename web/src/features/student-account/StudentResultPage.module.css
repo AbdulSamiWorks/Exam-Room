@@ -1,0 +1,45 @@
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.score {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.comment {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--color-text);
+  background: var(--color-surface);
+  white-space: pre-wrap;
+}
+
+.questionResult {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.typedAnswer {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--color-surface);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.marks {
+  margin: 0;
+  font-weight: 700;
+}

@@ -17,6 +17,9 @@ function attemptResult(overrides: Partial<AttemptResult> = {}): AttemptResult {
     forgivenExits: 0,
     awayMs: 65_000,
     isAwayNow: false,
+    answeredCount: 0,
+    photoCount: 0,
+    totalMarks: null,
     exits: [],
     ...overrides,
   };
@@ -70,5 +73,22 @@ describe('resultsFileName', () => {
   it('keeps Urdu letters and falls back when nothing is left', () => {
     expect(resultsFileName('ریاضی ٹیسٹ')).toBe('ریاضی-ٹیسٹ-results.csv');
     expect(resultsFileName('???')).toBe('test-results.csv');
+  });
+});
+
+describe('marks in the CSV', () => {
+  it('adds a marks column when the test has marks', () => {
+    const lines = buildResultsCsv(
+      [
+        attemptResult({ totalMarks: 7.5 }),
+        attemptResult({ id: 2, rollNumber: '18', totalMarks: null }),
+      ],
+      10,
+    )
+      .replace('\uFEFF', '')
+      .split('\r\n');
+    expect(lines[0]?.endsWith(',Marks (out of 10)')).toBe(true);
+    expect(lines[1]?.endsWith(',7.5')).toBe(true);
+    expect(lines[2]?.endsWith(',')).toBe(true);
   });
 });

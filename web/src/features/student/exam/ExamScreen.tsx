@@ -2,9 +2,12 @@ import type { StudentAttempt } from '@exam-room/shared';
 import { useEffect, useState, type SyntheticEvent } from 'react';
 import { Button } from '../../../components/Button';
 import { classNames } from '../../../lib/class-names';
-import { useFinishAttempt } from '../use-attempt';
+import { describeDateTime } from '../../../lib/describe-date-time';
+import { AnswerStatus } from '../answers/AnswerStatus';
+import { requestFinish, type OutboxSnapshot } from '../answers/outbox-store';
+import { useSavedAnswersRestore } from '../answers/use-answer-outbox';
+import { ExamBody } from './ExamBody';
 import { FinishDialog } from './FinishDialog';
-import { PaperViewer } from './PaperViewer';
 import { formatRemainingTime, useRemainingTime } from './use-remaining-time';
 import styles from './ExamScreen.module.css';
 
@@ -15,14 +18,17 @@ type ExamScreenProps = {
   testCode: string;
   attemptToken: string;
   attempt: StudentAttempt;
+  outbox: OutboxSnapshot | undefined;
   onTimeUp: () => void;
 };
 
-export function ExamScreen({ testCode, attemptToken, attempt, onTimeUp }: ExamScreenProps) {
+export function ExamScreen({ testCode, attemptToken, attempt, outbox, onTimeUp }: ExamScreenProps) {
   const remainingMs = useRemainingTime(attempt.deadlineAt, attempt.serverTime);
   const isTimeUp = remainingMs === 0;
-  const finishAttempt = useFinishAttempt(testCode, attemptToken);
   const [isFinishDialogOpen, setIsFinishDialogOpen] = useState(false);
+  const hasQuestions = attempt.test.questionCount > 0;
+  const isFinishing = outbox?.outbox.finishRequested ?? false;
+  useSavedAnswersRestore(testCode, attemptToken, hasQuestions);
 
   useEffect(() => {
     if (!isTimeUp) return;
@@ -46,24 +52,33 @@ export function ExamScreen({ testCode, attemptToken, attempt, onTimeUp }: ExamSc
             {attempt.studentName} · {attempt.rollNumber}
           </span>
         </div>
-        <span
-          className={classNames(styles.timer, remainingMs <= LAST_MINUTES_MS && styles.timerEnding)}
-          role="timer"
-          aria-label="Time left"
-        >
-          {formatRemainingTime(remainingMs)}
-        </span>
+        {attempt.test.kind === 'assignment' ? (
+          <span className={styles.dueDate}>Due {describeDateTime(attempt.deadlineAt)}</span>
+        ) : (
+          <span
+            className={classNames(
+              styles.timer,
+              remainingMs <= LAST_MINUTES_MS && styles.timerEnding,
+            )}
+            role="timer"
+            aria-label="Time left"
+          >
+            {formatRemainingTime(remainingMs)}
+          </span>
+        )}
         <Button onClick={() => setIsFinishDialogOpen(true)}>Finish</Button>
       </header>
 
-      <PaperViewer testCode={testCode} attemptToken={attemptToken} pageSizes={attempt.pageSizes} />
+      {hasQuestions && outbox && <AnswerStatus sendingState={outbox.sendingState} />}
 
-      {isFinishDialogOpen && (
+      <ExamBody testCode={testCode} attemptToken={attemptToken} attempt={attempt} outbox={outbox} />
+
+      {(isFinishDialogOpen || isFinishing) && (
         <FinishDialog
-          isFinishing={finishAttempt.isPending}
-          errorMessage={finishAttempt.error?.message}
+          isFinishing={isFinishing}
+          isOffline={outbox?.sendingState === 'offline'}
           onCancel={() => setIsFinishDialogOpen(false)}
-          onConfirm={() => finishAttempt.mutate()}
+          onConfirm={() => requestFinish(testCode)}
         />
       )}
     </div>

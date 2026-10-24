@@ -1,6 +1,7 @@
-import type { AllowedExits, LeaveRule, TestAvailability, TestSchedule } from './tests.js';
+import type { PaperKind, WrittenAnswers } from './paper.js';
+import type { AllowedExits, LeaveRule, TestAvailability, TestKind, TestSchedule } from './tests.js';
 
-export type AttemptStatus = 'in_progress' | 'submitted' | 'locked';
+export type AttemptStatus = 'waiting' | 'in_progress' | 'submitted' | 'locked';
 
 export type FinishReason = 'student' | 'time_up' | 'teacher' | 'left_test';
 
@@ -10,12 +11,20 @@ export type StudentExitReason = Exclude<ExitReason, 'device_change'>;
 
 export type PublicTest = TestSchedule & {
   code: string;
+  kind: TestKind;
   title: string;
   subjectName: string;
   durationMinutes: number;
   allowedExits: AllowedExits;
   leaveRule: LeaveRule;
+  paperKind: PaperKind;
   pageCount: number;
+  questionCount: number;
+  maxMarks: number | null;
+  writtenAnswers: WrittenAnswers;
+  bountyNote: string;
+  bountyPoints: number;
+  waitingRoom: boolean;
   availability: TestAvailability;
 };
 
@@ -39,11 +48,6 @@ export type StudentAttempt = {
   deadlineAt: number;
   exitsUsed: number;
   serverTime: number;
-};
-
-export type StartAttemptRequest = {
-  studentName: string;
-  rollNumber: string;
 };
 
 export type StartAttemptResponse = {
@@ -83,11 +87,21 @@ export type AttemptResult = {
   forgivenExits: number;
   awayMs: number;
   isAwayNow: boolean;
+  answeredCount: number;
+  photoCount: number;
+  totalMarks: number | null;
   exits: AttemptExit[];
+};
+
+export type NotStartedStudent = {
+  studentId: number;
+  name: string;
+  rollNumber: string;
 };
 
 export type AttemptResultListResponse = {
   attempts: AttemptResult[];
+  notStarted: NotStartedStudent[];
   serverTime: number;
 };
 

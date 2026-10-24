@@ -6,6 +6,7 @@ export function summarizeAttempt(
   storedAttempt: AttemptRecord,
   exits: readonly ExitEvent[],
   currentTime: number,
+  counts: { answeredCount: number; photoCount: number } = { answeredCount: 0, photoCount: 0 },
 ): AttemptResult {
   const attempt = applyTimeLimit(storedAttempt, currentTime).attempt;
   const openExit = exits.find((exit) => exit.returnedAt === null);
@@ -25,6 +26,9 @@ export function summarizeAttempt(
     forgivenExits: attempt.forgivenExits,
     awayMs: closedAwayMs + openAwayMs,
     isAwayNow: attempt.status === 'in_progress' && openExit !== undefined,
+    answeredCount: counts.answeredCount,
+    photoCount: counts.photoCount,
+    totalMarks: attempt.totalMarks,
     exits: exits.map((exit) => summarizeExit(exit, awayUntil)),
   };
 }

@@ -1,22 +1,26 @@
-import type { AttemptStatus, FinishReason } from '@exam-room/shared';
+import type { AttemptStatus, FinishReason, NotStartedStudent } from '@exam-room/shared';
 import type { Row } from '@libsql/client';
 import type { Database } from '../../database/connection.js';
 import { requireFirstRow } from '../../database/query-helpers.js';
+import { compareNaturally } from '../../lib/text.js';
 import type { AttemptChange, AttemptRecord, ExitEvent } from './attempt-record.js';
+import type { StartTimes } from './attempt-rules.js';
 
 export type NewAttempt = {
   testId: number;
+  studentId: number;
   studentName: string;
   rollNumber: string;
   rollNumberKey: string;
   tokenHash: string;
+  status: Extract<AttemptStatus, 'waiting' | 'in_progress'>;
   startedAt: number;
   deadlineAt: number;
 };
 
 const ATTEMPT_COLUMNS = `
-  id, test_id, student_name, roll_no, token_hash, status, finish_reason,
-  started_at, deadline_at, finished_at, exit_count, forgiven_exits, version`;
+  id, test_id, student_id, student_name, roll_no, token_hash, status, finish_reason,
+  started_at, deadline_at, finished_at, exit_count, forgiven_exits, total_marks, version`;
 
 export async function insertAttempt(
   database: Database,
@@ -24,20 +28,37 @@ export async function insertAttempt(
 ): Promise<AttemptRecord> {
   const result = await database.execute({
     sql: `INSERT INTO attempts
-            (test_id, student_name, roll_no, roll_no_key, token_hash, status, started_at, deadline_at)
-          VALUES (?, ?, ?, ?, ?, 'in_progress', ?, ?)
+            (test_id, student_id, student_name, roll_no, roll_no_key, token_hash, status,
+             started_at, deadline_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           RETURNING ${ATTEMPT_COLUMNS}`,
     args: [
       newAttempt.testId,
+      newAttempt.studentId,
       newAttempt.studentName,
       newAttempt.rollNumber,
       newAttempt.rollNumberKey,
       newAttempt.tokenHash,
+      newAttempt.status,
       newAttempt.startedAt,
       newAttempt.deadlineAt,
     ],
   });
   return toAttemptRecord(requireFirstRow(result));
+}
+
+export async function startWaitingAttempts(
+  database: Database,
+  testId: number,
+  { startedAt, deadlineAt }: StartTimes,
+): Promise<number> {
+  const result = await database.execute({
+    sql: `UPDATE attempts
+          SET status = 'in_progress', started_at = ?, deadline_at = ?, version = version + 1
+          WHERE test_id = ? AND status = 'waiting'`,
+    args: [startedAt, deadlineAt, testId],
+  });
+  return result.rowsAffected;
 }
 
 export async function findAttemptById(
@@ -54,12 +75,12 @@ export async function findAttemptByTokenHash(
   return findOneAttempt(database, 'token_hash = ?', [tokenHash]);
 }
 
-export async function findAttemptByRollNumber(
+export async function findAttemptOfStudent(
   database: Database,
   testId: number,
-  rollNumberKey: string,
+  studentId: number,
 ): Promise<AttemptRecord | undefined> {
-  return findOneAttempt(database, 'test_id = ? AND roll_no_key = ?', [testId, rollNumberKey]);
+  return findOneAttempt(database, 'test_id = ? AND student_id = ?', [testId, studentId]);
 }
 
 export async function saveAttemptChange(
@@ -139,6 +160,9 @@ export async function deleteAttemptWithExits(database: Database, attemptId: numb
   await database.batch(
     [
       { sql: 'DELETE FROM exits WHERE attempt_id = ?', args: [attemptId] },
+      { sql: 'DELETE FROM answers WHERE attempt_id = ?', args: [attemptId] },
+      { sql: 'DELETE FROM answer_photos WHERE attempt_id = ?', args: [attemptId] },
+      { sql: 'DELETE FROM question_marks WHERE attempt_id = ?', args: [attemptId] },
       { sql: 'DELETE FROM attempts WHERE id = ?', args: [attemptId] },
     ],
     'write',
@@ -180,6 +204,27 @@ export async function listExitsOfTest(
   return exitsByAttemptId;
 }
 
+export async function listStudentsWithoutAttempt(
+  database: Database,
+  classId: number,
+  testId: number,
+): Promise<NotStartedStudent[]> {
+  const { rows } = await database.execute({
+    sql: `SELECT id, name, roll_no FROM students
+          WHERE class_id = ?
+            AND id NOT IN (SELECT student_id FROM attempts
+                           WHERE test_id = ? AND student_id IS NOT NULL)`,
+    args: [classId, testId],
+  });
+  return rows
+    .map((row) => ({
+      studentId: Number(row.id),
+      name: String(row.name),
+      rollNumber: String(row.roll_no),
+    }))
+    .sort((first, second) => compareNaturally(first.rollNumber, second.rollNumber));
+}
+
 function toExitEvent(row: Row): ExitEvent {
   return {
     clientExitId: String(row.client_exit_id),
@@ -207,9 +252,10 @@ function toAttemptRecord(row: Row): AttemptRecord {
   return {
     id: Number(row.id),
     testId: Number(row.test_id),
+    studentId: row.student_id === null ? null : Number(row.student_id),
     studentName: String(row.student_name),
     rollNumber: String(row.roll_no),
-    tokenHash: String(row.token_hash),
+    tokenHash: row.token_hash === null ? null : String(row.token_hash),
     status: String(row.status) as AttemptStatus,
     finishReason: row.finish_reason === null ? null : (String(row.finish_reason) as FinishReason),
     startedAt: Number(row.started_at),
@@ -217,6 +263,7 @@ function toAttemptRecord(row: Row): AttemptRecord {
     finishedAt: row.finished_at === null ? null : Number(row.finished_at),
     exitCount: Number(row.exit_count),
     forgivenExits: Number(row.forgiven_exits),
+    totalMarks: row.total_marks === null ? null : Number(row.total_marks),
     version: Number(row.version),
   };
 }

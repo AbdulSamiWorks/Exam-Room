@@ -6,6 +6,11 @@ const optionalText = z
   .optional()
   .transform((value) => value || undefined);
 
+const optionalWebAddress = optionalText.refine(
+  (value) => value === undefined || URL.canParse(value),
+  'must be a full web address, for example https://exam-room.onrender.com',
+);
+
 const environmentVariablesSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
@@ -13,6 +18,8 @@ const environmentVariablesSchema = z.object({
   SESSION_SECRET: z.string().min(32, 'must be at least 32 characters'),
   DATABASE_URL: optionalText,
   DATABASE_AUTH_TOKEN: optionalText,
+  PUBLIC_ORIGIN: optionalWebAddress,
+  RENDER_EXTERNAL_URL: optionalWebAddress,
 });
 
 export type RuntimeEnvironment = 'development' | 'production' | 'test';
@@ -22,6 +29,7 @@ export type Config = {
   port: number;
   teacherPassword: string;
   sessionSecret: string;
+  publicOrigin: string;
   database: {
     url: string;
     authToken: string | undefined;
@@ -31,6 +39,8 @@ export type Config = {
 type ConfigDefaults = {
   databaseUrl: string;
 };
+
+const DEVELOPMENT_WEB_ORIGIN = 'http://localhost:5173';
 
 export function loadConfig(
   environmentVariables: NodeJS.ProcessEnv,
@@ -46,6 +56,9 @@ export function loadConfig(
     port: variables.PORT,
     teacherPassword: variables.TEACHER_PASSWORD,
     sessionSecret: variables.SESSION_SECRET,
+    publicOrigin: new URL(
+      variables.PUBLIC_ORIGIN ?? variables.RENDER_EXTERNAL_URL ?? DEVELOPMENT_WEB_ORIGIN,
+    ).origin,
     database: {
       url: variables.DATABASE_URL ?? defaults.databaseUrl,
       authToken: variables.DATABASE_AUTH_TOKEN,

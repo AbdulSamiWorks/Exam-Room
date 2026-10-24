@@ -2,6 +2,8 @@ import type { AttemptResult } from '@exam-room/shared';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+  addStudentToClass,
+  classIdOfTest,
   publishTest,
   startAttemptToken,
   STUDENT,
@@ -62,6 +64,36 @@ describe('teacher results', () => {
         awayMs: 0,
         isAwayNow: false,
       }),
+    ]);
+  });
+
+  it('lists the students of the class who have not started yet', async () => {
+    const test = await publishTest(context.app);
+    await addStudentToClass(context.app, classIdOfTest(context.app, test.code), SECOND_STUDENT);
+    await startAttemptToken(context.app, test.code);
+
+    const teacher = await logInAsTeacher(context.app);
+    const response = await teacher.get(`/api/tests/${test.id}/attempts`);
+    expect(response.body.notStarted).toEqual([
+      {
+        studentId: expect.any(Number),
+        name: SECOND_STUDENT.studentName,
+        rollNumber: SECOND_STUDENT.rollNumber,
+      },
+    ]);
+  });
+
+  it('keeps the result of a deleted student by name and roll number', async () => {
+    const test = await publishTest(context.app);
+    await startAttemptToken(context.app, test.code);
+    const teacher = await logInAsTeacher(context.app);
+    const classId = classIdOfTest(context.app, test.code);
+    const students = await teacher.get(`/api/classes/${classId}/students`);
+
+    const deleted = await teacher.delete(`/api/students/${students.body.students[0].id}`);
+    expect(deleted.status).toBe(204);
+    expect(await readResults(test.id)).toEqual([
+      expect.objectContaining({ studentName: STUDENT.studentName, rollNumber: STUDENT.rollNumber }),
     ]);
   });
 

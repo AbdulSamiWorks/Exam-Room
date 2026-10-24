@@ -9,9 +9,9 @@ import type {
   StudentWithPin,
   UpdateStudentRequest,
 } from '@exam-room/shared';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { deleteResource, getJson, patchJson, postJson } from '../../../api/http-client';
-import { classQueryKeys } from './use-classes';
+import { classQueryKeys, useManageChange } from './use-classes';
 
 export function useStudents(classId: number) {
   return useQuery({
@@ -21,18 +21,8 @@ export function useStudents(classId: number) {
   });
 }
 
-function useStudentChange<Variables, Result>(
-  sendChange: (variables: Variables) => Promise<Result>,
-) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: sendChange,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: classQueryKeys.tree }),
-  });
-}
-
 export function useAddStudents(classId: number) {
-  return useStudentChange((students: NewStudent[]) =>
+  return useManageChange((students: NewStudent[]) =>
     postJson<AddStudentsResponse>(`/classes/${classId}/students`, {
       students,
     } satisfies AddStudentsRequest),
@@ -40,21 +30,21 @@ export function useAddStudents(classId: number) {
 }
 
 export function useUpdateStudent(studentId: number) {
-  return useStudentChange((changes: UpdateStudentRequest) =>
+  return useManageChange((changes: UpdateStudentRequest) =>
     patchJson<StudentResponse>(`/students/${studentId}`, changes),
   );
 }
 
 export function useResetPin(studentId: number) {
-  return useStudentChange(() => postJson<StudentWithPin>(`/students/${studentId}/reset-pin`));
+  return useManageChange(() => postJson<StudentWithPin>(`/students/${studentId}/reset-pin`));
 }
 
 export function useDeleteStudent(studentId: number) {
-  return useStudentChange(() => deleteResource(`/students/${studentId}`));
+  return useManageChange(() => deleteResource(`/students/${studentId}`));
 }
 
 export function useMoveStudents(classId: number) {
-  return useStudentChange((toClassId: number) =>
+  return useManageChange((toClassId: number) =>
     postJson<MoveStudentsResponse>(`/classes/${classId}/students/move`, {
       toClassId,
     } satisfies MoveStudentsRequest),

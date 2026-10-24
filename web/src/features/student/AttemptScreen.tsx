@@ -1,15 +1,19 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { forgetOutbox } from './answers/outbox-store';
+import { hasUnsentWork } from './answers/outbox-state';
+import { useAnswerOutbox } from './answers/use-answer-outbox';
 import { readStoredAttempt, updateStoredAttempt } from './attempt-storage';
 import { ExamScreen } from './exam/ExamScreen';
-import { forgetPageImages } from './exam/use-page-image';
+import { forgetPaper } from './exam/use-page-image';
 import { useExitReporting } from './exit-detection/use-exit-reporting';
 import { enterFullscreen } from './fullscreen';
 import { ErrorScreen } from './screens/ErrorScreen';
 import { FinishedScreen } from './screens/FinishedScreen';
 import { LockedScreen } from './screens/LockedScreen';
 import { SessionLostScreen } from './screens/SessionLostScreen';
+import { WaitingRoomScreen } from './screens/WaitingRoomScreen';
 import { WarningScreen } from './screens/WarningScreen';
 import { isSessionLostError, useAttempt } from './use-attempt';
 import { useScreenWakeLock } from './use-screen-wake-lock';
@@ -27,13 +31,30 @@ export function AttemptScreen({ testCode, attemptToken, onSessionLost }: Attempt
   const [acknowledgedExits, acknowledgeExits] = useAcknowledgedExits(testCode);
   const { refetch } = attemptQuery;
   const reloadAttempt = useCallback(() => void refetch(), [refetch]);
+  const outbox = useAnswerOutbox(
+    testCode,
+    attemptToken,
+    attemptQuery.data,
+    attemptQuery.dataUpdatedAt,
+  );
+  const isFinishing = outbox?.outbox.finishRequested ?? false;
+  const isTimedExam = attemptQuery.data?.test.kind !== 'assignment';
+  const isOutboxSettled = outbox !== undefined && !hasUnsentWork(outbox.outbox);
 
-  useExitReporting({ testCode, attemptToken, isWatching: status === 'in_progress' });
-  useScreenWakeLock(status === 'in_progress');
+  useExitReporting({
+    testCode,
+    attemptToken,
+    isWatching: status === 'in_progress' && !isFinishing && isTimedExam,
+  });
+  useScreenWakeLock((status === 'in_progress' || status === 'waiting') && isTimedExam);
 
   useEffect(() => {
-    if (status && status !== 'in_progress') forgetPageImages(queryClient, testCode);
+    if (status === 'submitted' || status === 'locked') forgetPaper(queryClient, testCode);
   }, [status, queryClient, testCode]);
+
+  useEffect(() => {
+    if (status === 'submitted' && isOutboxSettled) void forgetOutbox(testCode);
+  }, [status, isOutboxSettled, testCode]);
 
   if (attemptQuery.isPending) return <LoadingScreen message="Opening your test…" />;
 
@@ -45,8 +66,18 @@ export function AttemptScreen({ testCode, attemptToken, onSessionLost }: Attempt
   }
 
   const attempt = attemptQuery.data;
-  if (attempt.status === 'submitted') return <FinishedScreen attempt={attempt} />;
+  if (attempt.status === 'submitted') {
+    return (
+      <FinishedScreen
+        testCode={testCode}
+        attemptToken={attemptToken}
+        attempt={attempt}
+        outbox={outbox}
+      />
+    );
+  }
   if (attempt.status === 'locked') return <LockedScreen />;
+  if (attempt.status === 'waiting') return <WaitingRoomScreen attempt={attempt} />;
 
   const hasUnseenExit = attempt.exitsUsed > acknowledgedExits;
 
@@ -56,6 +87,7 @@ export function AttemptScreen({ testCode, attemptToken, onSessionLost }: Attempt
         testCode={testCode}
         attemptToken={attemptToken}
         attempt={attempt}
+        outbox={outbox}
         onTimeUp={reloadAttempt}
       />
       {hasUnseenExit && (

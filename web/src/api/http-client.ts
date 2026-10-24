@@ -57,8 +57,8 @@ function jsonRequest(method: string, body: unknown, options: RequestOptions = {}
   };
 }
 
-export async function deleteResource(path: string): Promise<void> {
-  const response = await sendRequest(path, { method: 'DELETE' });
+export async function deleteResource(path: string, options: RequestOptions = {}): Promise<void> {
+  const response = await sendRequest(path, { method: 'DELETE', headers: options.headers });
   if (!response.ok) throw await readApiError(response);
 }
 
@@ -70,6 +70,18 @@ export async function getBlob(path: string, options: RequestOptions = {}): Promi
 
 export function postForm<ResponseBody>(path: string, formData: FormData): Promise<ResponseBody> {
   return requestJson<ResponseBody>(path, { method: 'POST', body: formData });
+}
+
+export function putBlob<ResponseBody>(
+  path: string,
+  blob: Blob,
+  options: RequestOptions = {},
+): Promise<ResponseBody> {
+  return requestJson<ResponseBody>(path, {
+    method: 'PUT',
+    headers: { 'Content-Type': blob.type, ...options.headers },
+    body: blob,
+  });
 }
 
 export function putForm<ResponseBody>(path: string, formData: FormData): Promise<ResponseBody> {

@@ -30,7 +30,8 @@
 
 .actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
   gap: 8px;
   margin-top: 4px;
 }

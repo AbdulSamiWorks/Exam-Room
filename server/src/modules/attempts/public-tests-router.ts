@@ -4,13 +4,13 @@ import { rateLimit } from 'express-rate-limit';
 import { z } from 'zod';
 import type { AppDependencies } from '../../app-dependencies.js';
 import { sha256 } from '../../lib/crypto.js';
-import { notFound, tooManyRequests } from '../../lib/http-errors.js';
+import { forbidden, notFound, tooManyRequests } from '../../lib/http-errors.js';
 import { parseInput } from '../../lib/parse-input.js';
 import { findTestByCode } from '../tests/tests-repository.js';
 import { startOrResumeAttempt } from './attempt-service.js';
 import { createAttemptToken } from './attempt-token.js';
 import { buildStudentAttempt, toPublicTest } from './student-attempt-view.js';
-import { studentLimits } from '../students/student-limits.js';
+import { requireSessionStudent } from '../student-auth/student-session.js';
 
 const START_WINDOW_MS = 5 * 60 * 1000;
 const MAX_STARTS_PER_WINDOW = 60;
@@ -23,23 +23,8 @@ const testCodeParamsSchema = z.object({
     .regex(/^[A-Z0-9]{6}$/, 'Check the test link.'),
 });
 
-const startAttemptSchema = z.object({
-  studentName: z
-    .string()
-    .trim()
-    .min(1, 'Enter your name.')
-    .max(studentLimits.maxNameLength, `Use at most ${studentLimits.maxNameLength} characters.`),
-  rollNumber: z
-    .string()
-    .trim()
-    .min(1, 'Enter your roll number.')
-    .max(
-      studentLimits.maxRollNumberLength,
-      `Use at most ${studentLimits.maxRollNumberLength} characters.`,
-    ),
-});
-
-export function createPublicTestsRouter({ database, clock }: AppDependencies): Router {
+export function createPublicTestsRouter(dependencies: AppDependencies): Router {
+  const { database, clock } = dependencies;
   const router = Router();
 
   const startAttemptLimiter = rateLimit({
@@ -66,15 +51,20 @@ export function createPublicTestsRouter({ database, clock }: AppDependencies): R
 
   router.post('/:testCode/attempts', startAttemptLimiter, async (request, response) => {
     const { testCode } = parseInput(testCodeParamsSchema, request.params);
-    const { studentName, rollNumber } = parseInput(startAttemptSchema, request.body);
+    const student = await requireSessionStudent(dependencies, request);
     const test = await requireTestByCode(testCode);
+    if (test.subject.classId !== student.schoolClass.id) {
+      throw forbidden(
+        `This test is for ${test.schoolClass.name}. You are in ${student.schoolClass.name}.`,
+        'other_class',
+      );
+    }
 
     const attemptToken = createAttemptToken();
     const currentTime = clock.now();
     const attempt = await startOrResumeAttempt(database, {
       test,
-      studentName,
-      rollNumber,
+      student,
       tokenHash: sha256(attemptToken),
       currentTime,
     });

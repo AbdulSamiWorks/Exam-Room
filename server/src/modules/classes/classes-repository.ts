@@ -2,6 +2,7 @@ import type { SchoolClass } from '@exam-room/shared';
 import type { Row } from '@libsql/client';
 import type { Database } from '../../database/connection.js';
 import { requireFirstRow } from '../../database/query-helpers.js';
+import { compareNaturally } from '../../lib/text.js';
 import type { ClassTreeRows } from './class-tree.js';
 
 export type ClassContents = {
@@ -45,6 +46,11 @@ export async function readClassTreeRows(database: Database): Promise<ClassTreeRo
       testCount: Number(row.test_count),
     })),
   };
+}
+
+export async function listClasses(database: Database): Promise<SchoolClass[]> {
+  const { rows } = await database.execute('SELECT id, name FROM classes');
+  return rows.map(toSchoolClass).sort((first, second) => compareNaturally(first.name, second.name));
 }
 
 export async function findClassById(

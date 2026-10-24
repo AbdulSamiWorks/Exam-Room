@@ -1,9 +1,17 @@
+export type * from './answer-photos.js';
+export type * from './answers.js';
 export type * from './attempts.js';
 export type * from './auth.js';
 export type * from './chapters.js';
 export type * from './classes.js';
 export type * from './errors.js';
 export type * from './health.js';
+export type * from './marking.js';
+export type * from './paper.js';
+export type * from './points.js';
+export type * from './progress.js';
+export type * from './student-auth.js';
+export type * from './student-home.js';
 export type * from './students.js';
 export type * from './subjects.js';
 export type * from './tests.js';

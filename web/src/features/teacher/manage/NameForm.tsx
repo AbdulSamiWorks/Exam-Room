@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Button } from '../../../components/Button';
 import { TextField } from '../../../components/TextField';
-import styles from './NameForm.module.css';
+import styles from './InlineForm.module.css';
 
 type NameFormProps = {
   label: string;
@@ -38,11 +38,14 @@ export function NameForm({
       setErrorMessage(`Enter the ${label.toLowerCase()}.`);
       return;
     }
+    const submittedName = name.trim();
     setIsBusy(true);
     setErrorMessage(undefined);
     try {
-      await onSubmit(name.trim());
-      if (clearsAfterSubmit) setName('');
+      await onSubmit(submittedName);
+      if (clearsAfterSubmit) {
+        setName((currentName) => (currentName.trim() === submittedName ? '' : currentName));
+      }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Something went wrong.');
     } finally {

@@ -3,11 +3,13 @@ import { ButtonLink } from '../../../components/Button';
 import { FormError } from '../../../components/FormError';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { Page } from '../../../components/Page';
-import { describeDuration, describePageCount } from '../../../lib/describe-test-length';
+import { describeBounty } from '../../../lib/describe-bounty';
+import { describeDuration, describePaperSize } from '../../../lib/describe-test-length';
 import { describeAllowedExits, describeChapters, describeTestKind } from '../tests/describe-test';
 import { ResultsPanel } from '../results/ResultsPanel';
 import { useTest } from '../tests/use-tests';
 import { DeleteTestPanel } from './DeleteTestPanel';
+import { PaperPanel } from './PaperPanel';
 import { ShareTestPanel } from './ShareTestPanel';
 import { TestAvailabilityPanel } from './TestAvailabilityPanel';
 import styles from './TestDetailsPage.module.css';
@@ -33,9 +35,11 @@ export function TestDetailsPage() {
     describeTestKind(test.kind),
     `${test.schoolClass.name} · ${test.subject.name}`,
     describeChapters(test.chapters),
-    describePageCount(test.pageCount),
-    describeDuration(test.durationMinutes),
-    describeAllowedExits(test.allowedExits),
+    describePaperSize(test),
+    test.kind === 'assignment' ? 'No timer' : describeDuration(test.durationMinutes),
+    test.kind === 'assignment' ? undefined : describeAllowedExits(test.allowedExits),
+    test.waitingRoom && test.kind !== 'assignment' ? 'Waiting room' : undefined,
+    describeBounty(test.bountyNote, test.bountyPoints),
   ]
     .filter(Boolean)
     .join(' · ');
@@ -53,7 +57,8 @@ export function TestDetailsPage() {
     >
       <div className={styles.sections}>
         <TestAvailabilityPanel test={test} />
-        <ShareTestPanel test={test} />
+        {test.paperKind !== 'none' && <ShareTestPanel test={test} />}
+        <PaperPanel test={test} />
         <ResultsPanel test={test} />
         <DeleteTestPanel test={test} />
       </div>

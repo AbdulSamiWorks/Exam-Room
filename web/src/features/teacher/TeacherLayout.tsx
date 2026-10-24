@@ -1,18 +1,20 @@
 import { Link, Outlet, useLocation } from 'react-router';
 import { Button } from '../../components/Button';
+import { TabLinks, type TabLink } from '../../components/TabLinks';
 import { ThemeToggle } from '../../components/ThemeToggle';
-import { classNames } from '../../lib/class-names';
 import { useLogout } from './auth/use-teacher-session';
 import { MANAGE_PATH } from './manage/manage-paths';
 import styles from './TeacherLayout.module.css';
 
-const TEACHER_SECTIONS = [
-  { to: '/teacher', label: 'Tests' },
+const TESTS_PATH = '/teacher';
+
+const TEACHER_SECTIONS: readonly TabLink[] = [
+  { to: TESTS_PATH, label: 'Tests' },
   { to: MANAGE_PATH, label: 'Manage' },
 ];
 
 function activeSectionPath(pathname: string): string {
-  return pathname.startsWith(MANAGE_PATH) ? MANAGE_PATH : '/teacher';
+  return pathname.startsWith(MANAGE_PATH) ? MANAGE_PATH : TESTS_PATH;
 }
 
 export function TeacherLayout() {
@@ -23,7 +25,7 @@ export function TeacherLayout() {
     <>
       <header className={styles.header}>
         <div className={styles.topRow}>
-          <Link to="/teacher" className={styles.brand}>
+          <Link to={TESTS_PATH} className={styles.brand}>
             Exam Room
           </Link>
           <div className={styles.headerActions}>
@@ -33,21 +35,12 @@ export function TeacherLayout() {
             </Button>
           </div>
         </div>
-        <nav aria-label="Teacher sections" className={styles.sections}>
-          {TEACHER_SECTIONS.map((section) => (
-            <Link
-              key={section.to}
-              to={section.to}
-              aria-current={section.to === activePath ? 'page' : undefined}
-              className={classNames(
-                styles.sectionLink,
-                section.to === activePath && styles.activeSection,
-              )}
-            >
-              {section.label}
-            </Link>
-          ))}
-        </nav>
+        <TabLinks
+          label="Teacher sections"
+          tabs={TEACHER_SECTIONS}
+          activeTo={activePath}
+          className={styles.sections}
+        />
       </header>
       <Outlet />
     </>

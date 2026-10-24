@@ -5,9 +5,10 @@ import { FormError } from '../../../components/FormError';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { Page } from '../../../components/Page';
 import { Panel } from '../../../components/Panel';
+import { subjectOptionsOf } from '../manage/subject-options';
 import { useClassTree } from '../manage/use-classes';
 import { useTestList } from '../tests/use-tests';
-import { groupTestsBySubject, subjectOptionsOf, testsOfKind } from './group-tests-by-subject';
+import { groupTestsBySubject, testsOfKind } from './group-tests-by-subject';
 import { KindFilter, SubjectFilter } from './SubjectFilter';
 import { TestCard } from './TestCard';
 import styles from './DashboardPage.module.css';
@@ -15,7 +16,7 @@ import styles from './DashboardPage.module.css';
 const SUBJECT_FILTER_PARAM = 'subject';
 const KIND_FILTER_PARAM = 'type';
 const NEW_TEST_PATH = '/teacher/tests/new';
-const TEST_KINDS: readonly TestKind[] = ['test', 'quiz'];
+const TEST_KINDS: readonly TestKind[] = ['test', 'quiz', 'assignment'];
 
 export function DashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();

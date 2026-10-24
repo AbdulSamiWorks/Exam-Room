@@ -1,8 +1,16 @@
-import type { AllowedExits, ClassSummary, LeaveRule, TestKind } from '@exam-room/shared';
+import type {
+  AllowedExits,
+  ClassSummary,
+  LeaveRule,
+  TestKind,
+  WrittenAnswers,
+} from '@exam-room/shared';
 import { ButtonLink } from '../../../components/Button';
 import { ChoiceGroup, type Choice } from '../../../components/ChoiceGroup';
 import { FormError } from '../../../components/FormError';
+import fieldStyles from '../../../components/FormField.module.css';
 import { Panel } from '../../../components/Panel';
+import { SelectField } from '../../../components/SelectField';
 import { TextField } from '../../../components/TextField';
 import { MANAGE_PATH, manageClassPath } from '../manage/manage-paths';
 import { useClassTree } from '../manage/use-classes';
@@ -21,6 +29,7 @@ import type { UpdateTestSettings } from './use-test-settings-form';
 const KIND_CHOICES: Choice<TestKind>[] = [
   { value: 'test', label: 'Test' },
   { value: 'quiz', label: 'Quiz' },
+  { value: 'assignment', label: 'Assignment' },
 ];
 
 const ALLOWED_EXITS_CHOICES: Choice<AllowedExits>[] = [
@@ -32,6 +41,20 @@ const ALLOWED_EXITS_CHOICES: Choice<AllowedExits>[] = [
 const LEAVE_RULE_CHOICES: Choice<LeaveRule>[] = [
   { value: 'lock', label: 'Lock (I can unlock)' },
   { value: 'finish', label: 'Finish the test' },
+];
+
+type StartChoice = 'on_tap' | 'together';
+
+const START_CHOICES: Choice<StartChoice>[] = [
+  { value: 'on_tap', label: 'When each one taps Start' },
+  { value: 'together', label: 'Together, when I start everyone' },
+];
+
+const WRITTEN_ANSWER_CHOICES: Choice<WrittenAnswers>[] = [
+  { value: 'on_paper', label: 'On their own paper' },
+  { value: 'typed', label: 'Typed on the phone' },
+  { value: 'photos', label: 'Photos of the paper after finishing' },
+  { value: 'typed_and_photos', label: 'Typed, and photos after finishing' },
 ];
 
 type TestSettingsFieldsProps = {
@@ -70,38 +93,103 @@ export function TestSettingsFields({
         errorMessage={errors.title}
       />
 
-      <TextField
-        label="Time limit (minutes)"
-        type="number"
-        inputMode="numeric"
-        min={testLimits.minDurationMinutes}
-        max={testLimits.maxDurationMinutes}
-        value={values.durationMinutes}
+      {values.kind === 'assignment' ? (
+        <p className={fieldStyles.hint}>
+          Assignments have no timer and no exit detection. Students work until the closing time you
+          set on the test page (at most 30 days).
+        </p>
+      ) : (
+        <>
+          <TextField
+            label="Time limit (minutes)"
+            type="number"
+            inputMode="numeric"
+            min={testLimits.minDurationMinutes}
+            max={testLimits.maxDurationMinutes}
+            value={values.durationMinutes}
+            disabled={areRulesFixed}
+            onChange={(event) => {
+              const durationMinutes = event.target.value;
+              onChange((current) => ({ ...current, durationMinutes }), 'durationMinutes');
+            }}
+            errorMessage={errors.durationMinutes}
+          />
+
+          <ChoiceGroup
+            label="Allowed exits"
+            hint="How many times a student may leave the test before the rule below applies."
+            choices={ALLOWED_EXITS_CHOICES}
+            selectedValue={values.allowedExits}
+            disabled={areRulesFixed}
+            onChange={(allowedExits) => onChange((current) => ({ ...current, allowedExits }))}
+          />
+
+          <ChoiceGroup
+            label="When a student leaves too often"
+            hint="Finish the test means the student cannot come back, and you cannot unlock it."
+            choices={LEAVE_RULE_CHOICES}
+            selectedValue={values.leaveRule}
+            disabled={areRulesFixed}
+            onChange={(leaveRule) => onChange((current) => ({ ...current, leaveRule }))}
+          />
+
+          <ChoiceGroup
+            label="Students start"
+            hint="Together: students who tap Start wait until you tap Start for everyone in the results, then all get the same time."
+            choices={START_CHOICES}
+            selectedValue={values.waitingRoom ? 'together' : 'on_tap'}
+            disabled={areRulesFixed}
+            onChange={(startChoice) =>
+              onChange((current) => ({ ...current, waitingRoom: startChoice === 'together' }))
+            }
+          />
+        </>
+      )}
+
+      <SelectField
+        label="Written answers"
+        hint="How students answer written questions. Multiple choice is always tapped on the phone when the test has questions."
+        value={values.writtenAnswers}
         disabled={areRulesFixed}
         onChange={(event) => {
-          const durationMinutes = event.target.value;
-          onChange((current) => ({ ...current, durationMinutes }), 'durationMinutes');
+          const writtenAnswers = event.target.value as WrittenAnswers;
+          onChange((current) => ({ ...current, writtenAnswers }));
         }}
-        errorMessage={errors.durationMinutes}
-      />
+      >
+        {WRITTEN_ANSWER_CHOICES.map((choice) => (
+          <option key={choice.value} value={choice.value}>
+            {choice.label}
+          </option>
+        ))}
+      </SelectField>
 
-      <ChoiceGroup
-        label="Allowed exits"
-        hint="How many times a student may leave the test before the rule below applies."
-        choices={ALLOWED_EXITS_CHOICES}
-        selectedValue={values.allowedExits}
-        disabled={areRulesFixed}
-        onChange={(allowedExits) => onChange((current) => ({ ...current, allowedExits }))}
-      />
-
-      <ChoiceGroup
-        label="When a student leaves too often"
-        hint="Finish the test means the student cannot come back, and you cannot unlock it."
-        choices={LEAVE_RULE_CHOICES}
-        selectedValue={values.leaveRule}
-        disabled={areRulesFixed}
-        onChange={(leaveRule) => onChange((current) => ({ ...current, leaveRule }))}
-      />
+      <details className={fieldStyles.field} open={Boolean(values.bountyNote)}>
+        <summary className={fieldStyles.label}>Reward for the top scorer (optional)</summary>
+        <TextField
+          label="Reward"
+          placeholder="e.g. A book for the best score"
+          value={values.bountyNote}
+          maxLength={testLimits.maxBountyNoteLength}
+          onChange={(event) => {
+            const bountyNote = event.target.value;
+            onChange((current) => ({ ...current, bountyNote }));
+          }}
+        />
+        <TextField
+          label="Points for the top scorer"
+          hint="Given when you release the results; ties share the top place."
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={testLimits.maxBountyPoints}
+          value={values.bountyPoints}
+          onChange={(event) => {
+            const bountyPoints = event.target.value;
+            onChange((current) => ({ ...current, bountyPoints }), 'bountyPoints');
+          }}
+          errorMessage={errors.bountyPoints}
+        />
+      </details>
     </>
   );
 }

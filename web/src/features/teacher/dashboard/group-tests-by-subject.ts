@@ -1,34 +1,12 @@
-import type { ClassSummary, TestKind, TestSummary } from '@exam-room/shared';
+import type { TestKind, TestSummary } from '@exam-room/shared';
 import { compareNaturally } from '../../../lib/natural-order';
+import { subjectLabel } from '../manage/subject-options';
 
 export type SubjectTestGroup = {
   subjectId: number;
   heading: string;
   tests: TestSummary[];
 };
-
-export type SubjectOption = {
-  subjectId: number;
-  label: string;
-};
-
-export function subjectLabel(
-  subjectName: string,
-  className: string,
-  showsClassName: boolean,
-): string {
-  return showsClassName ? `${subjectName} · ${className}` : subjectName;
-}
-
-export function subjectOptionsOf(classes: readonly ClassSummary[]): SubjectOption[] {
-  const showsClassName = classes.length > 1;
-  return classes.flatMap((schoolClass) =>
-    schoolClass.subjects.map((subject) => ({
-      subjectId: subject.id,
-      label: subjectLabel(subject.name, schoolClass.name, showsClassName),
-    })),
-  );
-}
 
 export function groupTestsBySubject(
   tests: readonly TestSummary[],
