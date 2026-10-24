@@ -1,4 +1,4 @@
-import type { PublicTest } from '@exam-room/shared';
+import type { PublicTestDetails } from '@exam-room/shared';
 import { useState } from 'react';
 import { Button, ButtonLink } from '../../../components/Button';
 import { FormError } from '../../../components/FormError';
@@ -16,6 +16,7 @@ import { studentLoginPath, studentTestPath } from '../../student-account/student
 import { useStudentSession } from '../../student-account/use-student-account';
 import { describeBounty } from '../../../lib/describe-bounty';
 import { describeHowToAnswer } from '../answers/answer-rules';
+import { describeTestHeading } from './describe-test-heading';
 import { PhoneLockSteps } from './PhoneLockSteps';
 import styles from './JoinScreen.module.css';
 
@@ -49,7 +50,7 @@ export function JoinScreen({ testCode, onStarted }: JoinScreenProps) {
 }
 
 type JoinFormProps = JoinScreenProps & {
-  test: PublicTest;
+  test: PublicTestDetails;
   isResuming: boolean;
 };
 
@@ -66,7 +67,7 @@ function JoinForm({ test, testCode, onStarted, isResuming }: JoinFormProps) {
   const student = session.data;
 
   return (
-    <Page title={test.title} subtitle={test.subjectName} actions={<ThemeToggle />}>
+    <Page title={test.title} subtitle={describeTestHeading(test)} actions={<ThemeToggle />}>
       <div className={styles.sections}>
         <Panel title="Before you start">
           <ul className={styles.rules}>
@@ -135,7 +136,7 @@ function describeStartButton(isPending: boolean, isResuming: boolean): string {
   return isPending ? 'Starting…' : 'Start test';
 }
 
-function describeExitRule({ allowedExits, leaveRule }: PublicTest): string {
+function describeExitRule({ allowedExits, leaveRule }: PublicTestDetails): string {
   const consequence =
     leaveRule === 'finish'
       ? 'your test is finished and you cannot come back'

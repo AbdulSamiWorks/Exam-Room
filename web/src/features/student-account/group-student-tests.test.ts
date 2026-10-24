@@ -18,6 +18,7 @@ function card(overrides: Partial<StudentTestCard>): StudentTestCard {
     maxMarks: null,
     releasedMarks: null,
     hasMcqResult: false,
+    chapterNames: [],
     bountyNote: '',
     bountyPoints: 0,
     ...overrides,
@@ -25,7 +26,7 @@ function card(overrides: Partial<StudentTestCard>): StudentTestCard {
 }
 
 describe('groupStudentTests', () => {
-  it('puts open and unfinished tests now, scheduled ones by opening time, the rest finished', () => {
+  it('puts open and unfinished tests now, coming ones by opening time, the rest finished', () => {
     const groups = groupStudentTests([
       card({ code: 'A', title: 'B quiz' }),
       card({ code: 'B', title: 'A quiz', availability: 'closed', attemptStatus: 'locked' }),
@@ -37,7 +38,7 @@ describe('groupStudentTests', () => {
     ]);
 
     expect(groups.now.map((test) => test.code)).toEqual(['B', 'A']);
-    expect(groups.upcoming.map((test) => test.code)).toEqual(['D', 'C']);
+    expect(groups.upcoming.map((test) => test.code)).toEqual(['D', 'C', 'G']);
     expect(groups.finished.map((test) => test.code)).toEqual(['F', 'E']);
   });
 });
@@ -54,6 +55,7 @@ describe('studentTestPill', () => {
     expect(studentTestPill(card({ attemptStatus: 'submitted' })).label).toBe('Marking');
     expect(studentTestPill(card({ availability: 'closed' })).label).toBe('Missed');
     expect(studentTestPill(card({ availability: 'scheduled' })).label).toBe('Soon');
+    expect(studentTestPill(card({ availability: 'not_open' })).label).toBe('Soon');
   });
 
   it('shows the score with a colour for how good it is', () => {

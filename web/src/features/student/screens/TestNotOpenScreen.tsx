@@ -1,15 +1,16 @@
-import type { PublicTest } from '@exam-room/shared';
+import type { PublicTestDetails } from '@exam-room/shared';
 import { Button } from '../../../components/Button';
 import { describeDateTime } from '../../../lib/describe-date-time';
+import { describeTestHeading } from '../join/describe-test-heading';
 import { StatusScreen } from './StatusScreen';
 
 type TestNotOpenScreenProps = {
-  test: PublicTest;
+  test: PublicTestDetails;
   onAlreadyStarted: () => void;
 };
 
 export function TestNotOpenScreen({ test, onAlreadyStarted }: TestNotOpenScreenProps) {
-  const testName = `${test.title} · ${test.subjectName}`;
+  const testName = `${test.title} · ${describeTestHeading(test)}`;
 
   if (test.availability === 'closed') {
     return (
@@ -29,14 +30,21 @@ export function TestNotOpenScreen({ test, onAlreadyStarted }: TestNotOpenScreenP
   }
 
   return (
-    <StatusScreen tone="neutral" title="Not open yet">
+    <StatusScreen
+      tone="neutral"
+      title={test.availability === 'scheduled' ? 'Coming soon' : 'Not open yet'}
+    >
       <p>{testName}</p>
       <p>
-        {test.availability === 'scheduled'
-          ? `This test opens ${describeDateTime(test.opensAt)}.`
-          : 'Your teacher has not opened this test yet.'}
+        {test.availability === 'scheduled' ? (
+          <>
+            This test opens <strong>{describeDateTime(test.opensAt)}</strong>.
+          </>
+        ) : (
+          'Your teacher has not opened this test yet. It opens when your teacher starts it.'
+        )}
       </p>
-      <p>Keep this page open. It checks again by itself every few seconds.</p>
+      <p>Keep this page open. It opens by itself when the test starts.</p>
     </StatusScreen>
   );
 }

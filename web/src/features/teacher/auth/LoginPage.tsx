@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { Button } from '../../../components/Button';
+import { Button, ButtonLink } from '../../../components/Button';
 import { FormError } from '../../../components/FormError';
 import { Page, PageText } from '../../../components/Page';
 import { TextField } from '../../../components/TextField';
 import { ThemeToggle } from '../../../components/ThemeToggle';
+import { STUDENT_LOGIN_PATH } from '../../student-account/student-paths';
 import { useLogin } from './use-teacher-session';
 import styles from './LoginPage.module.css';
 
@@ -37,6 +38,9 @@ export function LoginPage() {
         >
           {login.isPending ? 'Logging in…' : 'Log in'}
         </Button>
+        <ButtonLink to={STUDENT_LOGIN_PATH} variant="secondary" fullWidth>
+          I am a student
+        </ButtonLink>
       </form>
     </Page>
   );

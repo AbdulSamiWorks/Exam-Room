@@ -1,8 +1,10 @@
 import type { ChapterTag } from '@exam-room/shared';
 import type { InStatement, Row } from '@libsql/client';
+import type { Database } from '../../database/connection.js';
 import { groupBy } from '../../lib/collections.js';
 
-export type ChapterTagScope = { testId: number } | { subjectId: number } | 'all tests';
+export type ChapterTagScope =
+  { testId: number } | { subjectId: number } | { classId: number } | 'all tests';
 
 const SELECT_CHAPTER_TAGS = `
   SELECT test_chapters.test_id, chapters.id, chapters.name
@@ -19,10 +21,26 @@ export function chapterTagsQuery(scope: ChapterTagScope): InStatement {
       args: [scope.testId],
     };
   }
+  if ('classId' in scope) {
+    return {
+      sql: `${SELECT_CHAPTER_TAGS}
+            WHERE chapters.subject_id IN (SELECT id FROM subjects WHERE class_id = ?)
+            ${CHAPTER_TAG_ORDER}`,
+      args: [scope.classId],
+    };
+  }
   return {
     sql: `${SELECT_CHAPTER_TAGS} WHERE chapters.subject_id = ? ${CHAPTER_TAG_ORDER}`,
     args: [scope.subjectId],
   };
+}
+
+export async function listChapterNamesOfTest(
+  database: Database,
+  testId: number,
+): Promise<string[]> {
+  const { rows } = await database.execute(chapterTagsQuery({ testId }));
+  return rows.map((row) => String(row.name));
 }
 
 export function chapterTagsByTestId(rows: readonly Row[]): Map<number, ChapterTag[]> {

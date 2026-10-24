@@ -6,6 +6,7 @@ import type { AppDependencies } from '../../app-dependencies.js';
 import { sha256 } from '../../lib/crypto.js';
 import { forbidden, notFound, tooManyRequests } from '../../lib/http-errors.js';
 import { parseInput } from '../../lib/parse-input.js';
+import { listChapterNamesOfTest } from '../tests/test-chapters-repository.js';
 import { findTestByCode } from '../tests/tests-repository.js';
 import { startOrResumeAttempt } from './attempt-service.js';
 import { createAttemptToken } from './attempt-token.js';
@@ -46,7 +47,10 @@ export function createPublicTestsRouter(dependencies: AppDependencies): Router {
   router.get('/:testCode', async (request, response) => {
     const { testCode } = parseInput(testCodeParamsSchema, request.params);
     const test = await requireTestByCode(testCode);
-    response.json({ test: toPublicTest(test, clock.now()) } satisfies PublicTestResponse);
+    const chapterNames = await listChapterNamesOfTest(database, test.id);
+    response.json({
+      test: { ...toPublicTest(test, clock.now()), chapterNames },
+    } satisfies PublicTestResponse);
   });
 
   router.post('/:testCode/attempts', startAttemptLimiter, async (request, response) => {

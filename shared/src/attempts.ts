@@ -29,8 +29,12 @@ export type PublicTest = TestSchedule & {
   availability: TestAvailability;
 };
 
+export type PublicTestDetails = PublicTest & {
+  chapterNames: string[];
+};
+
 export type PublicTestResponse = {
-  test: PublicTest;
+  test: PublicTestDetails;
 };
 
 export type PageSize = {

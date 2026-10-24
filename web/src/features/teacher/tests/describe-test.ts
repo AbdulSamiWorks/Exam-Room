@@ -1,4 +1,5 @@
-import type { AllowedExits, ChapterTag, TestKind } from '@exam-room/shared';
+import type { AllowedExits, ChapterTag } from '@exam-room/shared';
+import { describeChapterNames } from '../../../lib/describe-test-kind';
 
 const shortDateFormat = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
 
@@ -15,18 +16,6 @@ export function studentTestLink(testCode: string): string {
   return `${window.location.origin}/t/${testCode}`;
 }
 
-const TEST_KIND_LABELS: Record<TestKind, string> = {
-  test: 'Test',
-  quiz: 'Quiz',
-  assignment: 'Assignment',
-};
-
-export function describeTestKind(kind: TestKind): string {
-  return TEST_KIND_LABELS[kind];
-}
-
 export function describeChapters(chapters: readonly ChapterTag[]): string | undefined {
-  if (chapters.length === 0) return undefined;
-  const label = chapters.length === 1 ? 'Chapter' : 'Chapters';
-  return `${label}: ${chapters.map((chapter) => chapter.name).join(', ')}`;
+  return describeChapterNames(chapters.map((chapter) => chapter.name));
 }

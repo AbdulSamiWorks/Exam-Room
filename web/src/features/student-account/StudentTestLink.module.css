@@ -120,3 +120,15 @@
   background: var(--color-surface);
   color: var(--color-muted);
 }
+
+.chapters {
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+.timing {
+  color: var(--color-warning);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
