@@ -2,7 +2,7 @@ import type { ChapterSummary, ClassSubjectSummary, ClassSummary } from '@exam-ro
 import { describe, expect, it } from 'vitest';
 import {
   chapterIdsAfterMove,
-  classDeletionBlocker,
+  describeClassDeletion,
   describeChapterDeletion,
   describeSubjectDeletion,
   pinListText,
@@ -23,10 +23,16 @@ function schoolClass(overrides: Partial<ClassSummary> = {}): ClassSummary {
 }
 
 describe('deleting', () => {
-  it('explains why a class cannot be deleted yet', () => {
-    expect(classDeletionBlocker(schoolClass())).toBeUndefined();
-    expect(classDeletionBlocker(schoolClass({ studentCount: 2, subjects: [subject()] }))).toBe(
-      'Class 9 still has 2 students and 1 subject. Move or delete them first.',
+  it('says what deleting a class also deletes', () => {
+    expect(describeClassDeletion(schoolClass())).toBe(
+      'The class is empty, so nothing else is deleted. This cannot be undone.',
+    );
+    const physics = subject({ testCount: 3, chapters: [chapter(1, 'Motion')] });
+    expect(describeClassDeletion(schoolClass({ studentCount: 2, subjects: [physics] }))).toBe(
+      'This also deletes 1 subject (1 chapter and 3 tests with all their results and photos) and 2 students with their PINs and points. Results the students have in other classes stay. This cannot be undone.',
+    );
+    expect(describeClassDeletion(schoolClass({ subjects: [subject()] }))).toBe(
+      'This also deletes 1 subject. Results the students have in other classes stay. This cannot be undone.',
     );
   });
 

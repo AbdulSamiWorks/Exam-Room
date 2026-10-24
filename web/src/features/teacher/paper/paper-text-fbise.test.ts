@@ -63,3 +63,18 @@ describe('the Federal Board sample paper the app offers', () => {
     expect(answerKey[questions[26]?.id ?? '']?.text).toContain('| 0 | 1 | 0 | 1 | 1 | 1 |');
   });
 });
+
+describe('a short answer section', () => {
+  it('reads a) and b) lines without marks as parts of a written question', () => {
+    const { paper, problems } = parsePaperText(
+      '# Section B: Short answers\n28. Write the dual of each expression. [2 marks]\na) A + 0 = A\nb) A·1 = A',
+    );
+    expect(problems).toEqual([]);
+    expect(questionsOf(paper)[0]).toMatchObject({
+      kind: 'written',
+      marks: 2,
+      text: 'Write the dual of each expression.\na) A + 0 = A\nb) A·1 = A',
+      options: [],
+    });
+  });
+});

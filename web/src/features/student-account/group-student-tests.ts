@@ -1,4 +1,5 @@
 import type { StudentTestCard } from '@exam-room/shared';
+import { formatMarks } from '../../lib/describe-marks';
 import { compareNaturally } from '../../lib/natural-order';
 import { studentResultPath } from './student-paths';
 
@@ -40,28 +41,45 @@ export function studentTestPath(test: StudentTestCard): string {
   return hasResult ? studentResultPath(test.code) : `/t/${test.code}`;
 }
 
-export type StudentTestTone = 'open' | 'active' | 'danger' | 'result' | 'quiet';
+export type StudentTestTone =
+  'action' | 'wait' | 'danger' | 'good' | 'okay' | 'low' | 'result' | 'quiet';
 
-export function studentTestTone(test: StudentTestCard): StudentTestTone {
-  if (test.releasedMarks !== null || test.hasMcqResult) return 'result';
-  if (test.attemptStatus === 'locked') return 'danger';
-  if (test.attemptStatus === 'waiting' || test.attemptStatus === 'in_progress') return 'active';
-  if (test.attemptStatus === null && test.availability === 'open') return 'open';
-  return 'quiet';
+export type StudentTestPill = {
+  label: string;
+  tone: StudentTestTone;
+};
+
+const GOOD_PERCENT = 70;
+const OKAY_PERCENT = 40;
+
+function scoreTone(marks: number, maxMarks: number | null): StudentTestTone {
+  if (!maxMarks) return 'result';
+  const percent = (marks / maxMarks) * 100;
+  if (percent >= GOOD_PERCENT) return 'good';
+  return percent >= OKAY_PERCENT ? 'okay' : 'low';
 }
 
-export function describeStudentTestState(test: StudentTestCard): string {
+export function studentTestPill(test: StudentTestCard): StudentTestPill {
   if (test.releasedMarks !== null) {
-    return `Marks: ${test.releasedMarks} of ${test.maxMarks ?? 0} – tap to see`;
+    return {
+      label: `${formatMarks(test.releasedMarks)} / ${formatMarks(test.maxMarks ?? 0)}`,
+      tone: scoreTone(test.releasedMarks, test.maxMarks),
+    };
   }
-  if (test.hasMcqResult) return 'Finished – tap to see your MCQ result';
-  if (test.attemptStatus === 'waiting') return 'Waiting for your teacher – tap to open';
-  if (test.attemptStatus === 'in_progress') return 'Started – tap to continue';
-  if (test.attemptStatus === 'locked') return 'Locked – ask your teacher';
-  if (test.attemptStatus === 'submitted') {
-    return test.finishReason === 'time_up' ? 'Finished – time up' : 'Finished';
+  if (test.hasMcqResult) return { label: 'MCQ result', tone: 'result' };
+  switch (test.attemptStatus) {
+    case 'waiting':
+      return { label: 'Waiting', tone: 'wait' };
+    case 'in_progress':
+      return { label: 'Continue', tone: 'action' };
+    case 'locked':
+      return { label: 'Locked', tone: 'danger' };
+    case 'submitted':
+      return { label: 'Marking', tone: 'quiet' };
+    case null:
+      break;
   }
-  if (test.availability === 'open') return 'Open now';
-  if (test.availability === 'closed') return 'Missed';
-  return 'Not open yet';
+  if (test.availability === 'open') return { label: 'Start', tone: 'action' };
+  if (test.availability === 'scheduled') return { label: 'Soon', tone: 'wait' };
+  return { label: test.availability === 'closed' ? 'Missed' : 'Not open', tone: 'quiet' };
 }

@@ -1,0 +1,122 @@
+.testList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.testCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.testCard:hover {
+  background: var(--color-surface);
+}
+
+.testCard:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.testText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.testTitle {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.testDetails,
+.bounty {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.bounty {
+  color: var(--color-accent-text);
+  font-weight: 600;
+}
+
+.pill {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.action {
+  border-left-color: var(--color-primary);
+}
+
+.actionPill {
+  background: var(--gradient-action);
+  color: var(--color-on-primary);
+}
+
+.wait,
+.okay {
+  border-left-color: var(--color-warning);
+}
+
+.waitPill,
+.okayPill {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.danger,
+.low {
+  border-left-color: var(--color-danger);
+}
+
+.dangerPill,
+.lowPill {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.good {
+  border-left-color: var(--color-success);
+}
+
+.goodPill {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.result {
+  border-left-color: var(--color-accent-text);
+}
+
+.resultPill {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+
+.quiet {
+  border-left-color: var(--color-border-strong);
+}
+
+.quietPill {
+  background: var(--color-surface);
+  color: var(--color-muted);
+}

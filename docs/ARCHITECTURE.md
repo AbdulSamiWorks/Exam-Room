@@ -1,7 +1,7 @@
 # Exam Room — Architecture
 
 > Status: **approved plan, v1** (2026-10-22). Milestones M0–M19 are all built (2026-10-25), and the
-> owner's first feedback round M20 (2026-10-24, §17) is done; the real-device checks in §15 are
+> owner's feedback rounds M20 and M21 (2026-10-24, §17) are done; the real-device checks in §15 are
 > still to do. Colours and their roles: `docs/DESIGN.md`. Update this file whenever a decision
 > below changes.
 
@@ -351,6 +351,8 @@ GET    /api/classes                   → classes with subjects, chapters and co
 POST   /api/classes                   { name }
 PATCH  /api/classes/:id               { name }
 DELETE /api/classes/:id               → only when it has no subjects and no students
+DELETE /api/classes/:id?withContents=true → the class with its subjects, chapters, tests
+                                       (all results) and students, in one batch (D64)
 POST   /api/classes/:id/subjects      { name }
 GET    /api/classes/:id/students
 POST   /api/classes/:id/students      { students: [{ rollNumber, name }] } → each with a new PIN
@@ -652,6 +654,11 @@ the real-device checks in §15.
 | D62 | The plain text reader accepts an FBISE paper as written (options on one line, `Section A:` headings, parts without marks, fill-in lines dropped); paper text supports tables (`\|` rows) and `^{}`/`_{}` superscripts and subscripts, rendered by one pure `rich-text.ts` | Teachers paste their own papers; truth tables, K-maps and formulas are common in Class 11 | Papers need real maths layout → add KaTeX, loaded only for papers that use it |
 | D63 | Warm design system from the owner's reference: cream page, white cards, orange actions, green good news, red danger, serif page titles; every colour has one role (`docs/DESIGN.md`) | One clear meaning per colour; looks friendly and calm | Owner feedback |
 
+| D64 | Deleting a class can take everything with it (subjects, chapters, tests with all results and photos, students with PINs and points) in one batch write, but only after the teacher types the class name; shared `testDeletionStatements` and `studentDeletionStatements` keep single deletes the same | Removing contents one by one made delete look broken; typing the name prevents an accident | — |
+| D65 | Model answers of written questions reach students only after release, and only while "Show the correct MCQ answers and the model answers" is on; in a section called Short, Long or Detailed answers, `a)` lines are parts | The owner wants students to learn from the model answers without leaking them during the test | — |
+| D66 | The teacher's test list shows a stage per test (Not open, Opens later, Running, Finished · to mark, Results out) with a coloured edge, finished and still-writing counts and the average after release, from three small counts in the list query | The owner could not see which tests were finished or how they went | Many tests → add paging |
+| D67 | Student cards show one pill for what to do or how it went (Start, Continue, Waiting, Locked, Marking, MCQ result, score coloured by percent); the finished screen shows the MCQ score at once | One look tells the student what matters | Owner feedback |
+
 ## 14. Future extension points (not built now)
 
 - Multiple teachers → `teachers` table + `teacher_id` on subjects/tests; only the auth module changes.
@@ -880,6 +887,14 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 | Render hours     | One service awake all month ≈ 744 hours                               | 750 hours / month                  |
 
 ## 17. Built milestones
+
+### M21 Owner's second feedback round (built 2026-10-24)
+
+- **Delete a class** with everything in it after typing its name (D64).
+- **Model answers** for short and long questions, shown to students after release (D65).
+- **Teacher dashboard**: stage, finished counts and average on every test card (D66).
+- **Student dashboard**: tiles, clear cards with one pill each, Results with Show all; the
+  **finished screen shows the MCQ score** with right, wrong and not answered counts (D67).
 
 ### M20 Owner's first feedback round (built 2026-10-24)
 

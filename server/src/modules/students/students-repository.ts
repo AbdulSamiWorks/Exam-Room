@@ -1,5 +1,5 @@
 import type { NewStudent, Student, StudentProfile } from '@exam-room/shared';
-import type { Row } from '@libsql/client';
+import type { InStatement, InValue, Row } from '@libsql/client';
 import type { Database } from '../../database/connection.js';
 import { placeholdersFor } from '../../database/query-helpers.js';
 import { compareNaturally, comparisonKey } from '../../lib/text.js';
@@ -159,16 +159,20 @@ export async function moveStudentsOfClass(
   return result.rowsAffected;
 }
 
+export function studentDeletionStatements(studentIdsQuery: string, args: InValue[]): InStatement[] {
+  return [
+    {
+      sql: `UPDATE attempts SET student_id = NULL WHERE student_id IN (${studentIdsQuery})`,
+      args,
+    },
+    { sql: `DELETE FROM student_passkeys WHERE student_id IN (${studentIdsQuery})`, args },
+    { sql: `DELETE FROM points WHERE student_id IN (${studentIdsQuery})`, args },
+    { sql: `DELETE FROM students WHERE id IN (${studentIdsQuery})`, args },
+  ];
+}
+
 export async function deleteStudent(database: Database, studentId: number): Promise<void> {
-  await database.batch(
-    [
-      { sql: 'UPDATE attempts SET student_id = NULL WHERE student_id = ?', args: [studentId] },
-      { sql: 'DELETE FROM student_passkeys WHERE student_id = ?', args: [studentId] },
-      { sql: 'DELETE FROM points WHERE student_id = ?', args: [studentId] },
-      { sql: 'DELETE FROM students WHERE id = ?', args: [studentId] },
-    ],
-    'write',
-  );
+  await database.batch(studentDeletionStatements('SELECT ?', [studentId]), 'write');
 }
 
 function byRollNumber(first: Student, second: Student): number {

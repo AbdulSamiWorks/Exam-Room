@@ -38,6 +38,9 @@ export type TestSummary = TestSchedule & {
   instantMcqResult: boolean;
   resultsReleasedAt: number | null;
   studentCount: number;
+  finishedCount: number;
+  classStudentCount: number;
+  averageMarks: number | null;
   createdAt: number;
   availability: TestAvailability;
 };

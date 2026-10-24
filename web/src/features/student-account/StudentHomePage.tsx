@@ -7,6 +7,7 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { Page } from '../../components/Page';
 import { Panel } from '../../components/Panel';
 import { ThemeToggle } from '../../components/ThemeToggle';
+import { classNames } from '../../lib/class-names';
 import { countOf, joinWithAnd } from '../../lib/text';
 import { ProgressOverview } from '../progress/ProgressOverview';
 import { FingerprintOffer } from './FingerprintOffer';
@@ -34,11 +35,9 @@ export function StudentHomePage({ student }: { student: StudentProfile }) {
       }
     >
       <div className={styles.sections}>
-        <FingerprintOffer />
-        <InstallAppPanel />
         {home.isPending && <LoadingScreen message="Loading your tests…" />}
         {home.isError && <FormError>{home.error.message}</FormError>}
-        {home.data && <TestSections tests={home.data.tests} />}
+        {home.data && <TestSections tests={home.data.tests} points={home.data.points} />}
         {progress.data && (
           <ProgressOverview
             results={progress.data.results}
@@ -46,6 +45,8 @@ export function StudentHomePage({ student }: { student: StudentProfile }) {
             subjectPath={studentSubjectPath}
           />
         )}
+        <FingerprintOffer />
+        <InstallAppPanel />
       </div>
       <Drawer title="My profile" isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)}>
         <ProfileDetails
@@ -96,34 +97,64 @@ function ProfileDetails({ student, points, leaders }: ProfileDetailsProps) {
   );
 }
 
-function TestSections({ tests }: { tests: StudentTestCard[] }) {
+const RECENT_RESULT_COUNT = 5;
+
+function TestSections({ tests, points }: { tests: StudentTestCard[]; points: number }) {
   const groups = groupStudentTests(tests);
+  const [isShowingAllResults, setIsShowingAllResults] = useState(false);
+  const shownResults = isShowingAllResults
+    ? groups.finished
+    : groups.finished.slice(0, RECENT_RESULT_COUNT);
 
   return (
     <>
-      <TestSection title="Open now" emptyMessage="No test is open right now." tests={groups.now} />
-      <TestSection title="Upcoming" emptyMessage="No upcoming tests." tests={groups.upcoming} />
+      <dl className={styles.summaryTiles}>
+        <SummaryTile label="Open now" value={groups.now.length} className={styles.openTile} />
+        <SummaryTile label="Finished" value={groups.finished.length} className={styles.doneTile} />
+        <SummaryTile label="Points" value={points} />
+      </dl>
+      <Panel title="Open now">
+        {groups.now.length === 0 ? (
+          <p className={styles.emptyMessage}>No test is open right now. Well done!</p>
+        ) : (
+          <StudentTestList tests={groups.now} />
+        )}
+      </Panel>
+      {groups.upcoming.length > 0 && (
+        <Panel title="Coming up">
+          <StudentTestList tests={groups.upcoming} />
+        </Panel>
+      )}
       {groups.finished.length > 0 && (
-        <TestSection title="Finished" emptyMessage="" tests={groups.finished.slice(0, 5)} />
+        <Panel title="Results">
+          <StudentTestList tests={shownResults} />
+          {groups.finished.length > RECENT_RESULT_COUNT && (
+            <Button
+              variant="secondary"
+              size="small"
+              className={styles.showAll}
+              onClick={() => setIsShowingAllResults((current) => !current)}
+            >
+              {isShowingAllResults ? 'Show fewer' : `Show all (${groups.finished.length})`}
+            </Button>
+          )}
+        </Panel>
       )}
     </>
   );
 }
 
-type TestSectionProps = {
-  title: string;
-  emptyMessage: string;
-  tests: StudentTestCard[];
+type SummaryTileProps = {
+  label: string;
+  value: number;
+  className?: string;
 };
 
-function TestSection({ title, emptyMessage, tests }: TestSectionProps) {
+function SummaryTile({ label, value, className }: SummaryTileProps) {
   return (
-    <Panel title={title}>
-      {tests.length === 0 ? (
-        <p className={styles.emptyMessage}>{emptyMessage}</p>
-      ) : (
-        <StudentTestList tests={tests} />
-      )}
-    </Panel>
+    <div className={classNames(styles.summaryTile, className)}>
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
   );
 }

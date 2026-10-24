@@ -15,6 +15,7 @@ const ANSWER_LINE = /^(?:answer|ans|correct answer)\s*[:-]\s*(.*)$/i;
 const ANSWER_LETTER = /^\(?([a-f])(?:[).](?:\s.*)?)?$/i;
 const INLINE_OPTION_MARKER = /(?:^|\s)\(?([a-f])\)\s+/gi;
 const FILL_IN_BLANKS = /_{3,}/;
+const WRITTEN_SECTION_TITLE = /short|long|detailed|descriptive|subjective|written|essay/i;
 const MARKS_AT_END = /\s*[[(]\s*(\d+(?:\.5)?)\s*(?:marks?|m)?\s*[\])]\s*$/i;
 const DEFAULT_MARKS = 1;
 
@@ -235,6 +236,9 @@ function buildImportedPaper(
       title: draftSection.title,
       instructions: draftSection.instructionLines.join('\n'),
       questions: draftSection.questions.map((draft) => {
+        if (WRITTEN_SECTION_TITLE.test(draftSection.title) && draft.answerLetter === undefined) {
+          turnOptionsIntoParts(draft);
+        }
         const question = toQuestion(draft, questionIndex);
         questionIndex += 1;
         collectAnswer(draft, question, answerKey, problems);

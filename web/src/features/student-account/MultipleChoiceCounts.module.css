@@ -1,0 +1,31 @@
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.counts li {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.right {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.wrong {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.unanswered {
+  background: var(--color-surface);
+  color: var(--color-muted);
+}

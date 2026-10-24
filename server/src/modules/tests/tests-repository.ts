@@ -7,7 +7,7 @@ import type {
   TestSchedule,
   WrittenAnswers,
 } from '@exam-room/shared';
-import type { Row, Transaction } from '@libsql/client';
+import type { InStatement, InValue, Row, Transaction } from '@libsql/client';
 import type { Database } from '../../database/connection.js';
 import { requireFirstRow } from '../../database/query-helpers.js';
 import type { PageImage } from './page-images.js';
@@ -63,7 +63,12 @@ const SELECT_TEST_SUMMARY = `
     subjects.name AS subject_name,
     classes.id    AS class_id,
     classes.name  AS class_name,
-    (SELECT COUNT(*) FROM attempts WHERE attempts.test_id = tests.id) AS student_count
+    (SELECT COUNT(*) FROM attempts WHERE attempts.test_id = tests.id) AS student_count,
+    (SELECT COUNT(*) FROM attempts
+     WHERE attempts.test_id = tests.id AND attempts.status = 'submitted') AS finished_count,
+    (SELECT AVG(attempts.total_marks) FROM attempts
+     WHERE attempts.test_id = tests.id AND attempts.total_marks IS NOT NULL) AS average_marks,
+    (SELECT COUNT(*) FROM students WHERE students.class_id = classes.id) AS class_student_count
   FROM tests
   JOIN subjects ON subjects.id = tests.subject_id
   JOIN classes ON classes.id = subjects.class_id`;
@@ -294,36 +299,26 @@ export async function saveTestSchedule(
   });
 }
 
+const ATTEMPT_TABLES = ['exits', 'answers', 'answer_photos', 'question_marks'] as const;
+const TEST_TABLES = ['attempts', 'test_pages', 'paper_images', 'test_chapters', 'points'] as const;
+
+export function testDeletionStatements(testIdsQuery: string, args: InValue[]): InStatement[] {
+  const attemptIdsQuery = `SELECT id FROM attempts WHERE test_id IN (${testIdsQuery})`;
+  return [
+    ...ATTEMPT_TABLES.map((table) => ({
+      sql: `DELETE FROM ${table} WHERE attempt_id IN (${attemptIdsQuery})`,
+      args,
+    })),
+    ...TEST_TABLES.map((table) => ({
+      sql: `DELETE FROM ${table} WHERE test_id IN (${testIdsQuery})`,
+      args,
+    })),
+    { sql: `DELETE FROM tests WHERE id IN (${testIdsQuery})`, args },
+  ];
+}
+
 export async function deleteTestWithResults(database: Database, testId: number): Promise<void> {
-  await database.batch(
-    [
-      {
-        sql: 'DELETE FROM exits WHERE attempt_id IN (SELECT id FROM attempts WHERE test_id = ?)',
-        args: [testId],
-      },
-      {
-        sql: 'DELETE FROM answers WHERE attempt_id IN (SELECT id FROM attempts WHERE test_id = ?)',
-        args: [testId],
-      },
-      {
-        sql: `DELETE FROM answer_photos
-              WHERE attempt_id IN (SELECT id FROM attempts WHERE test_id = ?)`,
-        args: [testId],
-      },
-      {
-        sql: `DELETE FROM question_marks
-              WHERE attempt_id IN (SELECT id FROM attempts WHERE test_id = ?)`,
-        args: [testId],
-      },
-      { sql: 'DELETE FROM attempts WHERE test_id = ?', args: [testId] },
-      { sql: 'DELETE FROM test_pages WHERE test_id = ?', args: [testId] },
-      { sql: 'DELETE FROM paper_images WHERE test_id = ?', args: [testId] },
-      { sql: 'DELETE FROM test_chapters WHERE test_id = ?', args: [testId] },
-      { sql: 'DELETE FROM points WHERE test_id = ?', args: [testId] },
-      { sql: 'DELETE FROM tests WHERE id = ?', args: [testId] },
-    ],
-    'write',
-  );
+  await database.batch(testDeletionStatements('SELECT ?', [testId]), 'write');
 }
 
 export async function isTestCodeTaken(database: Database, code: string): Promise<boolean> {
@@ -365,6 +360,9 @@ function toTestRecord(row: Row): TestRecord {
     instantMcqResult: Number(row.instant_mcq_result) === 1,
     resultsReleasedAt: row.results_released_at === null ? null : Number(row.results_released_at),
     studentCount: Number(row.student_count),
+    finishedCount: Number(row.finished_count),
+    classStudentCount: Number(row.class_student_count),
+    averageMarks: row.average_marks === null ? null : Number(row.average_marks),
     createdAt: Number(row.created_at),
     opensAt: row.opens_at === null ? null : Number(row.opens_at),
     closesAt: row.closes_at === null ? null : Number(row.closes_at),

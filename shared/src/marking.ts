@@ -67,6 +67,7 @@ export type QuestionResult = {
   chosenOption: number | null;
   typedAnswer: string | null;
   correctOption: number | null;
+  modelAnswer: string | null;
   comment: string;
 };
 

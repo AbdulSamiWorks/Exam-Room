@@ -1,10 +1,6 @@
 import type { StudentTestCard } from '@exam-room/shared';
 import { describe, expect, it } from 'vitest';
-import {
-  describeStudentTestState,
-  groupStudentTests,
-  studentTestTone,
-} from './group-student-tests';
+import { groupStudentTests, studentTestPill } from './group-student-tests';
 
 function card(overrides: Partial<StudentTestCard>): StudentTestCard {
   return {
@@ -28,19 +24,6 @@ function card(overrides: Partial<StudentTestCard>): StudentTestCard {
   };
 }
 
-describe('studentTestTone', () => {
-  it('colours a test by what the student can do with it', () => {
-    expect(studentTestTone(card({}))).toBe('open');
-    expect(studentTestTone(card({ attemptStatus: 'waiting' }))).toBe('active');
-    expect(studentTestTone(card({ attemptStatus: 'locked' }))).toBe('danger');
-    expect(studentTestTone(card({ attemptStatus: 'submitted', releasedMarks: 4 }))).toBe('result');
-    expect(studentTestTone(card({ availability: 'closed' }))).toBe('quiet');
-    expect(studentTestTone(card({ attemptStatus: 'submitted', hasMcqResult: true }))).toBe(
-      'result',
-    );
-  });
-});
-
 describe('groupStudentTests', () => {
   it('puts open and unfinished tests now, scheduled ones by opening time, the rest finished', () => {
     const groups = groupStudentTests([
@@ -59,26 +42,28 @@ describe('groupStudentTests', () => {
   });
 });
 
-describe('describeStudentTestState', () => {
-  it('says what the student can do', () => {
-    expect(describeStudentTestState(card({}))).toBe('Open now');
-    expect(describeStudentTestState(card({ attemptStatus: 'waiting' }))).toBe(
-      'Waiting for your teacher – tap to open',
-    );
-    expect(describeStudentTestState(card({ attemptStatus: 'in_progress' }))).toBe(
-      'Started – tap to continue',
-    );
-    expect(describeStudentTestState(card({ attemptStatus: 'locked' }))).toBe(
-      'Locked – ask your teacher',
-    );
-    expect(
-      describeStudentTestState(card({ attemptStatus: 'submitted', finishReason: 'time_up' })),
-    ).toBe('Finished – time up');
-    expect(describeStudentTestState(card({ availability: 'closed' }))).toBe('Missed');
-    expect(
-      describeStudentTestState(
-        card({ attemptStatus: 'submitted', releasedMarks: 7.5, maxMarks: 10 }),
-      ),
-    ).toBe('Marks: 7.5 of 10 – tap to see');
+describe('studentTestPill', () => {
+  it('says what the student can do with a test', () => {
+    expect(studentTestPill(card({}))).toEqual({ label: 'Start', tone: 'action' });
+    expect(studentTestPill(card({ attemptStatus: 'in_progress' }))).toEqual({
+      label: 'Continue',
+      tone: 'action',
+    });
+    expect(studentTestPill(card({ attemptStatus: 'waiting' })).tone).toBe('wait');
+    expect(studentTestPill(card({ attemptStatus: 'locked' })).tone).toBe('danger');
+    expect(studentTestPill(card({ attemptStatus: 'submitted' })).label).toBe('Marking');
+    expect(studentTestPill(card({ availability: 'closed' })).label).toBe('Missed');
+    expect(studentTestPill(card({ availability: 'scheduled' })).label).toBe('Soon');
+  });
+
+  it('shows the score with a colour for how good it is', () => {
+    const finished = { attemptStatus: 'submitted' as const, maxMarks: 20 };
+    expect(studentTestPill(card({ ...finished, releasedMarks: 17 }))).toEqual({
+      label: '17 / 20',
+      tone: 'good',
+    });
+    expect(studentTestPill(card({ ...finished, releasedMarks: 9.5 })).tone).toBe('okay');
+    expect(studentTestPill(card({ ...finished, releasedMarks: 4 })).tone).toBe('low');
+    expect(studentTestPill(card({ ...finished, hasMcqResult: true })).label).toBe('MCQ result');
   });
 });
