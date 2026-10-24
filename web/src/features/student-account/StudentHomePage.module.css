@@ -60,6 +60,23 @@
   font-weight: 600;
 }
 
+.open {
+  color: var(--color-success);
+}
+
+.active,
+.result {
+  color: var(--color-accent-text);
+}
+
+.danger {
+  color: var(--color-danger);
+}
+
+.quiet {
+  color: var(--color-muted);
+}
+
 .offerActions {
   display: grid;
   grid-template-columns: 1fr 1fr;

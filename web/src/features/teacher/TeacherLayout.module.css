@@ -16,8 +16,8 @@
 
 .brand {
   font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--color-text);
+  font-weight: 800;
+  color: var(--color-accent-text);
   text-decoration: none;
 }
 

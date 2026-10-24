@@ -6,6 +6,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-bg);
+  box-shadow: var(--shadow-card);
   color: var(--color-text);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;

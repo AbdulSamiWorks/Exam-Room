@@ -38,6 +38,16 @@ export function studentTestPath(test: StudentTestCard): string {
   return test.releasedMarks === null ? `/t/${test.code}` : `/results/${test.code}`;
 }
 
+export type StudentTestTone = 'open' | 'active' | 'danger' | 'result' | 'quiet';
+
+export function studentTestTone(test: StudentTestCard): StudentTestTone {
+  if (test.releasedMarks !== null) return 'result';
+  if (test.attemptStatus === 'locked') return 'danger';
+  if (test.attemptStatus === 'waiting' || test.attemptStatus === 'in_progress') return 'active';
+  if (test.attemptStatus === null && test.availability === 'open') return 'open';
+  return 'quiet';
+}
+
 export function describeStudentTestState(test: StudentTestCard): string {
   if (test.releasedMarks !== null) {
     return `Marks: ${test.releasedMarks} of ${test.maxMarks ?? 0} – tap to see`;

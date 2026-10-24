@@ -2,7 +2,7 @@
   display: block;
   width: 100%;
   height: auto;
-  color: var(--color-text);
+  color: var(--color-primary);
 }
 
 .gridLine {
@@ -72,7 +72,7 @@
 }
 
 .barFill {
-  fill: var(--color-text);
+  fill: var(--color-primary);
 }
 
 .barDetail {
