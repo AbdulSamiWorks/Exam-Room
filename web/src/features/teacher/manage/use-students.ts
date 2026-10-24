@@ -3,6 +3,7 @@ import type {
   AddStudentsResponse,
   MoveStudentsRequest,
   MoveStudentsResponse,
+  NewPinsResponse,
   NewStudent,
   StudentListResponse,
   StudentResponse,
@@ -37,6 +38,12 @@ export function useUpdateStudent(studentId: number) {
 
 export function useResetPin(studentId: number) {
   return useManageChange(() => postJson<StudentWithPin>(`/students/${studentId}/reset-pin`));
+}
+
+export function useResetClassPins(classId: number) {
+  return useManageChange(() =>
+    postJson<NewPinsResponse>(`/classes/${classId}/students/reset-pins`),
+  );
 }
 
 export function useDeleteStudent(studentId: number) {

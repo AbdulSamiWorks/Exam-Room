@@ -125,3 +125,11 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+
+.listActions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 16px;
+}

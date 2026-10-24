@@ -124,20 +124,25 @@ export async function saveStudent(database: Database, student: Student): Promise
   });
 }
 
-export async function replacePinHash(
+export type NewPinHash = {
+  studentId: number;
+  pinHash: string;
+};
+
+export async function replacePinHashes(
   database: Database,
-  studentId: number,
-  pinHash: string,
+  newPinHashes: readonly NewPinHash[],
 ): Promise<void> {
+  if (newPinHashes.length === 0) return;
   await database.batch(
-    [
+    newPinHashes.flatMap(({ studentId, pinHash }) => [
       {
         sql: `UPDATE students SET pin_hash = ?, session_version = session_version + 1
               WHERE id = ?`,
         args: [pinHash, studentId],
       },
       { sql: 'DELETE FROM student_passkeys WHERE student_id = ?', args: [studentId] },
-    ],
+    ]),
     'write',
   );
 }

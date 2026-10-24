@@ -146,6 +146,28 @@ describe('students', () => {
     expect(await verifyPin(response.body.pin, after.pinHash)).toBe(true);
   });
 
+  it('gives every student of a class a new PIN at once', async () => {
+    const added = (
+      await addStudents([
+        { rollNumber: '2', name: 'Bilal' },
+        { rollNumber: '1', name: 'Ayesha' },
+      ])
+    ).body.students;
+    const before = await storedStudent(added[0].student.id);
+
+    const response = await teacher.post(`/api/classes/${schoolClass.id}/students/reset-pins`);
+
+    expect(response.status).toBe(200);
+    expect(
+      response.body.students.map(({ student }: { student: { name: string } }) => student.name),
+    ).toEqual(['Ayesha', 'Bilal']);
+    const bilal = response.body.students[1];
+    const after = await storedStudent(bilal.student.id);
+    expect(after.sessionVersion).toBe(before.sessionVersion + 1);
+    expect(await verifyPin(bilal.pin, after.pinHash)).toBe(true);
+    expect(await verifyPin(added[0].pin, after.pinHash)).toBe(false);
+  });
+
   it('moves every student to another class', async () => {
     const classTen = await createClass(teacher, 'Class 10');
     await addStudents([

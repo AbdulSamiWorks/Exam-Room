@@ -27,6 +27,10 @@ export type AddStudentsResponse = {
   students: StudentWithPin[];
 };
 
+export type NewPinsResponse = {
+  students: StudentWithPin[];
+};
+
 export type UpdateStudentRequest = {
   name?: string;
   rollNumber?: string;
