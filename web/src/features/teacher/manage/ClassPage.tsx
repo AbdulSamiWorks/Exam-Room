@@ -1,6 +1,6 @@
 import type { ClassSummary } from '@exam-room/shared';
 import { useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import { Button } from '../../../components/Button';
 import { FormError } from '../../../components/FormError';
 import { LoadingScreen } from '../../../components/LoadingScreen';
@@ -19,6 +19,13 @@ import { useClassTree, useDeleteClass, useRenameClass } from './use-classes';
 import styles from './ClassPage.module.css';
 
 const BACK_TO_CLASSES = { to: MANAGE_PATH, label: 'All classes' };
+const TEACHER_PAGES_PREFIX = '/teacher/';
+
+function useBackLink() {
+  const backTo: unknown = (useLocation().state as { backTo?: unknown } | null)?.backTo;
+  const isTeacherPage = typeof backTo === 'string' && backTo.startsWith(TEACHER_PAGES_PREFIX);
+  return isTeacherPage ? { to: backTo, label: 'Back to the test' } : BACK_TO_CLASSES;
+}
 
 export function ClassPage() {
   const classId = Number(useParams().classId);
@@ -56,6 +63,7 @@ function ClassView({ schoolClass, classes }: ClassViewProps) {
   const [searchParams] = useSearchParams();
   const section = classSectionOf(searchParams);
   const [isRenaming, setIsRenaming] = useState(false);
+  const backLink = useBackLink();
   const renameClass = useRenameClass(schoolClass.id);
   const deleteClass = useDeleteClass(schoolClass.id, () =>
     navigate(MANAGE_PATH, { replace: true }),
@@ -93,7 +101,7 @@ function ClassView({ schoolClass, classes }: ClassViewProps) {
     <Page
       title={schoolClass.name}
       subtitle={describeClassContents(schoolClass)}
-      backLink={BACK_TO_CLASSES}
+      backLink={backLink}
       actions={
         !isRenaming && (
           <div className={styles.headerActions}>

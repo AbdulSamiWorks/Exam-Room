@@ -4,7 +4,24 @@
   gap: 8px;
 }
 
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+}
+
+.addChapterLink {
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .manageLink {
-  align-self: flex-start;
+  font-size: 0.875rem;
   font-weight: 600;
 }

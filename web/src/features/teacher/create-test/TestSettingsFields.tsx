@@ -251,6 +251,7 @@ function ClassFields({ values, errors, onChange }: ClassFieldsProps) {
       />
       {chosenSubject && (
         <ChapterPicker
+          subjectId={chosenSubject.id}
           chapters={chosenSubject.chapters}
           selectedChapterIds={values.chapterIds}
           manageLink={manageClassPath(Number(classId))}

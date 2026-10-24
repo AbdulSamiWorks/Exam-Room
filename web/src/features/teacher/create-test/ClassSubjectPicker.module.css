@@ -21,7 +21,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--color-primary);
+  color: var(--color-accent-text);
   font-weight: 600;
   cursor: pointer;
 }

@@ -1,11 +1,9 @@
 import type { ClassSummary } from '@exam-room/shared';
-import { useState, type KeyboardEvent } from 'react';
-import { Button } from '../../../components/Button';
-import { FormError } from '../../../components/FormError';
+import { useState } from 'react';
 import { SelectField } from '../../../components/SelectField';
-import { TextField } from '../../../components/TextField';
 import { useCreateSubject } from '../manage/use-classes';
 import { subjectLimits } from '../manage/manage-limits';
+import { QuickAddForm } from './QuickAddForm';
 import styles from './ClassSubjectPicker.module.css';
 
 type ClassSubjectPickerProps = {
@@ -106,49 +104,24 @@ function AddSubjectForm({
   onCancel,
 }: AddSubjectFormProps) {
   const createSubject = useCreateSubject(classId);
-  const [newSubjectName, setNewSubjectName] = useState('');
-
-  function addSubject() {
-    if (!newSubjectName.trim()) return;
-    createSubject.mutate(newSubjectName, {
-      onSuccess: ({ subject }) => onAdded(subject.id),
-    });
-  }
-
-  function addSubjectOnEnter(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key !== 'Enter') return;
-    event.preventDefault();
-    addSubject();
-  }
 
   return (
-    <div className={styles.addSubject}>
-      <TextField
-        label={isFirstSubject ? 'Subject' : 'New subject'}
-        hint={
-          isFirstSubject
-            ? 'This class has no subjects yet. Add one, for example Physics.'
-            : undefined
-        }
-        placeholder="e.g. Chemistry"
-        value={newSubjectName}
-        maxLength={subjectLimits.maxNameLength}
-        onChange={(event) => setNewSubjectName(event.target.value)}
-        onKeyDown={addSubjectOnEnter}
-        errorMessage={errorMessage}
-        autoFocus={!isFirstSubject}
-      />
-      {createSubject.error && <FormError>{createSubject.error.message}</FormError>}
-      <div className={styles.actions}>
-        <Button onClick={addSubject} disabled={createSubject.isPending || !newSubjectName.trim()}>
-          {createSubject.isPending ? 'Adding…' : 'Add subject'}
-        </Button>
-        {!isFirstSubject && (
-          <Button variant="secondary" onClick={onCancel}>
-            Cancel
-          </Button>
-        )}
-      </div>
-    </div>
+    <QuickAddForm
+      label={isFirstSubject ? 'Subject' : 'New subject'}
+      hint={
+        isFirstSubject ? 'This class has no subjects yet. Add one, for example Physics.' : undefined
+      }
+      placeholder="e.g. Chemistry"
+      maxLength={subjectLimits.maxNameLength}
+      addLabel="Add subject"
+      isAdding={createSubject.isPending}
+      addError={createSubject.error}
+      fieldError={errorMessage}
+      autoFocus={!isFirstSubject}
+      onAdd={(name) =>
+        createSubject.mutate(name, { onSuccess: ({ subject }) => onAdded(subject.id) })
+      }
+      onCancel={isFirstSubject ? undefined : onCancel}
+    />
   );
 }
