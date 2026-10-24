@@ -1,6 +1,6 @@
 import type { AttemptExit, AttemptResult } from '@exam-room/shared';
 import { Link } from 'react-router';
-import { Button } from '../../../components/Button';
+import { Button, ButtonLink } from '../../../components/Button';
 import { classNames } from '../../../lib/class-names';
 import {
   describeAwayTime,
@@ -23,10 +23,12 @@ export type ResultRowActions = {
 export function ResultRow({
   result,
   questionCount,
+  markingPath,
   actions,
 }: {
   result: AttemptResult;
   questionCount: number;
+  markingPath?: string;
   actions: ResultRowActions;
 }) {
   const status = describeResultStatus(result);
@@ -63,6 +65,9 @@ export function ResultRow({
         </Link>
       )}
       <div className={styles.rowActions}>
+        {markingPath && result.status === 'submitted' && (
+          <ButtonLink to={markingPath}>Mark</ButtonLink>
+        )}
         {isLocked && (
           <Button variant="danger" onClick={actions.onUnlock} disabled={actions.isUnlocking}>
             {actions.isUnlocking ? 'Unlocking…' : 'Unlock'}

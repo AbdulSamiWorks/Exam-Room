@@ -6,6 +6,7 @@ import { useConfirmation } from '../../../components/use-confirmation';
 import { downloadTextFile } from '../../../lib/download-file';
 import { countWaiting } from './describe-result';
 import { buildResultsCsv, resultsFileName } from './results-csv';
+import { testMarkingPath } from '../tests/test-paths';
 import { NotStartedList } from './NotStartedList';
 import { ResultRow } from './ResultRow';
 import {
@@ -111,6 +112,9 @@ export function ResultsPanel({ test }: { test: TestSummary }) {
                 key={attempt.id}
                 result={attempt}
                 questionCount={test.questionCount}
+                markingPath={
+                  test.questionCount > 0 ? testMarkingPath(testId, attempt.id) : undefined
+                }
                 actions={{
                   isUnlocking: unlockAttempt.isPending && unlockAttempt.variables === attempt.id,
                   onUnlock: () => unlockAttempt.mutate(attempt.id),

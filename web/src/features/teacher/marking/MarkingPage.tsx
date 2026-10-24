@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useParams } from 'react-router';
+import { useEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router';
 import { FormError } from '../../../components/FormError';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { Page } from '../../../components/Page';
@@ -11,11 +11,24 @@ import { StudentMarkingForm } from './StudentMarkingForm';
 import { useMarking } from './use-marking';
 import styles from './MarkingPage.module.css';
 
+function studentElementId(attemptId: number): string {
+  return `student-${attemptId}`;
+}
+
 export function MarkingPage() {
   const testId = Number(useParams().testId);
   const markingQuery = useMarking(testId);
-  const [openAttemptId, setOpenAttemptId] = useState<number>();
+  const [searchParams] = useSearchParams();
+  const [openAttemptId, setOpenAttemptId] = useState<number | undefined>(
+    () => Number(searchParams.get('student')) || undefined,
+  );
   const backLink = { to: `/teacher/tests/${testId}`, label: 'Back to the test' };
+  const isLoaded = markingQuery.isSuccess;
+
+  useEffect(() => {
+    if (!isLoaded || openAttemptId === undefined) return;
+    document.getElementById(studentElementId(openAttemptId))?.scrollIntoView({ block: 'start' });
+  }, [isLoaded, openAttemptId]);
 
   if (markingQuery.isPending) return <LoadingScreen message="Marking…" />;
   if (markingQuery.isError) {
@@ -45,6 +58,7 @@ export function MarkingPage() {
             return (
               <li
                 key={attempt.attemptId}
+                id={studentElementId(attempt.attemptId)}
                 className={classNames(styles.student, isOpen && styles.open)}
               >
                 <button
