@@ -9,7 +9,7 @@ import { useRelease } from './use-marking';
 import styles from './MarkingPage.module.css';
 
 const OPTION_LABELS: Record<keyof ReleaseOptions, string> = {
-  showCorrectAnswers: 'Show the correct MCQ answers',
+  showCorrectAnswers: 'Show the correct MCQ answers and the model answers',
   showComments: 'Show my comments',
   showTopScorer: 'Show the top scorer',
 };

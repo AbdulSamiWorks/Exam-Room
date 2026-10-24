@@ -10,6 +10,7 @@ import { ThemeToggle } from '../../components/ThemeToggle';
 import { describeMarks, describeScore, formatMarks } from '../../lib/describe-marks';
 import { joinWithAnd } from '../../lib/text';
 import { PaperView } from '../paper/PaperView';
+import { RichText } from '../paper/RichText';
 import styles from './StudentResultPage.module.css';
 
 const BACK_HOME = { to: '/', label: 'My tests' };
@@ -93,6 +94,14 @@ export function StudentResultPage() {
                         : 'Marked later by your teacher'
                       : `${formatMarks(questionResult.marks)} of ${describeMarks(question.marks)}`}
                   </p>
+                  {questionResult.modelAnswer && (
+                    <div className={styles.modelAnswer}>
+                      <p className={styles.modelAnswerTitle}>Model answer</p>
+                      <div dir="auto">
+                        <RichText text={questionResult.modelAnswer} />
+                      </div>
+                    </div>
+                  )}
                   {questionResult.comment && (
                     <p className={styles.comment} dir="auto">
                       {questionResult.comment}

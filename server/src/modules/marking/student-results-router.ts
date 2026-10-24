@@ -53,6 +53,7 @@ export function createStudentResultsRouter(dependencies: AppDependencies): Route
       const mark = showsMark ? marking.questionMarks[question.id] : undefined;
       const answer = answers.get(question.id);
       const correctOption = storedPaper.answerKey[question.id]?.option;
+      const modelAnswer = storedPaper.answerKey[question.id]?.text;
       const isCorrect = correctOption !== undefined && answer?.choice === correctOption;
       return {
         questionId: question.id,
@@ -60,6 +61,7 @@ export function createStudentResultsRouter(dependencies: AppDependencies): Route
         chosenOption: answer?.choice ?? null,
         typedAnswer: answer?.text ?? null,
         correctOption: showCorrectAnswers ? (correctOption ?? null) : null,
+        modelAnswer: isFinal && showCorrectAnswers ? (modelAnswer ?? null) : null,
         comment: isFinal && showComments ? (mark?.comment ?? '') : '',
       };
     });

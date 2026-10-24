@@ -149,6 +149,7 @@ describe('marking and releasing results', () => {
       result.body.questions.map((question: { marks: number | null }) => question.marks),
     ).toEqual([1, 0, null]);
     expect(result.body.questions[1]).toMatchObject({ chosenOption: null, correctOption: 2 });
+    expect(result.body.questions[2]).toMatchObject({ marks: null, modelAnswer: null });
     const home = await student.get('/api/student/home');
     expect(home.body.tests[0]).toMatchObject({ hasMcqResult: true, releasedMarks: null });
   });
@@ -191,7 +192,18 @@ describe('marking and releasing results', () => {
       chosenOption: 1,
       typedAnswer: null,
       correctOption: null,
+      modelAnswer: null,
       comment: '',
+    });
+    expect(result.body.questions[2]).toMatchObject({ marks: 3, modelAnswer: null });
+
+    await teacher
+      .put(`/api/tests/${test.id}/release`)
+      .send({ showCorrectAnswers: true, showComments: true, showTopScorer: true });
+    const withAnswers = await student.get(`/api/student/results/${test.code}`);
+    expect(withAnswers.body.questions[2]).toMatchObject({
+      typedAnswer: 'Law',
+      modelAnswer: SAMPLE_ANSWER_KEY.q3?.text,
     });
     const home = await student.get('/api/student/home');
     expect(home.body.tests[0]).toMatchObject({ releasedMarks: 4, maxMarks: 5 });

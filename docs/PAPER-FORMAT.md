@@ -62,21 +62,21 @@ The rules:
 | No marks                            | The question counts 1 mark (the preview tells you)                                                    |
 | `a) ...`, `b) ...` (or `A.`, `(a)`) | Options; they make it a multiple choice question (2 to 6 options)                                     |
 | `Answer: b`                         | The correct option of a multiple choice question                                                      |
-| `Answer: ...` under a written one   | The model answer (only you see it); following lines belong to it                                      |
+| `Answer: ...` under a written one   | The model answer; following lines belong to it. Students see it only after you release the results    |
 | `a) ... [2]` lines with marks       | Parts of one written question; their marks are added up                                               |
 | A line that is none of these        | Continues the question, option or answer above it                                                     |
 
 More rules, so a Federal Board (FBISE) paper can be pasted exactly as it is written:
 
-| You write                                           | It means                                                                                    |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `Section A: Multiple choice (25 marks)`             | A new section, also without `#` (`Part 1: ...` works too); the marks stay in the title      |
-| `a) analog  b) digital  c) sine wave  d) square`    | All options on one line                                                                     |
-| `a) ...` lines without marks, then a written answer | Parts of a written question (for example "write the dual of each expression")               |
-| `Name: ______  Roll No.: ______` before questions   | Left out; the app already knows the student                                                 |
-| `\| A \| B \| F \|` lines                           | A table. Put `\|---\|---\|---\|` under the first row to make it the header row              |
-| `x^{2}`, `H_{2}O`                                   | Superscript and subscript: x², H₂O                                                          |
-| `1.`, `2.` lines inside a model answer              | Stay in the answer; only the next question number (for example `27.`) starts a new question |
+| You write                                                                                                   | It means                                                                                    |
+| ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `Section A: Multiple choice (25 marks)`                                                                     | A new section, also without `#` (`Part 1: ...` works too); the marks stay in the title      |
+| `a) analog  b) digital  c) sine wave  d) square`                                                            | All options on one line                                                                     |
+| `a) ...` lines without marks, then a written answer, or in a section called Short / Long / Detailed answers | Parts of a written question (for example "write the dual of each expression")               |
+| `Name: ______  Roll No.: ______` before questions                                                           | Left out; the app already knows the student                                                 |
+| `\| A \| B \| F \|` lines                                                                                   | A table. Put `\|---\|---\|---\|` under the first row to make it the header row              |
+| `x^{2}`, `H_{2}O`                                                                                           | Superscript and subscript: x², H₂O                                                          |
+| `1.`, `2.` lines inside a model answer                                                                      | Stay in the answer; only the next question number (for example `27.`) starts a new question |
 
 ### Federal Board (FBISE) pattern
 
