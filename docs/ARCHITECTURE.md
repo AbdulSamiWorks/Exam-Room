@@ -1,7 +1,9 @@
 # Exam Room — Architecture
 
-> Status: **approved plan, v1** (2026-10-22). Milestones M0–M19 are all built (2026-10-25); the
-> real-device checks in §15 are still to do. Update this file whenever a decision below changes.
+> Status: **approved plan, v1** (2026-10-22). Milestones M0–M19 are all built (2026-10-25), and the
+> owner's first feedback round M20 (2026-10-24, §17) is done; the real-device checks in §15 are
+> still to do. Colours and their roles: `docs/DESIGN.md`. Update this file whenever a decision
+> below changes.
 
 Exam Room is a small mobile-first web app. A teacher uploads a test paper (PDF), shares a link, and
 students read the paper on their phones inside the website — with a timer and exit detection. Expected scale: **one teacher, 5–10 students per test.**
@@ -155,7 +157,8 @@ question_marks (attempt_id → attempts, question_id, marks NULL, comment,
 attempts   + mcq_marks, written_marks, total_marks (D48), teacher_comment
 tests      + results_released_at, show_correct_answers, show_comments, show_top_scorer (D49, D50),
              bounty_note, bounty_points (D51); paper_kind may be 'none' for an offline
-             assignment (rebuilt in migration 12), waiting_room 0/1 (migration 13, D58)
+             assignment (rebuilt in migration 12), waiting_room 0/1 (migration 13, D58),
+             instant_mcq_result 0/1 (migration 14, D61)
 
 points     (id PK, student_id → students, test_id NULL → tests, points, reason, created_at)
              -- test_id set: a bounty, replaced on every release; NULL: given by hand
@@ -361,6 +364,7 @@ PATCH  /api/chapters/:id              { name }
 DELETE /api/chapters/:id              → removes only its tags from tests
 PATCH  /api/students/:id              { name?, rollNumber?, classId? }
 POST   /api/students/:id/reset-pin    → a new PIN, shown once; old phones are logged out
+POST   /api/classes/:id/students/reset-pins → a new PIN for every student of the class (D60)
 DELETE /api/students/:id              → old results stay by name and roll number
 GET    /api/tests?subjectId=
 POST   /api/tests                 multipart: subjectId, kind, chapterIds, title, durationMinutes,
@@ -407,7 +411,9 @@ GET    /api/student-auth/session           → profile or null
 POST   /api/student-auth/logout
 GET    /api/student/home                   → profile + tests of the class with the own attempt state
                                               and the released marks
-GET    /api/student/results/:code          → the own released result (403 before release)
+GET    /api/student/results/:code          → the own released result; before release the MCQ
+                                              result once finished if the test allows it (D61),
+                                              else 403
 GET    /api/student/progress               → released results with chapters, and the class subjects
 POST   /api/student-auth/passkeys/registration-options   (student cookie) → WebAuthn options
 POST   /api/student-auth/passkeys/registrations          (student cookie) the phone's answer
@@ -573,7 +579,8 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 | M19 | Waiting room: the teacher starts everyone at the same time                                             |
 
 Status (2026-10-25): M0–M19 are built and tested (unit tests, API tests and a smoke test of the
-production build). Still to do by hand: the real-device checks in §15.
+production build), and M20, the owner's first feedback round, is done (§17). Still to do by hand:
+the real-device checks in §15.
 
 ## 13. Decision log
 
@@ -638,6 +645,12 @@ production build). Still to do by hand: the real-device checks in §15.
 | D57 | Before a test the app shows how to lock the phone to the app (Android App pinning, iPhone Guided Access)                                                                                                                                                                                                                                                | A website cannot block other apps (§9)                                                                                                                            | Browsers offer a lock API                                              |
 
 | D58 | Waiting room: **Start for everyone** is one `UPDATE` of all waiting attempts of the test with the same `started_at` and `deadline_at`. A student who arrives after it waits for the next tap; ending the exam also submits anyone still waiting. Only tests and quizzes use it, and the switch is fixed once a student has started | One write, exactly equal times for everyone, nothing runs on the server while students wait (phones ask every 3 s); the teacher decides about late students | Teacher wants late students to join at once with the shared deadline |
+
+| D59 | Local exam data (saved test tokens, answer outbox, photo outbox) belongs to the student logged in on the phone. Another student's login clears it; logout clears it but waits until every answer and photo is sent. Logout removes only the other cached queries, never the session query the page watches | A shared phone must never open or answer another student's test, and logout must show the login page at once | Students get one phone each and logout is never used |
+| D60 | **New PINs for everyone** in a class: one batch write, PINs shown once with Copy all PINs; it logs the students out like a single reset | PINs are stored only as scrypt hashes and can never be shown again | — |
+| D61 | Per-test switch (on for new tests): a finished student sees the MCQ result and the correct options at once, computed on request from the stored answers (no work during the exam) and saved on the attempt; written marks, comments and the top scorer wait for release | The owner wants instant MCQ feedback kept in the portal | Early finishers leak answers to students still writing → switch it off for that test |
+| D62 | The plain text reader accepts an FBISE paper as written (options on one line, `Section A:` headings, parts without marks, fill-in lines dropped); paper text supports tables (`\|` rows) and `^{}`/`_{}` superscripts and subscripts, rendered by one pure `rich-text.ts` | Teachers paste their own papers; truth tables, K-maps and formulas are common in Class 11 | Papers need real maths layout → add KaTeX, loaded only for papers that use it |
+| D63 | Warm design system from the owner's reference: cream page, white cards, orange actions, green good news, red danger, serif page titles; every colour has one role (`docs/DESIGN.md`) | One clear meaning per colour; looks friendly and calm | Owner feedback |
 
 ## 14. Future extension points (not built now)
 
@@ -867,6 +880,17 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 | Render hours     | One service awake all month ≈ 744 hours                               | 750 hours / month                  |
 
 ## 17. Built milestones
+
+### M20 Owner's first feedback round (built 2026-10-24)
+
+- **Logout fixed** (D59): the teacher saw the pages stay after logout and "Please log in first."
+  everywhere; now the login page shows at once. An expired session shows the login page too.
+  Shared phones keep each student's test data apart, and logout waits for unsent answers.
+- **New PINs for everyone** in Manage → class → Students (D60).
+- **MCQ result right after finishing**, also later in the portal; green and red answers (D61).
+- **FBISE papers**: pasted as written, tables and formulas, model answers on the marking page,
+  and a full HSSC-I Computer Science sample paper (D62, `docs/PAPER-FORMAT.md`).
+- **New look**: warm colours with clear roles in light and dark (D63, `docs/DESIGN.md`).
 
 ### M19 Waiting room (built 2026-10-25)
 

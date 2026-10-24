@@ -10,7 +10,9 @@
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    filter 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -25,12 +27,13 @@
 }
 
 .primary {
-  background: var(--color-primary);
+  background: var(--gradient-action);
+  box-shadow: var(--shadow-action);
   color: var(--color-on-primary);
 }
 
 .primary:not(:disabled):hover {
-  background: var(--color-primary-hover);
+  filter: brightness(1.06);
 }
 
 .secondary {
@@ -44,7 +47,7 @@
 }
 
 .danger {
-  background: var(--color-danger);
+  background: var(--color-danger-solid);
   color: var(--color-on-danger);
 }
 

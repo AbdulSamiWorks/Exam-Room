@@ -1,7 +1,7 @@
 export type Theme = 'light' | 'dark';
 
 const THEME_STORAGE_KEY = 'exam-room:theme';
-const THEME_COLORS: Record<Theme, string> = { light: '#ffffff', dark: '#131a2a' };
+const THEME_COLORS: Record<Theme, string> = { light: '#f1eee6', dark: '#13110f' };
 
 export function currentTheme(): Theme {
   return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';

@@ -72,7 +72,7 @@
 }
 
 .barFill {
-  fill: var(--color-primary);
+  fill: var(--color-progress);
 }
 
 .barDetail {

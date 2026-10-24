@@ -1,34 +1,44 @@
 :root {
   color-scheme: light;
 
-  --color-page: #f4f6fb;
-  --color-bg: #ffffff;
-  --color-surface: #f0f2f8;
-  --color-text: #111827;
-  --color-muted: #586174;
-  --color-border: #e2e6ef;
-  --color-border-strong: #c6cddb;
-  --color-primary: #4f46e5;
-  --color-primary-hover: #4338ca;
+  --color-page: #f1eee6;
+  --color-page-glow: rgb(15 122 85 / 10%);
+  --color-bg: #fffdf9;
+  --color-surface: #f6f1e8;
+  --color-text: #1c1917;
+  --color-muted: #6b6257;
+  --color-border: #e8e0d3;
+  --color-border-strong: #d4c8b6;
+
+  --color-primary: #c2570c;
+  --color-primary-hover: #a8480a;
   --color-on-primary: #ffffff;
-  --color-accent-text: #4338ca;
-  --color-accent-soft: #eef0ff;
-  --color-focus: rgb(79 70 229 / 35%);
-  --color-active-bg: #eef0ff;
-  --color-danger: #dc2626;
-  --color-danger-bg: #fef2f2;
+  --gradient-action: linear-gradient(135deg, #b9470b 0%, #e2861d 100%);
+  --shadow-action: 0 6px 16px rgb(194 87 12 / 24%);
+  --color-accent-text: #ad4a0b;
+  --color-accent-soft: #fbead6;
+  --color-active-bg: #fbead6;
+  --color-focus: rgb(194 87 12 / 35%);
+
+  --color-success: #0f7a55;
+  --color-success-bg: #e3f4ec;
+  --color-progress: #0f7a55;
+  --color-danger: #c62828;
+  --color-danger-solid: #c62828;
+  --color-danger-bg: #fdecea;
   --color-on-danger: #ffffff;
-  --color-success: #15803d;
-  --color-success-bg: #ecfdf3;
-  --color-warning: #b45309;
-  --color-warning-bg: #fffbeb;
-  --color-backdrop: rgb(15 23 42 / 55%);
+  --color-warning: #9a5b06;
+  --color-warning-bg: #fcf1d9;
+
+  --color-backdrop: rgb(28 25 23 / 50%);
   --color-paper: #ffffff;
-  --color-paper-shadow: rgb(15 23 42 / 12%);
-  --shadow-card: 0 1px 2px rgb(15 23 42 / 5%), 0 2px 8px rgb(15 23 42 / 4%);
+  --color-paper-shadow: rgb(68 48 24 / 14%);
+  --shadow-card: 0 1px 2px rgb(68 48 24 / 6%), 0 6px 20px rgb(68 48 24 / 6%);
 
   --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
   --radius: 12px;
+  --radius-large: 16px;
   --tap-size: 48px;
   --page-padding: 16px;
   --content-width: 640px;
@@ -37,26 +47,34 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --color-page: #0b0f1a;
-  --color-bg: #131a2a;
-  --color-surface: #1b2336;
-  --color-text: #eef1f7;
-  --color-muted: #9aa3b6;
-  --color-border: #253049;
-  --color-border-strong: #38435f;
-  --color-primary: #8b93f8;
-  --color-primary-hover: #a5adfb;
-  --color-on-primary: #0b0f1a;
-  --color-accent-text: #a5adfb;
-  --color-accent-soft: #20264a;
-  --color-focus: rgb(139 147 248 / 45%);
-  --color-active-bg: #20264a;
-  --color-danger: #ef4444;
-  --color-danger-bg: #2c1316;
-  --color-success: #4ade80;
-  --color-success-bg: #0f2a1c;
+  --color-page: #13110f;
+  --color-page-glow: rgb(52 211 153 / 8%);
+  --color-bg: #1c1916;
+  --color-surface: #26221d;
+  --color-text: #f5efe6;
+  --color-muted: #b2a797;
+  --color-border: #332d26;
+  --color-border-strong: #4a4137;
+
+  --color-primary: #f59e0b;
+  --color-primary-hover: #fbbf24;
+  --color-on-primary: #1c1208;
+  --gradient-action: linear-gradient(135deg, #f08a0c 0%, #fbbf3c 100%);
+  --shadow-action: 0 6px 16px rgb(245 158 11 / 18%);
+  --color-accent-text: #fbbf6a;
+  --color-accent-soft: #3a2a14;
+  --color-active-bg: #3a2a14;
+  --color-focus: rgb(245 158 11 / 40%);
+
+  --color-success: #34d399;
+  --color-success-bg: #0f2a20;
+  --color-progress: #34d399;
+  --color-danger: #f87171;
+  --color-danger-solid: #dc2626;
+  --color-danger-bg: #2e1414;
   --color-warning: #fbbf24;
-  --color-warning-bg: #2a2109;
+  --color-warning-bg: #2c2210;
+
   --color-backdrop: rgb(0 0 0 / 70%);
   --color-paper-shadow: rgb(0 0 0 / 60%);
   --shadow-card: none;
@@ -74,7 +92,9 @@ html {
 
 body {
   margin: 0;
-  background: var(--color-page);
+  background:
+    radial-gradient(48rem 28rem at 85% -8%, var(--color-page-glow), transparent 70%) no-repeat,
+    var(--color-page);
   color: var(--color-text);
   font: 16px/1.5 var(--font);
   -webkit-font-smoothing: antialiased;

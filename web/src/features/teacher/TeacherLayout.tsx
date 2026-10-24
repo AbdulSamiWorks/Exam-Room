@@ -26,7 +26,7 @@ export function TeacherLayout() {
       <header className={styles.header}>
         <div className={styles.topRow}>
           <Link to={TESTS_PATH} className={styles.brand}>
-            Exam Room
+            Exam<span className={styles.brandAccent}>Room</span>
           </Link>
           <div className={styles.headerActions}>
             <ThemeToggle />

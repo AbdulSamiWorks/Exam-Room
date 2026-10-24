@@ -4,12 +4,14 @@ A simple, mobile-first web app for showing test papers to students on their phon
 The teacher uploads a PDF, shares a link, and students read the paper inside the website with a
 timer and exit detection.
 
-Architecture, decisions and roadmap: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Architecture, decisions and roadmap: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Colours and
+their roles: [docs/DESIGN.md](docs/DESIGN.md).
 
 ## How it works
 
 1. **Teacher** logs in and opens **Manage** once to add classes, their subjects and chapters, and
-   the students (one by one or a pasted list). Every student gets a 6-digit PIN, shown once.
+   the students (one by one or a pasted list). Every student gets a 6-digit PIN, shown once
+   (lost PINs: **New PINs for everyone** gives the whole class new ones).
 2. The teacher taps **New test**, picks the PDF, class, subject, chapters, title, time limit and
    allowed exits (0, 1 or 2). The PDF is turned into page images in the teacher's browser.
 3. The test page shows a link and a code. Send the link with **Copy link** or **Send on WhatsApp**.
@@ -21,7 +23,10 @@ Architecture, decisions and roadmap: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md
 5. If the student leaves the page or switches apps, a red warning appears. After the allowed
    exits the test locks. The teacher can tap **Unlock** in the results.
 6. The student taps **Finish**, or the test is submitted when the time is up. After that the paper
-   cannot be opened again.
+   cannot be opened again. If the test allows it, the student sees the multiple choice result at
+   once (also later in their portal); written answers are marked by the teacher and released.
+   Papers in the Federal Board (FBISE) pattern can be pasted as they are written
+   ([docs/PAPER-FORMAT.md](docs/PAPER-FORMAT.md)).
 7. The teacher's results list updates every 5 seconds.
 
 ## Requirements
