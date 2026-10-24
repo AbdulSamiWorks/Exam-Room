@@ -103,6 +103,7 @@ const testSettingsFields = {
     .max(testLimits.maxBountyPoints, `At most ${testLimits.maxBountyPoints} points.`),
   waitingRoom: booleanField('Choose whether students wait for you to start.'),
   instantMcqResult: booleanField('Choose when students see their multiple choice result.'),
+  shuffleQuestions: booleanField('Choose the order of the questions.'),
 };
 
 function jsonText<Schema extends z.ZodType>(schema: Schema, unreadableMessage: string) {
@@ -132,6 +133,7 @@ const createTestFieldsSchema = z.object({
   bountyPoints: testSettingsFields.bountyPoints.default(0),
   waitingRoom: testSettingsFields.waitingRoom.default(false),
   instantMcqResult: testSettingsFields.instantMcqResult.default(true),
+  shuffleQuestions: testSettingsFields.shuffleQuestions.default(false),
   paperKind: z.enum(['pages', 'typed', 'none']).default('pages'),
   maxMarks: z.coerce
     .number()
@@ -165,6 +167,7 @@ function settingsOfNewTest(fields: CreateTestFields) {
   const { subjectId, kind, chapterIds, title, durationMinutes, allowedExits } = fields;
   const { leaveRule, writtenAnswers, bountyNote, bountyPoints, waitingRoom, instantMcqResult } =
     fields;
+  const { shuffleQuestions } = fields;
   return {
     subjectId,
     kind,
@@ -178,6 +181,7 @@ function settingsOfNewTest(fields: CreateTestFields) {
     bountyPoints,
     waitingRoom,
     instantMcqResult,
+    shuffleQuestions,
   };
 }
 

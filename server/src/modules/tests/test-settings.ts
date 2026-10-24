@@ -9,6 +9,7 @@ const SETTINGS_FIXED_ONCE_STARTED = [
   'leaveRule',
   'writtenAnswers',
   'waitingRoom',
+  'shuffleQuestions',
 ] as const;
 
 export function settingsOf(test: TestRecord): StoredTestSettings {
@@ -24,6 +25,7 @@ export function settingsOf(test: TestRecord): StoredTestSettings {
     bountyPoints: test.bountyPoints,
     waitingRoom: test.waitingRoom,
     instantMcqResult: test.instantMcqResult,
+    shuffleQuestions: test.shuffleQuestions,
   };
 }
 
@@ -44,6 +46,7 @@ export function applySettingChanges(
     bountyPoints: changes.bountyPoints ?? current.bountyPoints,
     waitingRoom: changes.waitingRoom ?? current.waitingRoom,
     instantMcqResult: changes.instantMcqResult ?? current.instantMcqResult,
+    shuffleQuestions: changes.shuffleQuestions ?? current.shuffleQuestions,
   };
 }
 

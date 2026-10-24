@@ -423,4 +423,12 @@ export const migrations: readonly Migration[] = [
          CHECK (instant_mcq_result IN (0, 1))`,
     ],
   },
+  {
+    id: 15,
+    name: 'question and option order mixed for each student',
+    statements: [
+      `ALTER TABLE tests ADD COLUMN shuffle_questions INTEGER NOT NULL DEFAULT 0
+         CHECK (shuffle_questions IN (0, 1))`,
+    ],
+  },
 ];

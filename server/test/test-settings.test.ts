@@ -21,6 +21,7 @@ const test: TestRecord = {
   bountyPoints: 0,
   waitingRoom: false,
   instantMcqResult: false,
+  shuffleQuestions: false,
   resultsReleasedAt: null,
   paperKind: 'pages',
   pageCount: 2,
@@ -49,6 +50,7 @@ describe('applySettingChanges', () => {
       bountyPoints: 0,
       waitingRoom: false,
       instantMcqResult: false,
+      shuffleQuestions: false,
     });
   });
 });

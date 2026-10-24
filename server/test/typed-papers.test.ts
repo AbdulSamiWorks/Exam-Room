@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { createClassWithSubject } from './support/catalog-fixtures.js';
 import { publishTest, startAttemptToken, studentRequests } from './support/exam-fixtures.js';
 import { createBlankPageImage, isWebpImage } from './support/page-image-fixtures.js';
 import { publishTypedTest, SAMPLE_ANSWER_KEY, SAMPLE_PAPER } from './support/paper-fixtures.js';
@@ -40,13 +41,59 @@ describe('typed papers', () => {
     expect(isWebpImage(image.body)).toBe(true);
   });
 
+  it('accepts a typed test that sends every setting the form has', async () => {
+    const teacher = await logInAsTeacher(context.app);
+    const subject = await createClassWithSubject(teacher);
+    const response = await teacher
+      .post('/api/tests')
+      .field('paperKind', 'typed')
+      .field('subjectId', String(subject.id))
+      .field('kind', 'quiz')
+      .field('chapterIds', '')
+      .field('title', 'Every setting')
+      .field('durationMinutes', '45')
+      .field('allowedExits', '1')
+      .field('leaveRule', 'lock')
+      .field('writtenAnswers', 'typed_and_photos')
+      .field('bountyNote', 'A book')
+      .field('bountyPoints', '5')
+      .field('waitingRoom', 'true')
+      .field('instantMcqResult', 'true')
+      .field('shuffleQuestions', 'true')
+      .field('maxMarks', '10')
+      .field('paper', JSON.stringify({ ...SAMPLE_PAPER, sections: [SAMPLE_PAPER.sections[1]] }))
+      .field('answerKey', '{}');
+
+    expect(response.status).toBe(201);
+    expect(response.body.test).toMatchObject({
+      waitingRoom: true,
+      instantMcqResult: true,
+      shuffleQuestions: true,
+    });
+  });
+
+  it('gives each student a mixing number when the test mixes the question order', async () => {
+    const { test, teacher } = await publishTypedTest(context.app, {
+      images: [picture],
+      isOpen: false,
+    });
+    await teacher.patch(`/api/tests/${test.id}`).send({ shuffleQuestions: true });
+    await teacher.post(`/api/tests/${test.id}/open`);
+    const student = studentRequests(context.app, await startAttemptToken(context.app, test.code));
+
+    const paper = await student.get('/api/attempt/paper');
+
+    expect(paper.body.paper).toEqual(SAMPLE_PAPER);
+    expect(paper.body.shuffleSeed).toEqual(expect.any(Number));
+  });
+
   it('shows students the paper without the answers while the test is running', async () => {
     const { test } = await publishTypedTest(context.app, { images: [picture] });
     const student = studentRequests(context.app, await startAttemptToken(context.app, test.code));
 
     const paper = await student.get('/api/attempt/paper');
     expect(paper.status).toBe(200);
-    expect(paper.body).toEqual({ paper: SAMPLE_PAPER });
+    expect(paper.body).toEqual({ paper: SAMPLE_PAPER, shuffleSeed: null });
     expect(JSON.stringify(paper.body)).not.toContain('stays at rest');
     expect((await student.get('/api/attempt/paper-images/1')).status).toBe(200);
 

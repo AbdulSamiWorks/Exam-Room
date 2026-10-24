@@ -112,9 +112,15 @@ export function createAttemptRouter(dependencies: AppDependencies): Router {
 
   router.get('/paper', async (request, response) => {
     const attempt = await loadAttemptWithOpenPaper(request);
-    const paper = await findPaperForStudents(database, attempt.testId);
+    const [paper, test] = await Promise.all([
+      findPaperForStudents(database, attempt.testId),
+      findTestOfAttempt(database, attempt),
+    ]);
     if (!paper) throw notFound('This test has no typed questions.', 'paper_not_found');
-    response.set('Cache-Control', 'no-store').json({ paper } satisfies StudentPaperResponse);
+    const shuffleSeed = test.shuffleQuestions && test.paperKind === 'typed' ? attempt.id : null;
+    response
+      .set('Cache-Control', 'no-store')
+      .json({ paper, shuffleSeed } satisfies StudentPaperResponse);
   });
 
   router.get('/paper-images/:imageNumber', async (request, response) => {

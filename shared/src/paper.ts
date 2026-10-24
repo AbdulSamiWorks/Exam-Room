@@ -48,6 +48,7 @@ export type AnswerKeyRequest = {
 
 export type StudentPaperResponse = {
   paper: Paper;
+  shuffleSeed: number | null;
 };
 
 export type PaperLimits = {

@@ -1,9 +1,10 @@
-import type { NumberedQuestion, Paper } from '@exam-room/shared';
+import type { NumberedQuestion, StudentPaperResponse } from '@exam-room/shared';
 import { highestImageNumber } from '@exam-room/shared/paper-rules';
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Button } from '../../../components/Button';
 import { PaperView, type PaperViewProps } from '../../paper/PaperView';
 import { useExamImage, usePrefetchExamImages } from './use-page-image';
+import { originalOptionOf, shownOptionOf, studentPaperView } from './student-paper-view';
 import { useStudentPaper } from './use-student-paper';
 import styles from './TypedPaperViewer.module.css';
 
@@ -40,7 +41,7 @@ export function TypedPaperViewer({
     <LoadedPaper
       testCode={testCode}
       attemptToken={attemptToken}
-      paper={paperQuery.data}
+      studentPaper={paperQuery.data}
       footer={footer}
       {...answering}
     />
@@ -50,11 +51,26 @@ export function TypedPaperViewer({
 function LoadedPaper({
   testCode,
   attemptToken,
-  paper,
+  studentPaper,
   footer,
-  ...answering
-}: TypedPaperViewerProps & { paper: Paper }) {
+  chosenOptions,
+  onChooseOption,
+  renderQuestionExtra,
+}: TypedPaperViewerProps & { studentPaper: StudentPaperResponse }) {
+  const view = useMemo(
+    () => studentPaperView(studentPaper.paper, studentPaper.shuffleSeed),
+    [studentPaper],
+  );
+  const { paper } = view;
   usePrefetchExamImages(testCode, attemptToken, 'picture', highestImageNumber(paper));
+  const shownChosenOptions =
+    chosenOptions &&
+    Object.fromEntries(
+      Object.entries(chosenOptions).map(([questionId, option]) => [
+        questionId,
+        option === undefined ? undefined : shownOptionOf(view, questionId, option),
+      ]),
+    );
 
   return (
     <div className={styles.scrollArea}>
@@ -69,7 +85,13 @@ function LoadedPaper({
               question={question}
             />
           )}
-          {...answering}
+          chosenOptions={shownChosenOptions}
+          onChooseOption={
+            onChooseOption &&
+            ((questionId, shownOption) =>
+              onChooseOption(questionId, originalOptionOf(view, questionId, shownOption)))
+          }
+          renderQuestionExtra={renderQuestionExtra}
         />
         {footer}
       </div>

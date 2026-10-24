@@ -50,6 +50,13 @@ const START_CHOICES: Choice<StartChoice>[] = [
   { value: 'together', label: 'Together, when I start everyone' },
 ];
 
+type OrderChoice = 'mixed' | 'same';
+
+const ORDER_CHOICES: Choice<OrderChoice>[] = [
+  { value: 'mixed', label: 'Mixed for each student' },
+  { value: 'same', label: 'Same for everyone' },
+];
+
 type ResultChoice = 'after_finishing' | 'after_release';
 
 const RESULT_CHOICES: Choice<ResultChoice>[] = [
@@ -169,6 +176,17 @@ export function TestSettingsFields({
           </option>
         ))}
       </SelectField>
+
+      <ChoiceGroup
+        label="Question order"
+        hint="Typed papers only. Mixed: each student gets the questions of every section and the options of each MCQ in a different order, so neighbours cannot copy. Results always use your order."
+        choices={ORDER_CHOICES}
+        selectedValue={values.shuffleQuestions ? 'mixed' : 'same'}
+        disabled={areRulesFixed}
+        onChange={(orderChoice) =>
+          onChange((current) => ({ ...current, shuffleQuestions: orderChoice === 'mixed' }))
+        }
+      />
 
       <ChoiceGroup
         label="Students see their multiple choice result"

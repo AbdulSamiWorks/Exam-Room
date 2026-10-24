@@ -78,6 +78,7 @@ describe('tests', () => {
       bountyPoints: 0,
       waitingRoom: false,
       instantMcqResult: true,
+      shuffleQuestions: false,
       resultsReleasedAt: null,
       studentCount: 0,
       finishedCount: 0,

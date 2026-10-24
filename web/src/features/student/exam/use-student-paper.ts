@@ -6,7 +6,6 @@ export function useStudentPaper(testCode: string, attemptToken: string) {
   return useQuery({
     queryKey: studentQueryKeys.paper(testCode),
     queryFn: () => fetchStudentPaper(attemptToken),
-    select: (response) => response.paper,
     staleTime: Infinity,
     gcTime: Infinity,
   });
