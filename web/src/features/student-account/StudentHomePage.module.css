@@ -14,67 +14,48 @@
   color: var(--color-muted);
 }
 
-.testList {
-  display: flex;
-  flex-direction: column;
+.summaryTiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
-.testCard {
+.summaryTile {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 12px 14px;
+  padding: 12px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  color: var(--color-text);
-  text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
+  border-radius: var(--radius-large);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-card);
 }
 
-.testCard:hover {
-  border-color: var(--color-border-strong);
-  background: var(--color-surface);
-}
-
-.testCard:focus-visible {
-  outline: 3px solid var(--color-focus);
-  outline-offset: 2px;
-}
-
-.testTitle {
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.testDetails,
-.testState {
+.summaryTile dt {
   color: var(--color-muted);
-  font-size: 0.875rem;
-}
-
-.testState {
+  font-size: 0.8125rem;
   font-weight: 600;
 }
 
-.open {
-  color: var(--color-success);
+.summaryTile dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
 }
 
-.active,
-.result {
+.openTile dd {
   color: var(--color-accent-text);
 }
 
-.danger {
-  color: var(--color-danger);
+.doneTile dd {
+  color: var(--color-success);
 }
 
-.quiet {
-  color: var(--color-muted);
+.showAll {
+  align-self: flex-start;
 }
 
 .offerActions {

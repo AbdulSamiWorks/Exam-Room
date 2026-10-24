@@ -7,11 +7,6 @@ export function describeAllowedExits(allowedExits: AllowedExits): string {
   return allowedExits === 1 ? '1 exit allowed' : `${allowedExits} exits allowed`;
 }
 
-export function describeStudentCount(studentCount: number): string {
-  if (studentCount === 0) return 'No students yet';
-  return studentCount === 1 ? '1 student' : `${studentCount} students`;
-}
-
 export function describeCreatedDate(createdAt: number): string {
   return `Created ${shortDateFormat.format(createdAt)}`;
 }

@@ -1,11 +1,10 @@
 import type { FinishReason, StudentAttempt } from '@exam-room/shared';
 import { useEffect } from 'react';
-import { ButtonLink } from '../../../components/Button';
-import { studentResultPath } from '../../student-account/student-paths';
 import type { OutboxSnapshot } from '../answers/outbox-store';
 import { hasUnsentWork } from '../answers/outbox-state';
 import { PhotoAnswersPanel } from '../photos/PhotoAnswersPanel';
 import { leaveFullscreen } from '../fullscreen';
+import { FinishedMcqScore } from './FinishedMcqScore';
 import { StatusScreen } from './StatusScreen';
 
 type FinishedMessage = {
@@ -59,13 +58,7 @@ export function FinishedScreen({ testCode, attemptToken, attempt, outbox }: Fini
     <StatusScreen
       tone={finished.tone}
       title={finished.title}
-      actions={
-        canSeeMcqResult && (
-          <ButtonLink to={studentResultPath(testCode)} size="large" fullWidth>
-            See my MCQ result
-          </ButtonLink>
-        )
-      }
+      actions={canSeeMcqResult && <FinishedMcqScore testCode={testCode} />}
     >
       {isStillSending ? (
         <p>
