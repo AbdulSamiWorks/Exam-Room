@@ -207,6 +207,8 @@ describe('marking and releasing results', () => {
     });
     const home = await student.get('/api/student/home');
     expect(home.body.tests[0]).toMatchObject({ releasedMarks: 4, maxMarks: 5 });
+    const summary = (await teacher.get(`/api/tests/${test.id}`)).body.test;
+    expect(summary).toMatchObject({ finishedCount: 2, classStudentCount: 2, averageMarks: 2 });
 
     await teacher.delete(`/api/tests/${test.id}/release`);
     expect((await student.get(`/api/student/results/${test.code}`)).status).toBe(403);

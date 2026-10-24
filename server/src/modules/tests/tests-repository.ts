@@ -63,7 +63,12 @@ const SELECT_TEST_SUMMARY = `
     subjects.name AS subject_name,
     classes.id    AS class_id,
     classes.name  AS class_name,
-    (SELECT COUNT(*) FROM attempts WHERE attempts.test_id = tests.id) AS student_count
+    (SELECT COUNT(*) FROM attempts WHERE attempts.test_id = tests.id) AS student_count,
+    (SELECT COUNT(*) FROM attempts
+     WHERE attempts.test_id = tests.id AND attempts.status = 'submitted') AS finished_count,
+    (SELECT AVG(attempts.total_marks) FROM attempts
+     WHERE attempts.test_id = tests.id AND attempts.total_marks IS NOT NULL) AS average_marks,
+    (SELECT COUNT(*) FROM students WHERE students.class_id = classes.id) AS class_student_count
   FROM tests
   JOIN subjects ON subjects.id = tests.subject_id
   JOIN classes ON classes.id = subjects.class_id`;
@@ -355,6 +360,9 @@ function toTestRecord(row: Row): TestRecord {
     instantMcqResult: Number(row.instant_mcq_result) === 1,
     resultsReleasedAt: row.results_released_at === null ? null : Number(row.results_released_at),
     studentCount: Number(row.student_count),
+    finishedCount: Number(row.finished_count),
+    classStudentCount: Number(row.class_student_count),
+    averageMarks: row.average_marks === null ? null : Number(row.average_marks),
     createdAt: Number(row.created_at),
     opensAt: row.opens_at === null ? null : Number(row.opens_at),
     closesAt: row.closes_at === null ? null : Number(row.closes_at),

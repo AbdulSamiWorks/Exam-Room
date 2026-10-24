@@ -1,14 +1,14 @@
 import type { TestSummary } from '@exam-room/shared';
 import { Link } from 'react-router';
 import { describeDuration, describePaperSize } from '../../../lib/describe-test-length';
-import { AvailabilityBadge } from '../tests/AvailabilityBadge';
+import { classNames } from '../../../lib/class-names';
 import {
   describeAllowedExits,
   describeChapters,
   describeCreatedDate,
-  describeStudentCount,
   describeTestKind,
 } from '../tests/describe-test';
+import { averagePercentOf, describeTestProgress, describeTestStage } from '../tests/test-stage';
 import styles from './TestCard.module.css';
 
 export function TestCard({ test }: { test: TestSummary }) {
@@ -22,22 +22,30 @@ export function TestCard({ test }: { test: TestSummary }) {
     .filter(Boolean)
     .join(' · ');
   const chapters = describeChapters(test.chapters);
-  const activity = [
-    describeStudentCount(test.studentCount),
-    describeCreatedDate(test.createdAt),
-  ].join(' · ');
+  const status = describeTestStage(test);
+  const averagePercent = averagePercentOf(test);
 
   return (
-    <Link to={`/teacher/tests/${test.id}`} className={styles.card}>
+    <Link
+      to={`/teacher/tests/${test.id}`}
+      className={classNames(styles.card, styles[status.stage])}
+    >
       <span className={styles.titleRow}>
         <span className={styles.title}>{test.title}</span>
-        <span className={styles.code}>{test.code}</span>
+        <span className={classNames(styles.stageBadge, styles[`${status.stage}Badge`])}>
+          {status.label}
+        </span>
       </span>
       <span className={styles.details}>{testDetails}</span>
       {chapters && <span className={styles.details}>{chapters}</span>}
       <span className={styles.footerRow}>
-        <span className={styles.details}>{activity}</span>
-        <AvailabilityBadge test={test} />
+        <span className={styles.progress}>{describeTestProgress(test)}</span>
+        {averagePercent !== null && (
+          <span className={styles.average}>Average {averagePercent}%</span>
+        )}
+      </span>
+      <span className={styles.meta}>
+        <span className={styles.code}>{test.code}</span> · {describeCreatedDate(test.createdAt)}
       </span>
     </Link>
   );
