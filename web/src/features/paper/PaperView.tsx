@@ -3,6 +3,7 @@ import { numberQuestions, optionLetter } from '@exam-room/shared/paper-rules';
 import type { ReactNode } from 'react';
 import { classNames } from '../../lib/class-names';
 import { describeMarks } from '../../lib/describe-marks';
+import { InlineText, RichText } from './RichText';
 import styles from './PaperView.module.css';
 
 export type PaperViewProps = {
@@ -46,9 +47,9 @@ export function PaperView({
   return (
     <article className={styles.paper}>
       {paper.instructions && (
-        <p className={styles.paperInstructions} dir="auto">
-          {paper.instructions}
-        </p>
+        <div className={styles.paperInstructions} dir="auto">
+          <RichText text={paper.instructions} />
+        </div>
       )}
       {paper.sections.map((section, sectionIndex) => (
         <section key={sectionIndex} className={styles.section}>
@@ -58,9 +59,9 @@ export function PaperView({
             </h2>
           )}
           {section.instructions && (
-            <p className={styles.sectionInstructions} dir="auto">
-              {section.instructions}
-            </p>
+            <div className={styles.sectionInstructions} dir="auto">
+              <RichText text={section.instructions} />
+            </div>
           )}
           <ol className={styles.questions}>
             {numberedQuestions
@@ -110,9 +111,9 @@ function QuestionView({
     <li className={styles.question}>
       <div className={styles.questionHeader}>
         <span className={styles.questionNumber}>{question.number}.</span>
-        <p id={textId} className={styles.questionText} dir="auto">
-          {question.text}
-        </p>
+        <div id={textId} className={styles.questionText} dir="auto">
+          <RichText text={question.text} />
+        </div>
         <span className={styles.marks}>{describeMarks(question.marks)}</span>
       </div>
       {picture}
@@ -141,7 +142,7 @@ function QuestionView({
               >
                 <span className={styles.optionLetter}>{optionLetter(optionIndex)}</span>
                 <span className={styles.optionText} dir="auto">
-                  {option}
+                  <InlineText text={option} />
                 </span>
                 {state && OPTION_STATE_LABELS[state] && (
                   <span className={styles.optionMark}>{OPTION_STATE_LABELS[state]}</span>

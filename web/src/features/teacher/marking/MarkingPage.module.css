@@ -192,3 +192,16 @@
   color: var(--color-success);
   font-weight: 600;
 }
+
+.modelAnswer {
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  font-size: 0.9375rem;
+}
+
+.modelAnswer summary {
+  color: var(--color-accent-text);
+  font-weight: 600;
+  cursor: pointer;
+}
