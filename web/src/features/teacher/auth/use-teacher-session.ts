@@ -1,6 +1,7 @@
 import type { LoginRequest, SessionResponse } from '@exam-room/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getJson, postJson } from '../../../api/http-client';
+import { removeQueriesExcept } from '../../../lib/query-cache';
 
 export const teacherSessionQueryKey = ['teacher-session'] as const;
 export const SESSION_EXPIRED_ERROR_CODE = 'unauthenticated';
@@ -28,8 +29,8 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => postJson<SessionResponse>('/auth/logout'),
     onSuccess: (session) => {
-      queryClient.clear();
       queryClient.setQueryData(teacherSessionQueryKey, session);
+      removeQueriesExcept(queryClient, [teacherSessionQueryKey]);
     },
   });
 }

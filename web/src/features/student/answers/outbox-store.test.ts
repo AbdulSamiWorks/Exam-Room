@@ -170,4 +170,38 @@ describe('the answer outbox on the phone', () => {
     await settle();
     expect(store.snapshotOf(TEST_CODE)?.sendingState).toBe('session_lost');
   });
+
+  it('reports unsent answers and forgets everything for the next student', async () => {
+    const server = fakeServer();
+    server.isAwake = false;
+    const storage = memoryStorage();
+    const store = storeWith(server, storage);
+    await store.loadOutbox(TEST_CODE, 'token');
+    store.recordAnswer(TEST_CODE, 'q1', { choice: 1, text: null });
+    await settle();
+    expect(store.hasUnsentWorkAnywhere()).toBe(true);
+
+    await store.forgetEverything();
+
+    expect(store.hasUnsentWorkAnywhere()).toBe(false);
+    expect(store.snapshotOf(TEST_CODE)).toBeUndefined();
+    expect(storage.records.size).toBe(0);
+    server.isAwake = true;
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(server.received).toEqual([]);
+  });
+
+  it('does not count answers of a removed attempt as unsent', async () => {
+    const store = createOutboxStore({
+      sendAnswers: () => Promise.reject(new ApiError(401, 'attempt_not_found', 'Lost.')),
+      finishAttempt: () => Promise.resolve(FINISHED),
+      storage: memoryStorage(),
+      now: () => 0,
+      random: () => 0,
+    });
+    await store.loadOutbox(TEST_CODE, 'old-token');
+    store.recordAnswer(TEST_CODE, 'q1', { choice: 0, text: null });
+    await settle();
+    expect(store.hasUnsentWorkAnywhere()).toBe(false);
+  });
 });

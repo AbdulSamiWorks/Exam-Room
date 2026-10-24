@@ -31,7 +31,7 @@ export function TeacherLayout() {
           <div className={styles.headerActions}>
             <ThemeToggle />
             <Button variant="secondary" onClick={() => logout.mutate()} disabled={logout.isPending}>
-              Log out
+              {logout.isPending ? 'Logging out…' : 'Log out'}
             </Button>
           </div>
         </div>

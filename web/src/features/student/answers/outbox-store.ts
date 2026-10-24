@@ -214,6 +214,22 @@ export function createOutboxStore(dependencies: OutboxDependencies) {
     await storage.remove(recordKey(testCode));
   }
 
+  function hasUnsentWorkAnywhere(): boolean {
+    return [...snapshots.values()].some(
+      (snapshot) => snapshot.sendingState !== 'session_lost' && hasUnsentWork(snapshot.outbox),
+    );
+  }
+
+  async function forgetEverything(): Promise<void> {
+    for (const timer of sendTimers.values()) clearTimeout(timer);
+    sendTimers.clear();
+    snapshots.clear();
+    failureCounts.clear();
+    notify();
+    await savingQueue;
+    for (const key of await storage.listKeys(RECORD_PREFIX)) await storage.remove(key);
+  }
+
   function sendAllNow(): void {
     for (const [testCode, snapshot] of snapshots) {
       if (hasUnsentWork(snapshot.outbox)) scheduleFlush(testCode, 0);
@@ -243,6 +259,8 @@ export function createOutboxStore(dependencies: OutboxDependencies) {
     requestFinish,
     onFinished,
     forgetOutbox,
+    hasUnsentWorkAnywhere,
+    forgetEverything,
     sendAllNow,
     resumeStoredOutboxes,
   };
@@ -272,6 +290,9 @@ export const {
   onFinished,
   forgetOutbox,
 } = outboxStore;
+
+export const hasUnsentAnswers = outboxStore.hasUnsentWorkAnywhere;
+export const forgetAllOutboxes = outboxStore.forgetEverything;
 
 export function useOutbox(testCode: string): OutboxSnapshot | undefined {
   return useSyncExternalStore(outboxStore.subscribe, () => outboxStore.snapshotOf(testCode));

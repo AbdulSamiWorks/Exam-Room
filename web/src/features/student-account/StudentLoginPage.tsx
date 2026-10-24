@@ -18,7 +18,7 @@ import {
 } from './fingerprint';
 import { safeNextPath } from './student-paths';
 import {
-  studentAccountQueryKeys,
+  enterStudentSession,
   useLoginClasses,
   useStudentLogin,
   useStudentSession,
@@ -57,7 +57,7 @@ function FingerprintLogin({ nextPath }: { nextPath: string }) {
     setErrorMessage(undefined);
     try {
       const session = await logInWithFingerprint();
-      queryClient.setQueryData(studentAccountQueryKeys.session, session);
+      await enterStudentSession(queryClient, session);
       navigate(nextPath, { replace: true });
     } catch (error) {
       if (error instanceof ApiError && error.code === 'passkey_unknown') {
