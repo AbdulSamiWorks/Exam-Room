@@ -52,8 +52,10 @@ export function useDeleteStudent(studentId: number) {
 
 export function useMoveStudents(classId: number) {
   return useManageChange((toClassId: number) =>
-    postJson<MoveStudentsResponse>(`/classes/${classId}/students/move`, {
-      toClassId,
-    } satisfies MoveStudentsRequest),
+    postJson<MoveStudentsResponse>(
+      `/classes/${classId}/students/move`,
+      { toClassId } satisfies MoveStudentsRequest,
+      { repeatable: true },
+    ),
   );
 }

@@ -18,7 +18,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: (password: string) => {
       const loginRequest: LoginRequest = { password };
-      return postJson<SessionResponse>('/auth/login', loginRequest);
+      return postJson<SessionResponse>('/auth/login', loginRequest, { repeatable: true });
     },
     onSuccess: (session) => queryClient.setQueryData(teacherSessionQueryKey, session),
   });
@@ -27,7 +27,7 @@ export function useLogin() {
 export function useLogout() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => postJson<SessionResponse>('/auth/logout'),
+    mutationFn: () => postJson<SessionResponse>('/auth/logout', undefined, { repeatable: true }),
     onSuccess: (session) => {
       queryClient.setQueryData(teacherSessionQueryKey, session);
       removeQueriesExcept(queryClient, [teacherSessionQueryKey]);

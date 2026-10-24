@@ -20,6 +20,8 @@ import {
   type RequestOptions,
 } from '../../api/http-client';
 
+const OUTBOX_REQUEST: RequestOptions = { waitForServer: false };
+
 function withAttemptToken(attemptToken: string, options: RequestOptions = {}): RequestOptions {
   return { ...options, headers: { Authorization: `Bearer ${attemptToken}` } };
 }
@@ -55,7 +57,7 @@ export function sendAnswers(
   return postJson<SaveAnswersResponse>(
     '/attempt/answers',
     { answers } satisfies SaveAnswersRequest,
-    withAttemptToken(attemptToken),
+    withAttemptToken(attemptToken, OUTBOX_REQUEST),
   );
 }
 
@@ -70,7 +72,7 @@ export function reportExit(
   return postJson<AttemptResponse>(
     '/attempt/exits',
     exitReport,
-    withAttemptToken(attemptToken, { keepalive: true }),
+    withAttemptToken(attemptToken, { ...OUTBOX_REQUEST, keepalive: true }),
   );
 }
 
@@ -78,11 +80,19 @@ export function reportReturn(
   attemptToken: string,
   returnReport: RecordReturnRequest,
 ): Promise<AttemptResponse> {
-  return postJson<AttemptResponse>('/attempt/return', returnReport, withAttemptToken(attemptToken));
+  return postJson<AttemptResponse>(
+    '/attempt/return',
+    returnReport,
+    withAttemptToken(attemptToken, OUTBOX_REQUEST),
+  );
 }
 
 export function finishAttempt(attemptToken: string): Promise<AttemptResponse> {
-  return postJson<AttemptResponse>('/attempt/finish', undefined, withAttemptToken(attemptToken));
+  return postJson<AttemptResponse>(
+    '/attempt/finish',
+    undefined,
+    withAttemptToken(attemptToken, OUTBOX_REQUEST),
+  );
 }
 
 export function fetchAnswerPhotos(attemptToken: string): Promise<AnswerPhotoListResponse> {
@@ -97,7 +107,7 @@ export function uploadAnswerPhoto(
   return putBlob<SaveAnswerPhotoResponse>(
     `/attempt/photos/${clientPhotoId}`,
     photo,
-    withAttemptToken(attemptToken),
+    withAttemptToken(attemptToken, OUTBOX_REQUEST),
   );
 }
 

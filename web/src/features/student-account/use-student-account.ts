@@ -63,7 +63,9 @@ export function useStudentLogin() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (login: StudentLoginRequest) => {
-      const session = await postJson<StudentSessionResponse>('/student-auth/login', login);
+      const session = await postJson<StudentSessionResponse>('/student-auth/login', login, {
+        repeatable: true,
+      });
       await enterStudentSession(queryClient, session);
       return session;
     },
@@ -75,7 +77,9 @@ export function useStudentLogout() {
   return useMutation({
     mutationFn: async () => {
       if (hasUnsentExamWork()) throw new Error(UNSENT_WORK_MESSAGE);
-      const session = await postJson<StudentSessionResponse>('/student-auth/logout');
+      const session = await postJson<StudentSessionResponse>('/student-auth/logout', undefined, {
+        repeatable: true,
+      });
       await forgetLocalExamData();
       saveDeviceStudentId(undefined);
       return session;

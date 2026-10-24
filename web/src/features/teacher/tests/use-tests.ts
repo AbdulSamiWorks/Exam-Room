@@ -64,11 +64,15 @@ export function useCreateTest() {
 }
 
 export function useOpenTest(testId: number) {
-  return useTestChange(testId, () => postJson<TestResponse>(`/tests/${testId}/open`));
+  return useTestChange(testId, () =>
+    postJson<TestResponse>(`/tests/${testId}/open`, undefined, { repeatable: true }),
+  );
 }
 
 export function useCloseTest(testId: number) {
-  return useTestChange(testId, () => postJson<TestResponse>(`/tests/${testId}/close`));
+  return useTestChange(testId, () =>
+    postJson<TestResponse>(`/tests/${testId}/close`, undefined, { repeatable: true }),
+  );
 }
 
 export function useScheduleTest(testId: number) {

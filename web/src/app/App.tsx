@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router';
+import { ServerWaitBanner } from '../components/ServerWaitBanner';
 import { HomePage } from '../features/home/HomePage';
 import { NotFoundPage } from '../features/home/NotFoundPage';
 import { StudentPage } from '../features/student/StudentPage';
@@ -11,16 +12,19 @@ import { TeacherArea } from '../features/teacher/TeacherArea';
 
 export function App() {
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path={STUDENT_LOGIN_PATH} element={<StudentLoginPage />} />
-      <Route path="/teacher/*" element={<TeacherArea />} />
-      <Route path="/t/:testCode" element={<StudentPage />} />
-      <Route element={<StudentOnlyRoutes />}>
-        <Route path="/results/:testCode" element={<StudentResultPage />} />
-        <Route path="/subjects/:subjectId" element={<StudentSubjectPage />} />
-      </Route>
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path={STUDENT_LOGIN_PATH} element={<StudentLoginPage />} />
+        <Route path="/teacher/*" element={<TeacherArea />} />
+        <Route path="/t/:testCode" element={<StudentPage />} />
+        <Route element={<StudentOnlyRoutes />}>
+          <Route path="/results/:testCode" element={<StudentResultPage />} />
+          <Route path="/subjects/:subjectId" element={<StudentSubjectPage />} />
+        </Route>
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+      <ServerWaitBanner />
+    </>
   );
 }
