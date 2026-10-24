@@ -1,7 +1,7 @@
 # Exam Room — Architecture
 
 > Status: **approved plan, v1** (2026-10-22). Milestones M0–M19 are all built (2026-10-25), and the
-> owner's feedback rounds M20 and M21 (2026-10-24, §17) are done; the real-device checks in §15 are
+> owner's feedback rounds M20 to M22 (2026-10-24, §17) are done; the real-device checks in §15 are
 > still to do. Colours and their roles: `docs/DESIGN.md`. Update this file whenever a decision
 > below changes.
 
@@ -158,7 +158,7 @@ attempts   + mcq_marks, written_marks, total_marks (D48), teacher_comment
 tests      + results_released_at, show_correct_answers, show_comments, show_top_scorer (D49, D50),
              bounty_note, bounty_points (D51); paper_kind may be 'none' for an offline
              assignment (rebuilt in migration 12), waiting_room 0/1 (migration 13, D58),
-             instant_mcq_result 0/1 (migration 14, D61)
+             instant_mcq_result 0/1 (migration 14, D61), shuffle_questions 0/1 (migration 15, D70)
 
 points     (id PK, student_id → students, test_id NULL → tests, points, reason, created_at)
              -- test_id set: a bounty, replaced on every release; NULL: given by hand
@@ -434,7 +434,9 @@ GET    /api/public/tests/:code             → title, subject, durationMinutes, 
 POST   /api/public/tests/:code/attempts    (student cookie) → token + state
 GET    /api/attempt                        → state (status, deadlineAt, serverNow, exits, pageCount…)
 GET    /api/attempt/pages/:n               → page image (in progress only)
-GET    /api/attempt/paper                  → the typed paper without answers (in progress only)
+GET    /api/attempt/paper                  → the typed paper without answers and the attempt's
+                                              mixing number when the order is mixed (D70)
+                                              (in progress only)
 GET    /api/attempt/paper-images/:n        → a picture of the typed paper (in progress only)
 GET    /api/attempt/answers                → the saved answers (in progress only)
 POST   /api/attempt/answers                { answers: [{ questionId, choice, text, sequence,
@@ -658,6 +660,11 @@ the real-device checks in §15.
 | D65 | Model answers of written questions reach students only after release, and only while "Show the correct MCQ answers and the model answers" is on; in a section called Short, Long or Detailed answers, `a)` lines are parts | The owner wants students to learn from the model answers without leaking them during the test | — |
 | D66 | The teacher's test list shows a stage per test (Not open, Opens later, Running, Finished · to mark, Results out) with a coloured edge, finished and still-writing counts and the average after release, from three small counts in the list query | The owner could not see which tests were finished or how they went | Many tests → add paging |
 | D67 | Student cards show one pill for what to do or how it went (Start, Continue, Waiting, Locked, Marking, MCQ result, score coloured by percent); the finished screen shows the MCQ score at once | One look tells the student what matters | Owner feedback |
+
+| D68 | Every request waits for a sleeping or restarting server: it tries again every 1 to 5 s for up to 2 minutes on 502/503 (the request never reached the app), and after a broken connection only when repeating is safe (GET, PUT, PATCH, DELETE and POSTs marked repeatable, or the phone was offline); a banner says the app is waiting. The exam outboxes opt out and keep their own retry | The free server sleeps; the teacher's action must finish by itself without making anything twice | Paid server that never sleeps |
+| D69 | Students see tests that are not open yet under Coming up (Not open yet, or the opening date and time), with the type, subject and chapters on every card and on the start page | Students should know what is coming and what each test covers | — |
+| D70 | Per-test mixed order for typed papers (on for new tests): the server gives each attempt a mixing number (its id); the phone mixes the questions inside each section and the MCQ options with a seeded shuffle, keeping options like All of the above in place, and stores answers in the teacher's order. Paste, drop, laptop shortcuts and printing are blocked during the test | Stops neighbours copying "5 is c" with no extra server work; a website still cannot block other apps (§9), so leaving is detected and counted | Shared figures between questions → teacher picks Same for everyone |
+| D71 | A Marks and results panel near the top of every test page with students, and a Mark button per finished student that opens that student on the marking page; answer photos sit inside each student's marking form | The owner could not find where to mark or see photos | — |
 
 ## 14. Future extension points (not built now)
 
@@ -887,6 +894,15 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 | Render hours     | One service awake all month ≈ 744 hours                               | 750 hours / month                  |
 
 ## 17. Built milestones
+
+### M22 Owner's third feedback round (built 2026-10-24)
+
+- **Sleeping server**: every action waits and finishes by itself, with a waiting banner (D68).
+- **Login switch**: the teacher login links to the student login.
+- **Students see** type, subject, chapters, and tests not open yet with their date (D69).
+- **Anti-cheating**: mixed question and option order per student, no paste, no shortcuts, no
+  printing (D70).
+- **Marking is easy to find**, with answer photos next to the marks (D71).
 
 ### M21 Owner's second feedback round (built 2026-10-24)
 
