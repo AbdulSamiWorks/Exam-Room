@@ -51,7 +51,14 @@ export function StudentResultPage() {
     >
       <div className={styles.sections}>
         <Panel>
+          {!result.isFinal && <p className={styles.note}>Multiple choice result</p>}
           <p className={styles.score}>{describeScore(result.totalMarks, result.maxMarks)}</p>
+          {!result.isFinal && (
+            <p className={styles.note}>
+              Your teacher marks the written answers. The full result comes when your teacher
+              releases it.
+            </p>
+          )}
           {result.topScorers && result.topScorers.length > 0 && (
             <p className={styles.note}>
               {result.topScorers.length === 1 ? 'Top scorer' : 'Top scorers'}:{' '}
@@ -81,7 +88,9 @@ export function StudentResultPage() {
                   )}
                   <p className={styles.marks}>
                     {questionResult.marks === null
-                      ? 'Not marked'
+                      ? result.isFinal
+                        ? 'Not marked'
+                        : 'Marked later by your teacher'
                       : `${formatMarks(questionResult.marks)} of ${describeMarks(question.marks)}`}
                   </p>
                   {questionResult.comment && (

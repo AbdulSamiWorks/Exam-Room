@@ -59,6 +59,13 @@ const chapterIdsField = z
   )
   .transform((chapterIds) => [...new Set(chapterIds)]);
 
+function booleanField(message: string) {
+  return z.preprocess(
+    (value) => (value === 'true' ? true : value === 'false' ? false : value),
+    z.boolean(message),
+  );
+}
+
 const testSettingsFields = {
   subjectId: z.coerce.number().int().positive('Choose a subject.'),
   kind: z.enum(['test', 'quiz', 'assignment'], 'Choose test, quiz or assignment.'),
@@ -94,10 +101,8 @@ const testSettingsFields = {
     .int('Points must be a whole number.')
     .min(0)
     .max(testLimits.maxBountyPoints, `At most ${testLimits.maxBountyPoints} points.`),
-  waitingRoom: z.preprocess(
-    (value) => (value === 'true' ? true : value === 'false' ? false : value),
-    z.boolean('Choose whether students wait for you to start.'),
-  ),
+  waitingRoom: booleanField('Choose whether students wait for you to start.'),
+  instantMcqResult: booleanField('Choose when students see their multiple choice result.'),
 };
 
 function jsonText<Schema extends z.ZodType>(schema: Schema, unreadableMessage: string) {
@@ -126,6 +131,7 @@ const createTestFieldsSchema = z.object({
   bountyNote: testSettingsFields.bountyNote.default(''),
   bountyPoints: testSettingsFields.bountyPoints.default(0),
   waitingRoom: testSettingsFields.waitingRoom.default(false),
+  instantMcqResult: testSettingsFields.instantMcqResult.default(true),
   paperKind: z.enum(['pages', 'typed', 'none']).default('pages'),
   maxMarks: z.coerce
     .number()
@@ -157,7 +163,8 @@ const STARTED_TEST_PAPER_MESSAGE =
 
 function settingsOfNewTest(fields: CreateTestFields) {
   const { subjectId, kind, chapterIds, title, durationMinutes, allowedExits } = fields;
-  const { leaveRule, writtenAnswers, bountyNote, bountyPoints, waitingRoom } = fields;
+  const { leaveRule, writtenAnswers, bountyNote, bountyPoints, waitingRoom, instantMcqResult } =
+    fields;
   return {
     subjectId,
     kind,
@@ -170,6 +177,7 @@ function settingsOfNewTest(fields: CreateTestFields) {
     bountyNote,
     bountyPoints,
     waitingRoom,
+    instantMcqResult,
   };
 }
 

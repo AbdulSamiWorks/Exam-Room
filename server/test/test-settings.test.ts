@@ -20,6 +20,7 @@ const test: TestRecord = {
   bountyNote: '',
   bountyPoints: 0,
   waitingRoom: false,
+  instantMcqResult: false,
   resultsReleasedAt: null,
   paperKind: 'pages',
   pageCount: 2,
@@ -44,6 +45,7 @@ describe('applySettingChanges', () => {
       bountyNote: '',
       bountyPoints: 0,
       waitingRoom: false,
+      instantMcqResult: false,
     });
   });
 });

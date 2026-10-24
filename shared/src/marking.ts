@@ -71,6 +71,7 @@ export type QuestionResult = {
 };
 
 export type StudentResultResponse = {
+  isFinal: boolean;
   testTitle: string;
   subjectName: string;
   paper: Paper | null;
@@ -79,5 +80,5 @@ export type StudentResultResponse = {
   questions: QuestionResult[];
   comment: string;
   topScorers: string[] | null;
-  releasedAt: number;
+  releasedAt: number | null;
 };

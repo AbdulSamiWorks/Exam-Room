@@ -21,6 +21,7 @@ function card(overrides: Partial<StudentTestCard>): StudentTestCard {
     finishReason: null,
     maxMarks: null,
     releasedMarks: null,
+    hasMcqResult: false,
     bountyNote: '',
     bountyPoints: 0,
     ...overrides,
@@ -34,6 +35,9 @@ describe('studentTestTone', () => {
     expect(studentTestTone(card({ attemptStatus: 'locked' }))).toBe('danger');
     expect(studentTestTone(card({ attemptStatus: 'submitted', releasedMarks: 4 }))).toBe('result');
     expect(studentTestTone(card({ availability: 'closed' }))).toBe('quiet');
+    expect(studentTestTone(card({ attemptStatus: 'submitted', hasMcqResult: true }))).toBe(
+      'result',
+    );
   });
 });
 

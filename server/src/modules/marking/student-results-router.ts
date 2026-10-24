@@ -11,6 +11,7 @@ import { findStoredPaper } from '../tests/paper-repository.js';
 import { findTestByCode } from '../tests/tests-repository.js';
 import { readMarkingRows } from './marking-repository.js';
 import { markAttempt } from './marking-service.js';
+import { multipleChoiceMarksOf, resultVisibility } from './result-visibility.js';
 import { topScorerNames } from './score-attempt.js';
 
 const testCodeParamsSchema = z.object({
@@ -31,45 +32,48 @@ export function createStudentResultsRouter(dependencies: AppDependencies): Route
     const test = await findTestByCode(database, testCode);
     const attempt = test && (await findAttemptOfStudent(database, test.id, student.id));
     if (!test || !attempt) throw notFound('There is no result for this test.', 'result_not_found');
-    if (test.resultsReleasedAt === null) {
+    const currentTime = clock.now();
+    const visibility = resultVisibility(test, attempt, currentTime);
+    if (visibility === 'hidden') {
       throw forbidden('Your teacher has not released the results yet.', 'results_not_released');
     }
+    const isFinal = visibility === 'final';
 
     const [marking, storedPaper, rows, attempts] = await Promise.all([
-      markAttempt(database, attempt, clock.now()),
+      markAttempt(database, attempt, currentTime),
       findStoredPaper(database, test.id),
       readMarkingRows(database, test.id, attempt.id),
-      listAttemptsOfTest(database, test.id),
+      isFinal ? listAttemptsOfTest(database, test.id) : Promise.resolve([]),
     ]);
     const { showCorrectAnswers, showComments, showTopScorer } = rows.releaseOptions;
     const answers = new Map(marking.answers.map((answer) => [answer.questionId, answer]));
-    const questions: QuestionResult[] = storedPaper.paper
-      ? questionsOf(storedPaper.paper).map((question) => {
-          const mark = marking.questionMarks[question.id];
-          const answer = answers.get(question.id);
-          const correctOption = storedPaper.answerKey[question.id]?.option;
-          const isCorrect = correctOption !== undefined && answer?.choice === correctOption;
-          return {
-            questionId: question.id,
-            marks:
-              mark?.marks ?? (question.kind === 'mcq' ? (isCorrect ? question.marks : 0) : null),
-            chosenOption: answer?.choice ?? null,
-            typedAnswer: answer?.text ?? null,
-            correctOption: showCorrectAnswers ? (correctOption ?? null) : null,
-            comment: showComments ? (mark?.comment ?? '') : '',
-          };
-        })
-      : [];
+    const paperQuestions = storedPaper.paper ? questionsOf(storedPaper.paper) : [];
+    const questions: QuestionResult[] = paperQuestions.map((question) => {
+      const showsMark = isFinal || question.kind === 'mcq';
+      const mark = showsMark ? marking.questionMarks[question.id] : undefined;
+      const answer = answers.get(question.id);
+      const correctOption = storedPaper.answerKey[question.id]?.option;
+      const isCorrect = correctOption !== undefined && answer?.choice === correctOption;
+      return {
+        questionId: question.id,
+        marks: mark?.marks ?? (question.kind === 'mcq' ? (isCorrect ? question.marks : 0) : null),
+        chosenOption: answer?.choice ?? null,
+        typedAnswer: answer?.text ?? null,
+        correctOption: showCorrectAnswers ? (correctOption ?? null) : null,
+        comment: isFinal && showComments ? (mark?.comment ?? '') : '',
+      };
+    });
 
     response.json({
+      isFinal,
       testTitle: test.title,
       subjectName: test.subject.name,
       paper: storedPaper.paper,
-      maxMarks: test.maxMarks ?? 0,
-      totalMarks: marking.score.totalMarks,
+      maxMarks: isFinal ? (test.maxMarks ?? 0) : multipleChoiceMarksOf(paperQuestions),
+      totalMarks: isFinal ? marking.score.totalMarks : marking.score.mcqMarks,
       questions,
-      comment: showComments ? marking.comment : '',
-      topScorers: showTopScorer ? topScorerNames(attempts) : null,
+      comment: isFinal && showComments ? marking.comment : '',
+      topScorers: isFinal && showTopScorer ? topScorerNames(attempts) : null,
       releasedAt: test.resultsReleasedAt,
     } satisfies StudentResultResponse);
   });

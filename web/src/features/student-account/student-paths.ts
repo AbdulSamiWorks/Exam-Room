@@ -15,6 +15,10 @@ export function studentTestPath(testCode: string): string {
   return `/t/${testCode}`;
 }
 
+export function studentResultPath(testCode: string): string {
+  return `/results/${testCode}`;
+}
+
 export function studentSubjectPath(subjectId: number): string {
   return `/subjects/${subjectId}`;
 }

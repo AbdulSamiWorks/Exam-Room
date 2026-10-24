@@ -54,6 +54,7 @@ const SELECT_TEST_SUMMARY = `
     tests.bounty_note,
     tests.bounty_points,
     tests.waiting_room,
+    tests.instant_mcq_result,
     tests.results_released_at,
     tests.created_at,
     tests.opens_at,
@@ -124,9 +125,9 @@ export async function insertTest(
     const insertedTest = await transaction.execute({
       sql: `INSERT INTO tests
               (code, subject_id, kind, title, duration_minutes, allowed_exits, leave_rule,
-               written_answers, bounty_note, bounty_points, waiting_room, paper_kind, page_count,
-               paper, answer_key, question_count, max_marks, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               written_answers, bounty_note, bounty_points, waiting_room, instant_mcq_result,
+               paper_kind, page_count, paper, answer_key, question_count, max_marks, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id`,
       args: [
         newTest.code,
@@ -140,6 +141,7 @@ export async function insertTest(
         newTest.bountyNote,
         newTest.bountyPoints,
         newTest.waitingRoom ? 1 : 0,
+        newTest.instantMcqResult ? 1 : 0,
         content.paperKind,
         pages.length,
         paperColumns.paper,
@@ -213,7 +215,7 @@ export async function saveTestSettings(
         sql: `UPDATE tests
               SET subject_id = ?, kind = ?, title = ?, duration_minutes = ?, allowed_exits = ?,
                   leave_rule = ?, written_answers = ?, bounty_note = ?, bounty_points = ?,
-                  waiting_room = ?
+                  waiting_room = ?, instant_mcq_result = ?
               WHERE id = ?`,
         args: [
           settings.subjectId,
@@ -226,6 +228,7 @@ export async function saveTestSettings(
           settings.bountyNote,
           settings.bountyPoints,
           settings.waitingRoom ? 1 : 0,
+          settings.instantMcqResult ? 1 : 0,
           testId,
         ],
       },
@@ -359,6 +362,7 @@ function toTestRecord(row: Row): TestRecord {
     bountyNote: String(row.bounty_note),
     bountyPoints: Number(row.bounty_points),
     waitingRoom: Number(row.waiting_room) === 1,
+    instantMcqResult: Number(row.instant_mcq_result) === 1,
     resultsReleasedAt: row.results_released_at === null ? null : Number(row.results_released_at),
     studentCount: Number(row.student_count),
     createdAt: Number(row.created_at),

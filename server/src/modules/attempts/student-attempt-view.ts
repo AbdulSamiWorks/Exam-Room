@@ -23,6 +23,7 @@ export function toPublicTest(test: TestRecord, currentTime: number): PublicTest 
     bountyNote: test.bountyNote,
     bountyPoints: test.bountyPoints,
     waitingRoom: test.waitingRoom,
+    instantMcqResult: test.instantMcqResult,
     opensAt: test.opensAt,
     closesAt: test.closesAt,
     availability: availabilityAt(test, currentTime),

@@ -14,6 +14,25 @@ export type PaperViewProps = {
   renderQuestionExtra?: (question: NumberedQuestion) => ReactNode;
 };
 
+type OptionState = 'chosenOption' | 'rightChoice' | 'wrongChoice' | 'correctOption';
+
+const OPTION_STATE_LABELS: Record<OptionState, string> = {
+  chosenOption: '',
+  rightChoice: '✓ Your answer',
+  wrongChoice: '✗ Your answer',
+  correctOption: '✓ Correct answer',
+};
+
+function optionState(
+  isChosen: boolean,
+  correctOption: number | undefined,
+  isCorrect: boolean,
+): OptionState | undefined {
+  if (correctOption === undefined) return isChosen ? 'chosenOption' : undefined;
+  if (isChosen) return isCorrect ? 'rightChoice' : 'wrongChoice';
+  return isCorrect ? 'correctOption' : undefined;
+}
+
 export function PaperView({
   paper,
   renderPicture,
@@ -105,27 +124,28 @@ function QuestionView({
           aria-readonly={onChooseOption ? undefined : true}
         >
           {question.options.map((option, optionIndex) => {
-            const isChosen = chosenOption === optionIndex;
-            const isCorrect = correctOption === optionIndex;
+            const state = optionState(
+              chosenOption === optionIndex,
+              correctOption,
+              correctOption === optionIndex,
+            );
             return (
               <button
                 key={optionIndex}
                 type="button"
                 role="radio"
-                aria-checked={isChosen}
+                aria-checked={chosenOption === optionIndex}
                 disabled={!onChooseOption}
-                className={classNames(
-                  styles.option,
-                  isChosen && styles.chosenOption,
-                  isCorrect && styles.correctOption,
-                )}
+                className={classNames(styles.option, state && styles[state])}
                 onClick={() => onChooseOption?.(question.id, optionIndex)}
               >
                 <span className={styles.optionLetter}>{optionLetter(optionIndex)}</span>
                 <span className={styles.optionText} dir="auto">
                   {option}
                 </span>
-                {isCorrect && <span className={styles.correctMark}>✓ Correct</span>}
+                {state && OPTION_STATE_LABELS[state] && (
+                  <span className={styles.optionMark}>{OPTION_STATE_LABELS[state]}</span>
+                )}
               </button>
             );
           })}

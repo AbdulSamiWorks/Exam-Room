@@ -35,6 +35,7 @@ export type TestSummary = TestSchedule & {
   bountyNote: string;
   bountyPoints: number;
   waitingRoom: boolean;
+  instantMcqResult: boolean;
   resultsReleasedAt: number | null;
   studentCount: number;
   createdAt: number;
@@ -61,6 +62,7 @@ export type TestSettings = {
   bountyNote: string;
   bountyPoints: number;
   waitingRoom: boolean;
+  instantMcqResult: boolean;
 };
 
 export type UpdateTestRequest = Partial<TestSettings>;

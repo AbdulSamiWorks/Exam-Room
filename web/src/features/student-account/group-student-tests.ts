@@ -1,5 +1,6 @@
 import type { StudentTestCard } from '@exam-room/shared';
 import { compareNaturally } from '../../lib/natural-order';
+import { studentResultPath } from './student-paths';
 
 export type StudentTestGroups = {
   now: StudentTestCard[];
@@ -35,13 +36,14 @@ function byTitle(first: StudentTestCard, second: StudentTestCard): number {
 }
 
 export function studentTestPath(test: StudentTestCard): string {
-  return test.releasedMarks === null ? `/t/${test.code}` : `/results/${test.code}`;
+  const hasResult = test.releasedMarks !== null || test.hasMcqResult;
+  return hasResult ? studentResultPath(test.code) : `/t/${test.code}`;
 }
 
 export type StudentTestTone = 'open' | 'active' | 'danger' | 'result' | 'quiet';
 
 export function studentTestTone(test: StudentTestCard): StudentTestTone {
-  if (test.releasedMarks !== null) return 'result';
+  if (test.releasedMarks !== null || test.hasMcqResult) return 'result';
   if (test.attemptStatus === 'locked') return 'danger';
   if (test.attemptStatus === 'waiting' || test.attemptStatus === 'in_progress') return 'active';
   if (test.attemptStatus === null && test.availability === 'open') return 'open';
@@ -52,6 +54,7 @@ export function describeStudentTestState(test: StudentTestCard): string {
   if (test.releasedMarks !== null) {
     return `Marks: ${test.releasedMarks} of ${test.maxMarks ?? 0} – tap to see`;
   }
+  if (test.hasMcqResult) return 'Finished – tap to see your MCQ result';
   if (test.attemptStatus === 'waiting') return 'Waiting for your teacher – tap to open';
   if (test.attemptStatus === 'in_progress') return 'Started – tap to continue';
   if (test.attemptStatus === 'locked') return 'Locked – ask your teacher';

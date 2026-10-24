@@ -1,5 +1,7 @@
 import type { FinishReason, StudentAttempt } from '@exam-room/shared';
 import { useEffect } from 'react';
+import { ButtonLink } from '../../../components/Button';
+import { studentResultPath } from '../../student-account/student-paths';
 import type { OutboxSnapshot } from '../answers/outbox-store';
 import { hasUnsentWork } from '../answers/outbox-state';
 import { PhotoAnswersPanel } from '../photos/PhotoAnswersPanel';
@@ -48,11 +50,23 @@ export function FinishedScreen({ testCode, attemptToken, attempt, outbox }: Fini
   const finished = FINISHED_MESSAGES[attempt.finishReason ?? 'student'];
   const isStillSending = outbox !== undefined && hasUnsentWork(outbox.outbox);
   const tooLateCount = outbox?.outbox.tooLateCount ?? 0;
+  const { instantMcqResult, questionCount } = attempt.test;
+  const canSeeMcqResult = instantMcqResult && questionCount > 0 && !isStillSending;
 
   useEffect(leaveFullscreen, []);
 
   return (
-    <StatusScreen tone={finished.tone} title={finished.title}>
+    <StatusScreen
+      tone={finished.tone}
+      title={finished.title}
+      actions={
+        canSeeMcqResult && (
+          <ButtonLink to={studentResultPath(testCode)} size="large" fullWidth>
+            See my MCQ result
+          </ButtonLink>
+        )
+      }
+    >
       {isStillSending ? (
         <p>
           Some of your answers are still being sent. Keep this page open until this message goes

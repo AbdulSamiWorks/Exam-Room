@@ -149,14 +149,33 @@
   border-color: var(--color-on-primary);
 }
 
-.correctOption {
+.correctOption,
+.rightChoice {
   border-color: var(--color-success);
   box-shadow: inset 0 0 0 1px var(--color-success);
 }
 
-.correctMark {
+.rightChoice {
+  background: var(--color-success-bg);
+}
+
+.wrongChoice {
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+  box-shadow: inset 0 0 0 1px var(--color-danger);
+}
+
+.optionMark {
   flex-shrink: 0;
-  color: var(--color-success);
   font-size: 0.8125rem;
   font-weight: 700;
+}
+
+.correctOption .optionMark,
+.rightChoice .optionMark {
+  color: var(--color-success);
+}
+
+.wrongChoice .optionMark {
+  color: var(--color-danger);
 }
