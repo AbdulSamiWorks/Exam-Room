@@ -7,7 +7,7 @@ import { testLimits } from './test-limits.js';
 
 type UploadField = Extract<CreateTestFormField, 'pages' | 'paperImages'>;
 
-const MAX_TEXT_FIELDS = 15;
+const MAX_TEXT_FIELDS = 30;
 const MAX_TEXT_FIELD_BYTES = 1_000_000;
 const ACCEPTED_IMAGE_TYPES = new Set(['image/webp', 'image/png', 'image/jpeg']);
 

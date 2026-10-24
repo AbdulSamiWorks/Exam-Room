@@ -25,7 +25,7 @@ export function ReleasePanel({ testId, marking }: { testId: number; marking: Mar
       <p className={styles.note}>
         {isReleased
           ? `Released ${describeDateTime(marking.releasedAt)}. Students see their marks now.`
-          : 'Students see nothing until you release the results.'}
+          : 'Students see their full result (written marks, comments, model answers) only after you release it.'}
       </p>
       {unmarked > 0 && (
         <p className={styles.warning}>

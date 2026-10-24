@@ -23,7 +23,9 @@ export function useUnlockAttempt(testId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (attemptId: number) =>
-      postJson<AttemptResultResponse>(`/attempts/${attemptId}/unlock`),
+      postJson<AttemptResultResponse>(`/attempts/${attemptId}/unlock`, undefined, {
+        repeatable: true,
+      }),
     onSuccess: ({ attempt }) => {
       updateResults(queryClient, testId, (attempts) => replaceAttempt(attempts, attempt));
     },
@@ -34,7 +36,9 @@ export function useEndAttempt(testId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (attemptId: number) =>
-      postJson<AttemptResultResponse>(`/attempts/${attemptId}/end`),
+      postJson<AttemptResultResponse>(`/attempts/${attemptId}/end`, undefined, {
+        repeatable: true,
+      }),
     onSuccess: ({ attempt }) => {
       updateResults(queryClient, testId, (attempts) => replaceAttempt(attempts, attempt));
     },
@@ -44,7 +48,10 @@ export function useEndAttempt(testId: number) {
 export function useStartEveryone(testId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => postJson<AttemptResultListResponse>(`/tests/${testId}/attempts/start`),
+    mutationFn: () =>
+      postJson<AttemptResultListResponse>(`/tests/${testId}/attempts/start`, undefined, {
+        repeatable: true,
+      }),
     onSuccess: (results) => {
       queryClient.setQueryData(resultsQueryKey(testId), results);
     },
@@ -54,7 +61,10 @@ export function useStartEveryone(testId: number) {
 export function useEndExamForEveryone(testId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => postJson<AttemptResultListResponse>(`/tests/${testId}/attempts/end`),
+    mutationFn: () =>
+      postJson<AttemptResultListResponse>(`/tests/${testId}/attempts/end`, undefined, {
+        repeatable: true,
+      }),
     onSuccess: (results) => {
       queryClient.setQueryData(resultsQueryKey(testId), results);
       return queryClient.invalidateQueries({ queryKey: testQueryKeys.everything });

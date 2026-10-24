@@ -93,3 +93,9 @@
   font-weight: 600;
   text-align: end;
 }
+
+@media print {
+  .examScreen {
+    display: none;
+  }
+}

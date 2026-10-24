@@ -23,6 +23,7 @@ export type TestSettingsFormValues = {
   bountyPoints: string;
   waitingRoom: boolean;
   instantMcqResult: boolean;
+  shuffleQuestions: boolean;
 };
 
 export type TestSettingsFormErrors = Partial<
@@ -43,6 +44,7 @@ export const NEW_TEST_SETTINGS: TestSettingsFormValues = {
   bountyPoints: '0',
   waitingRoom: false,
   instantMcqResult: true,
+  shuffleQuestions: true,
 };
 
 export function settingsFormValuesOf(test: TestSummary): TestSettingsFormValues {
@@ -60,6 +62,7 @@ export function settingsFormValuesOf(test: TestSummary): TestSettingsFormValues 
     bountyPoints: String(test.bountyPoints),
     waitingRoom: test.waitingRoom,
     instantMcqResult: test.instantMcqResult,
+    shuffleQuestions: test.shuffleQuestions,
   };
 }
 
@@ -136,6 +139,7 @@ export function toTestSettings(values: TestSettingsFormValues): TestSettings {
     bountyPoints: Number(values.bountyPoints || 0),
     waitingRoom: values.kind !== 'assignment' && values.waitingRoom,
     instantMcqResult: values.instantMcqResult,
+    shuffleQuestions: values.shuffleQuestions,
   };
 }
 

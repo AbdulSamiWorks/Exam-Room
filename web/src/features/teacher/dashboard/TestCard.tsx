@@ -2,11 +2,11 @@ import type { TestSummary } from '@exam-room/shared';
 import { Link } from 'react-router';
 import { describeDuration, describePaperSize } from '../../../lib/describe-test-length';
 import { classNames } from '../../../lib/class-names';
+import { describeTestKind } from '../../../lib/describe-test-kind';
 import {
   describeAllowedExits,
   describeChapters,
   describeCreatedDate,
-  describeTestKind,
 } from '../tests/describe-test';
 import { averagePercentOf, describeTestProgress, describeTestStage } from '../tests/test-stage';
 import styles from './TestCard.module.css';

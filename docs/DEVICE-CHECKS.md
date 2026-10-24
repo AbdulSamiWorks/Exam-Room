@@ -227,3 +227,17 @@ Open the site 2–3 minutes before you start: the free server sleeps after 15 mi
 - [ ] After you mark the short and long questions and release, the student sees each mark and
       the model answer under their own answer.
 - [ ] The student home shows the three tiles and one coloured pill per test.
+
+## 22. Third feedback round
+
+- [ ] Open the site after it slept (15 minutes without visitors): the yellow "Waiting for the
+      server" banner shows, and the page or action finishes by itself without tapping again.
+- [ ] Log out as the teacher: **I am a student** opens the student login.
+- [ ] Students see a test you have not opened under **Coming up** as "Not open yet", and a
+      scheduled one with its date and time; tapping shows Not open yet or Coming soon.
+- [ ] Two students on two phones see the questions and options in a different order; both get
+      the right MCQ marks.
+- [ ] During the test, long-press, copy and paste into an answer do nothing; on a laptop Ctrl+C,
+      Ctrl+V and Ctrl+P do nothing.
+- [ ] On a test page, **Marks and results → Mark answers** opens the marking page; **Mark** on a
+      student opens that student with the answer photos above the marks.

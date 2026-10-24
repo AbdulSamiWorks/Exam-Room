@@ -71,6 +71,7 @@ describe('student attempts', () => {
           opensAt: TEST_START_TIME,
           closesAt: null,
           availability: 'open',
+          chapterNames: [],
         },
       });
     });

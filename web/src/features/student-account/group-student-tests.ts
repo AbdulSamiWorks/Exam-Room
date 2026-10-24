@@ -14,12 +14,23 @@ const UNFINISHED_STATUSES = new Set(['waiting', 'in_progress', 'locked']);
 export function groupStudentTests(tests: readonly StudentTestCard[]): StudentTestGroups {
   const now = tests.filter(isHappeningNow);
   const upcoming = tests
-    .filter((test) => test.attemptStatus === null && test.availability === 'scheduled')
-    .sort((first, second) => (first.opensAt ?? 0) - (second.opensAt ?? 0));
+    .filter((test) => test.attemptStatus === null && isComingUp(test))
+    .sort(byOpeningTime);
   const finished = tests
     .filter((test) => isFinished(test))
     .sort((first, second) => (second.opensAt ?? 0) - (first.opensAt ?? 0));
   return { now: now.sort(byTitle), upcoming, finished };
+}
+
+function isComingUp(test: StudentTestCard): boolean {
+  return test.availability === 'scheduled' || test.availability === 'not_open';
+}
+
+function byOpeningTime(first: StudentTestCard, second: StudentTestCard): number {
+  const firstOpensAt = first.availability === 'scheduled' ? (first.opensAt ?? 0) : Infinity;
+  const secondOpensAt = second.availability === 'scheduled' ? (second.opensAt ?? 0) : Infinity;
+  if (firstOpensAt === secondOpensAt) return byTitle(first, second);
+  return firstOpensAt < secondOpensAt ? -1 : 1;
 }
 
 function isHappeningNow(test: StudentTestCard): boolean {
@@ -80,6 +91,6 @@ export function studentTestPill(test: StudentTestCard): StudentTestPill {
       break;
   }
   if (test.availability === 'open') return { label: 'Start', tone: 'action' };
-  if (test.availability === 'scheduled') return { label: 'Soon', tone: 'wait' };
-  return { label: test.availability === 'closed' ? 'Missed' : 'Not open', tone: 'quiet' };
+  if (test.availability === 'closed') return { label: 'Missed', tone: 'quiet' };
+  return { label: 'Soon', tone: 'wait' };
 }

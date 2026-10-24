@@ -7,6 +7,7 @@ import { AnswerStatus } from '../answers/AnswerStatus';
 import { requestFinish, type OutboxSnapshot } from '../answers/outbox-store';
 import { useSavedAnswersRestore } from '../answers/use-answer-outbox';
 import { ExamBody } from './ExamBody';
+import { isBlockedShortcut } from './exam-shortcuts';
 import { FinishDialog } from './FinishDialog';
 import { formatRemainingTime, useRemainingTime } from './use-remaining-time';
 import styles from './ExamScreen.module.css';
@@ -29,6 +30,8 @@ export function ExamScreen({ testCode, attemptToken, attempt, outbox, onTimeUp }
   const hasQuestions = attempt.test.questionCount > 0;
   const isFinishing = outbox?.outbox.finishRequested ?? false;
   useSavedAnswersRestore(testCode, attemptToken, hasQuestions);
+
+  useBlockedShortcuts();
 
   useEffect(() => {
     if (!isTimeUp) return;
@@ -87,4 +90,14 @@ export function ExamScreen({ testCode, attemptToken, attempt, outbox, onTimeUp }
 
 function preventDefault(event: SyntheticEvent): void {
   event.preventDefault();
+}
+
+function useBlockedShortcuts(): void {
+  useEffect(() => {
+    function blockShortcut(event: KeyboardEvent) {
+      if (isBlockedShortcut(event)) event.preventDefault();
+    }
+    window.addEventListener('keydown', blockShortcut);
+    return () => window.removeEventListener('keydown', blockShortcut);
+  }, []);
 }

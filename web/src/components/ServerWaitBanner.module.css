@@ -1,0 +1,42 @@
+.banner {
+  position: fixed;
+  right: var(--page-padding);
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: var(--page-padding);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 10px 14px;
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius);
+  background: var(--color-warning-bg);
+  box-shadow: var(--shadow-card);
+  color: var(--color-warning);
+  font-size: 0.875rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-warning);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+  }
+}

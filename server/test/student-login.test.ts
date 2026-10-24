@@ -2,7 +2,7 @@ import type { StudentHomeResponse, StudentSessionResponse } from '@exam-room/sha
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { STUDENT_SESSION_DURATION_MS } from '../src/modules/student-auth/student-session.js';
-import { createClass } from './support/catalog-fixtures.js';
+import { createChapter, createClass } from './support/catalog-fixtures.js';
 import {
   addStudentToClass,
   classIdOfTest,
@@ -172,6 +172,20 @@ describe('student home', () => {
     expect(home.body.tests).toEqual([
       expect.objectContaining({ attemptStatus: 'submitted', finishReason: 'student' }),
     ]);
+  });
+
+  it('names the chapters of each test, on the home and before starting', async () => {
+    const test = await publishTest(context.app);
+    const teacher = await logInAsTeacher(context.app);
+    const motion = await createChapter(teacher, test.subject.id, 'Motion');
+    const forces = await createChapter(teacher, test.subject.id, 'Forces');
+    await teacher.patch(`/api/tests/${test.id}`).send({ chapterIds: [forces.id, motion.id] });
+
+    const student = await logInAsStudent(context.app, classIdOfTest(context.app, test.code));
+    const home = await student.get('/api/student/home');
+    expect(home.body.tests[0].chapterNames).toEqual(['Motion', 'Forces']);
+    const publicTest = await request(context.app).get(`/api/public/tests/${test.code}`);
+    expect(publicTest.body.test.chapterNames).toEqual(['Motion', 'Forces']);
   });
 
   it('needs a student login', async () => {

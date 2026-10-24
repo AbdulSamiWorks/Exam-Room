@@ -3,17 +3,18 @@ import { ButtonLink } from '../../../components/Button';
 import { Panel } from '../../../components/Panel';
 import { describeMarks } from '../../../lib/describe-marks';
 import { countOf } from '../../../lib/text';
+import { testMarkingPath, testPaperPath } from '../tests/test-paths';
 import styles from './TestDetailsPage.module.css';
 
 export function PaperPanel({ test }: { test: TestSummary }) {
-  const paperPath = `/teacher/tests/${test.id}/paper`;
+  const paperPath = testPaperPath(test.id);
   const hasQuestions = test.questionCount > 0;
   const questionSummary = hasQuestions
     ? `${countOf(test.questionCount, 'question')} · ${describeMarks(test.maxMarks ?? 0)}`
     : undefined;
 
   const markingLink = hasQuestions && (
-    <ButtonLink to={`/teacher/tests/${test.id}/marking`}>
+    <ButtonLink to={testMarkingPath(test.id)}>
       {test.resultsReleasedAt === null ? 'Marks and release' : 'Marks (released)'}
     </ButtonLink>
   );
@@ -50,7 +51,7 @@ export function PaperPanel({ test }: { test: TestSummary }) {
     <Panel title="Answer sheet">
       <p className={styles.note}>
         {questionSummary ??
-          'No answer sheet yet. Add one so students tap their MCQ answers and the app marks them.'}
+          'No answer sheet yet. Add one to mark this test: students tap their MCQ answers and the app marks them, and you give marks for the short and long questions next to their answer photos.'}
       </p>
       <div className={styles.actions}>
         <ButtonLink to={paperPath} variant="secondary">

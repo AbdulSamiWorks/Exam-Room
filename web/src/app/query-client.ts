@@ -44,7 +44,10 @@ function showLoginIfSessionExpired(queryClient: QueryClient, error: Error): void
   }
 }
 
+const INTERNAL_SERVER_ERROR_STATUS = 500;
+
 function shouldRetryQuery(failureCount: number, error: Error): boolean {
-  const isClientError = error instanceof ApiError && error.isClientError;
-  return !isClientError && failureCount < MAX_QUERY_RETRIES;
+  const hasWaitedForServer =
+    error instanceof ApiError && error.status !== INTERNAL_SERVER_ERROR_STATUS;
+  return !hasWaitedForServer && failureCount < MAX_QUERY_RETRIES;
 }

@@ -24,6 +24,8 @@ export function WrittenAnswerBox({ questionNumber, value, onChange }: WrittenAns
         rows={4}
         maxLength={MAX_ANSWER_LENGTH}
         onChange={(event) => onChange(event.target.value)}
+        onPaste={(event) => event.preventDefault()}
+        onDrop={(event) => event.preventDefault()}
       />
     </div>
   );

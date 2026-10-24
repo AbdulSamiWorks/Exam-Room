@@ -1,12 +1,12 @@
 import type { AttemptMarking, MarkingResponse, QuestionMark } from '@exam-room/shared';
 import { numberQuestions, optionLetter } from '@exam-room/shared/paper-rules';
 import { useState } from 'react';
-import { Link } from 'react-router';
 import { Button } from '../../../components/Button';
 import { FormError } from '../../../components/FormError';
 import { describeMarks } from '../../../lib/describe-marks';
 import { useSaveMarks } from './use-marking';
 import { RichText } from '../../paper/RichText';
+import { AnswerPhotoGallery } from '../results/AnswerPhotoGallery';
 import styles from './MarkingPage.module.css';
 
 type StudentMarkingFormProps = {
@@ -24,6 +24,7 @@ export function StudentMarkingForm({ testId, marking, attempt, onSaved }: Studen
   const [comment, setComment] = useState(attempt.comment);
   const questions = marking.paper ? numberQuestions(marking.paper) : [];
   const answers = new Map(attempt.answers.map((answer) => [answer.questionId, answer]));
+  const hasWrittenQuestions = questions.some((question) => question.kind === 'written');
 
   function change(questionId: string, field: 'marks' | 'comment', value: string) {
     setDraft((current) => ({
@@ -41,14 +42,18 @@ export function StudentMarkingForm({ testId, marking, attempt, onSaved }: Studen
 
   return (
     <div className={styles.markingForm}>
-      {attempt.photoCount > 0 && (
-        <Link
-          to={`/teacher/attempts/${attempt.attemptId}/photos`}
-          state={{ studentName: attempt.studentName, backTo: `/teacher/tests/${testId}/marking` }}
-          className={styles.photoLink}
-        >
-          See the {attempt.photoCount} answer photos
-        </Link>
+      {attempt.photoCount > 0 ? (
+        <details className={styles.photoSection} open>
+          <summary>Answer photos ({attempt.photoCount})</summary>
+          <AnswerPhotoGallery attemptId={attempt.attemptId} isCompact />
+        </details>
+      ) : (
+        hasWrittenQuestions && (
+          <p className={styles.muted}>
+            No answer photos from this student. You can still give marks from the paper or the typed
+            answers.
+          </p>
+        )
       )}
       <ol className={styles.questionList}>
         {questions.map((question) => {

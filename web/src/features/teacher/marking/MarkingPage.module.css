@@ -98,8 +98,19 @@
   padding: 0 14px 14px;
 }
 
-.photoLink {
-  font-weight: 600;
+.photoSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.photoSection summary {
+  color: var(--color-accent-text);
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .questionList {

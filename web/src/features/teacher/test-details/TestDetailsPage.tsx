@@ -5,10 +5,12 @@ import { LoadingScreen } from '../../../components/LoadingScreen';
 import { Page } from '../../../components/Page';
 import { describeBounty } from '../../../lib/describe-bounty';
 import { describeDuration, describePaperSize } from '../../../lib/describe-test-length';
-import { describeAllowedExits, describeChapters, describeTestKind } from '../tests/describe-test';
+import { describeTestKind } from '../../../lib/describe-test-kind';
+import { describeAllowedExits, describeChapters } from '../tests/describe-test';
 import { ResultsPanel } from '../results/ResultsPanel';
 import { useTest } from '../tests/use-tests';
 import { DeleteTestPanel } from './DeleteTestPanel';
+import { MarkingPanel } from './MarkingPanel';
 import { PaperPanel } from './PaperPanel';
 import { ShareTestPanel } from './ShareTestPanel';
 import { TestAvailabilityPanel } from './TestAvailabilityPanel';
@@ -57,6 +59,7 @@ export function TestDetailsPage() {
     >
       <div className={styles.sections}>
         <TestAvailabilityPanel test={test} />
+        <MarkingPanel test={test} />
         {test.paperKind !== 'none' && <ShareTestPanel test={test} />}
         <PaperPanel test={test} />
         <ResultsPanel test={test} />

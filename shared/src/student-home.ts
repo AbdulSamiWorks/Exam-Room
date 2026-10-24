@@ -15,6 +15,7 @@ export type StudentTestCard = TestSchedule & {
   maxMarks: number | null;
   releasedMarks: number | null;
   hasMcqResult: boolean;
+  chapterNames: string[];
   bountyNote: string;
   bountyPoints: number;
 };
