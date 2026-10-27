@@ -56,7 +56,10 @@ export async function countAnswersOfTest(
   testId: number,
 ): Promise<Map<number, number>> {
   const { rows } = await database.execute({
-    sql: `SELECT answers.attempt_id, COUNT(*) AS answered_count
+    sql: `SELECT answers.attempt_id,
+                 COUNT(DISTINCT CASE WHEN instr(answers.question_id, '.') > 0
+                   THEN substr(answers.question_id, 1, instr(answers.question_id, '.') - 1)
+                   ELSE answers.question_id END) AS answered_count
           FROM answers
           JOIN attempts ON attempts.id = answers.attempt_id
           WHERE attempts.test_id = ? AND (answers.choice IS NOT NULL OR answers.text <> '')

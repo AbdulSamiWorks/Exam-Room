@@ -52,6 +52,68 @@ export const SAMPLE_ANSWER_KEY: AnswerKey = {
   q3: { text: 'An object stays at rest or keeps moving unless a force acts on it.' },
 };
 
+export const GRAMMAR_PAPER: Paper = {
+  instructions: '',
+  sections: [
+    {
+      title: 'Section B: Short answers',
+      instructions: '',
+      questions: [
+        {
+          id: 'q1',
+          kind: 'mcq',
+          text: 'Water _____ at 100 °C.',
+          marks: 1,
+          options: ['boil', 'boils', 'is boiling'],
+          imageNumber: null,
+        },
+        {
+          id: 'q2',
+          kind: 'parts',
+          text: 'Change into negative sentences.',
+          marks: 2,
+          options: [],
+          imageNumber: null,
+          parts: [
+            {
+              id: 'q2a',
+              kind: 'short',
+              text: 'The shopkeeper sells fresh fruit.',
+              marks: 1,
+              options: [],
+            },
+            { id: 'q2b', kind: 'short', text: 'I have locked the door.', marks: 1, options: [] },
+          ],
+        },
+        {
+          id: 'q3',
+          kind: 'blanks',
+          text: 'Ahmed (1) _____ (live) in Multan. Now he (2) _____ (study).',
+          marks: 1,
+          options: [],
+          imageNumber: null,
+        },
+        {
+          id: 'q4',
+          kind: 'written',
+          text: 'Write a paragraph about your school.',
+          marks: 5,
+          options: [],
+          imageNumber: null,
+        },
+      ],
+    },
+  ],
+};
+
+export const GRAMMAR_ANSWER_KEY: AnswerKey = {
+  q1: { option: 1 },
+  q2a: { accepted: ['The shopkeeper does not sell fresh fruit.'] },
+  q2b: { accepted: ['I have not locked the door.'] },
+  q3: { blanks: [['lives'], ['is studying']] },
+  q4: { text: 'Any clear paragraph with a topic sentence.' },
+};
+
 type TypedTestOptions = {
   writtenAnswers?: WrittenAnswers;
   paper?: Paper;

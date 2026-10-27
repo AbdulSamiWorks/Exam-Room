@@ -1,4 +1,4 @@
-import type { AnswerChange, NumberedQuestion, WrittenAnswers } from '@exam-room/shared';
+import type { AnswerChange, AnswerSlot, WrittenAnswers } from '@exam-room/shared';
 import type { AttemptRecord } from '../attempts/attempt-record.js';
 
 export const ANSWER_CLOCK_TOLERANCE_MS = 2000;
@@ -28,20 +28,25 @@ export function isAcceptingAnswers(
 }
 
 export function answerProblem(
-  question: NumberedQuestion | undefined,
+  slot: AnswerSlot | undefined,
   change: Pick<AnswerChange, 'choice' | 'text'>,
   writtenAnswers: WrittenAnswers,
 ): string | undefined {
-  if (!question) return 'This question is not on the paper.';
-  if (question.kind === 'mcq') {
-    if (change.text !== null) return `Question ${question.number} takes a choice, not text.`;
-    if (change.choice !== null && change.choice >= question.options.length) {
-      return `Question ${question.number} has no such option.`;
+  if (!slot) return 'This question is not on the paper.';
+  const { unit } = slot;
+  if (unit.kind === 'mcq') {
+    if (change.text !== null) return `Question ${unit.label} takes a choice, not text.`;
+    if (change.choice !== null && change.choice >= unit.options.length) {
+      return `Question ${unit.label} has no such option.`;
     }
     return undefined;
   }
-  if (change.choice !== null) return `Question ${question.number} takes text, not a choice.`;
-  if (change.text !== null && !TYPED_WRITTEN_ANSWERS.has(writtenAnswers)) {
+  if (change.choice !== null) return `Question ${unit.label} takes text, not a choice.`;
+  if (
+    unit.kind === 'written' &&
+    change.text !== null &&
+    !TYPED_WRITTEN_ANSWERS.has(writtenAnswers)
+  ) {
     return 'This test takes written answers on paper.';
   }
   return undefined;

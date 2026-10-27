@@ -1,12 +1,14 @@
 import type { AttemptMarking, MarkingResponse, QuestionMark } from '@exam-room/shared';
-import { numberQuestions, optionLetter } from '@exam-room/shared/paper-rules';
+import { checkUnit } from '@exam-room/shared/answer-checking';
+import { markableUnitsOf, numberQuestions } from '@exam-room/shared/paper-rules';
 import { useState } from 'react';
 import { Button } from '../../../components/Button';
 import { FormError } from '../../../components/FormError';
-import { describeMarks } from '../../../lib/describe-marks';
+import { describeMarks, formatMarks } from '../../../lib/describe-marks';
 import { useSaveMarks } from './use-marking';
 import { RichText } from '../../paper/RichText';
 import { AnswerPhotoGallery } from '../results/AnswerPhotoGallery';
+import { UnitAnswerSummary } from './UnitAnswerSummary';
 import styles from './MarkingPage.module.css';
 
 type StudentMarkingFormProps = {
@@ -22,14 +24,18 @@ export function StudentMarkingForm({ testId, marking, attempt, onSaved }: Studen
   const saveMarks = useSaveMarks(testId);
   const [draft, setDraft] = useState<MarkDraft>(() => draftOf(attempt.questionMarks));
   const [comment, setComment] = useState(attempt.comment);
-  const questions = marking.paper ? numberQuestions(marking.paper) : [];
+  const paper = marking.paper ?? { instructions: '', sections: [] };
+  const units = markableUnitsOf(paper);
+  const stemsByQuestionId = new Map(
+    numberQuestions(paper).map((question) => [question.id, question.text]),
+  );
   const answers = new Map(attempt.answers.map((answer) => [answer.questionId, answer]));
-  const hasWrittenQuestions = questions.some((question) => question.kind === 'written');
+  const hasWrittenQuestions = units.some((unit) => unit.kind === 'written');
 
-  function change(questionId: string, field: 'marks' | 'comment', value: string) {
+  function change(unitId: string, field: 'marks' | 'comment', value: string) {
     setDraft((current) => ({
       ...current,
-      [questionId]: { marks: '', comment: '', ...current[questionId], [field]: value },
+      [unitId]: { marks: '', comment: '', ...current[unitId], [field]: value },
     }));
   }
 
@@ -56,41 +62,31 @@ export function StudentMarkingForm({ testId, marking, attempt, onSaved }: Studen
         )
       )}
       <ol className={styles.questionList}>
-        {questions.map((question) => {
-          const answer = answers.get(question.id);
-          const correctOption = marking.answerKey[question.id]?.option;
-          const modelAnswer = marking.answerKey[question.id]?.text;
+        {units.map((unit) => {
+          const key = marking.answerKey[unit.id];
+          const check = checkUnit(unit, key, answers);
           return (
-            <li key={question.id} className={styles.questionRow}>
+            <li key={unit.id} className={styles.questionRow}>
+              {unit.partLetter === 'a' && (
+                <div className={styles.questionStem} dir="auto">
+                  <strong>{unit.questionNumber}.</strong>{' '}
+                  <RichText text={stemsByQuestionId.get(unit.questionId) ?? ''} />
+                </div>
+              )}
               <div className={styles.questionText} dir="auto">
-                <strong>{question.number}.</strong>{' '}
-                <span className={styles.muted}>({describeMarks(question.marks)})</span>
-                <RichText text={question.text} />
+                <strong>{unit.partLetter ? `${unit.partLetter})` : `${unit.label}.`}</strong>{' '}
+                <span className={styles.muted}>({describeMarks(unit.marks)})</span>
+                <RichText text={unit.text} />
               </div>
-              {modelAnswer && (
+              {key?.text && (
                 <details className={styles.modelAnswer}>
                   <summary>Model answer</summary>
                   <div dir="auto">
-                    <RichText text={modelAnswer} />
+                    <RichText text={key.text} />
                   </div>
                 </details>
               )}
-              {question.kind === 'mcq' ? (
-                <p className={styles.answerLine}>
-                  Chose{' '}
-                  <strong>
-                    {answer?.choice === null || answer?.choice === undefined
-                      ? 'nothing'
-                      : optionLetter(answer.choice)}
-                  </strong>
-                  {correctOption !== undefined && ` · correct is ${optionLetter(correctOption)}`}
-                  {answer?.choice !== undefined && answer.choice === correctOption ? ' ✓' : ''}
-                </p>
-              ) : (
-                <p className={styles.typedAnswer} dir="auto">
-                  {answer?.text || 'No typed answer (see the photos or the paper).'}
-                </p>
-              )}
+              <UnitAnswerSummary unit={unit} answerKey={key} answers={answers} check={check} />
               <div className={styles.markFields}>
                 <label className={styles.markField}>
                   Marks
@@ -98,19 +94,19 @@ export function StudentMarkingForm({ testId, marking, attempt, onSaved }: Studen
                     type="number"
                     inputMode="decimal"
                     min={0}
-                    max={question.marks}
+                    max={unit.marks}
                     step={0.5}
-                    placeholder={question.kind === 'mcq' ? 'auto' : '–'}
-                    value={draft[question.id]?.marks ?? ''}
-                    onChange={(event) => change(question.id, 'marks', event.target.value)}
+                    placeholder={check ? `auto ${formatMarks(check.marks)}` : '–'}
+                    value={draft[unit.id]?.marks ?? ''}
+                    onChange={(event) => change(unit.id, 'marks', event.target.value)}
                   />
                 </label>
                 <label className={styles.commentField}>
                   Comment
                   <input
-                    value={draft[question.id]?.comment ?? ''}
+                    value={draft[unit.id]?.comment ?? ''}
                     dir="auto"
-                    onChange={(event) => change(question.id, 'comment', event.target.value)}
+                    onChange={(event) => change(unit.id, 'comment', event.target.value)}
                   />
                 </label>
               </div>

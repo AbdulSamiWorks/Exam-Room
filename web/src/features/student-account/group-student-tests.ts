@@ -62,7 +62,7 @@ function byTitle(first: StudentTestCard, second: StudentTestCard): number {
 }
 
 export function studentTestPath(test: StudentTestCard): string {
-  const hasResult = test.releasedMarks !== null || test.hasMcqResult;
+  const hasResult = test.releasedMarks !== null || test.hasInstantResult;
   return hasResult ? studentResultPath(test.code) : `/t/${test.code}`;
 }
 
@@ -91,7 +91,7 @@ export function studentTestPill(test: StudentTestCard): StudentTestPill {
       tone: scoreTone(test.releasedMarks, test.maxMarks),
     };
   }
-  if (test.hasMcqResult) return { label: 'MCQ result', tone: 'result' };
+  if (test.hasInstantResult) return { label: 'Result so far', tone: 'result' };
   switch (test.attemptStatus) {
     case 'waiting':
       return { label: 'Waiting', tone: 'wait' };

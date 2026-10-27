@@ -8,11 +8,11 @@ export type QuestionMark = {
 };
 
 export type AttemptScore = {
-  mcqMarks: number;
+  autoMarks: number;
   writtenMarks: number;
   totalMarks: number;
   correctCount: number;
-  mcqCount: number;
+  autoCount: number;
   markedWrittenCount: number;
   writtenCount: number;
 };
@@ -61,12 +61,19 @@ export type ReleaseResultsResponse = {
   releaseOptions: ReleaseOptions;
 };
 
-export type QuestionResult = {
-  questionId: string;
+export type MarkSource = 'automatic' | 'teacher';
+
+export type UnitResult = {
+  unitId: string;
   marks: number | null;
+  markedBy: MarkSource | null;
   chosenOption: number | null;
   typedAnswer: string | null;
+  blankAnswers: string[];
+  isCorrect: boolean | null;
+  blankResults: boolean[];
   correctOption: number | null;
+  correctAnswers: string[];
   modelAnswer: string | null;
   comment: string;
 };
@@ -78,7 +85,7 @@ export type StudentResultResponse = {
   paper: Paper | null;
   maxMarks: number;
   totalMarks: number;
-  questions: QuestionResult[];
+  units: UnitResult[];
   comment: string;
   topScorers: string[] | null;
   releasedAt: number | null;

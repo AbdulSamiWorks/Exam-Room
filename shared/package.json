@@ -2,7 +2,7 @@
   "name": "@exam-room/shared",
   "version": "0.1.0",
   "private": true,
-  "description": "API contract types and the paper rules shared by server and web",
+  "description": "API contract types and the paper and answer rules shared by server and web",
   "type": "module",
   "exports": {
     ".": {
@@ -11,6 +11,10 @@
     "./paper-rules": {
       "types": "./src/paper-rules.ts",
       "default": "./src/paper-rules.ts"
+    },
+    "./answer-checking": {
+      "types": "./src/answer-checking.ts",
+      "default": "./src/answer-checking.ts"
     }
   },
   "scripts": {

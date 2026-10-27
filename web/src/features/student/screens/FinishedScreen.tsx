@@ -4,7 +4,7 @@ import type { OutboxSnapshot } from '../answers/outbox-store';
 import { hasUnsentWork } from '../answers/outbox-state';
 import { PhotoAnswersPanel } from '../photos/PhotoAnswersPanel';
 import { leaveFullscreen } from '../fullscreen';
-import { FinishedMcqScore } from './FinishedMcqScore';
+import { FinishedScore } from './FinishedScore';
 import { StatusScreen } from './StatusScreen';
 
 type FinishedMessage = {
@@ -49,8 +49,8 @@ export function FinishedScreen({ testCode, attemptToken, attempt, outbox }: Fini
   const finished = FINISHED_MESSAGES[attempt.finishReason ?? 'student'];
   const isStillSending = outbox !== undefined && hasUnsentWork(outbox.outbox);
   const tooLateCount = outbox?.outbox.tooLateCount ?? 0;
-  const { instantMcqResult, questionCount } = attempt.test;
-  const canSeeMcqResult = instantMcqResult && questionCount > 0 && !isStillSending;
+  const { instantResult, questionCount } = attempt.test;
+  const canSeeResult = instantResult && questionCount > 0 && !isStillSending;
 
   useEffect(leaveFullscreen, []);
 
@@ -58,7 +58,7 @@ export function FinishedScreen({ testCode, attemptToken, attempt, outbox }: Fini
     <StatusScreen
       tone={finished.tone}
       title={finished.title}
-      actions={canSeeMcqResult && <FinishedMcqScore testCode={testCode} />}
+      actions={canSeeResult && <FinishedScore testCode={testCode} />}
     >
       {isStillSending ? (
         <p>

@@ -1,11 +1,12 @@
 import type {
   AnswerChange,
+  AnswerSlot,
   AttemptResponse,
   SaveAnswersResponse,
   StoredAnswersResponse,
   StudentPaperResponse,
 } from '@exam-room/shared';
-import { numberQuestions } from '@exam-room/shared/paper-rules';
+import { ANSWER_SLOT_ID, answerSlotsOf } from '@exam-room/shared/paper-rules';
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import type { AppDependencies } from '../../app-dependencies.js';
@@ -44,7 +45,7 @@ const saveAnswersSchema = z.object({
   answers: z
     .array(
       z.object({
-        questionId: z.string().regex(/^q\d{1,4}$/),
+        questionId: z.string().regex(ANSWER_SLOT_ID),
         choice: z.number().int().min(0).nullable(),
         text: z.string().max(MAX_ANSWER_TEXT_LENGTH).nullable(),
         sequence: z.number().int().positive().max(MAX_SEQUENCE),
@@ -154,18 +155,9 @@ export function createAttemptRouter(dependencies: AppDependencies): Router {
       findTestOfAttempt(database, attempt),
       findPaperForStudents(database, attempt.testId),
     ]);
-    const questionsById = new Map(
-      numberQuestions(paper ?? { instructions: '', sections: [] }).map((question) => [
-        question.id,
-        question,
-      ]),
-    );
+    const slotsById = paper ? answerSlotsOf(paper) : new Map<string, AnswerSlot>();
     for (const change of answers) {
-      const problem = answerProblem(
-        questionsById.get(change.questionId),
-        change,
-        test.writtenAnswers,
-      );
+      const problem = answerProblem(slotsById.get(change.questionId), change, test.writtenAnswers);
       if (problem) throw badRequest(problem, 'invalid_answer');
     }
 

@@ -28,11 +28,11 @@ describe('scoreAttempt', () => {
 
   it('marks MCQs from the key and adds the teacher marks for written answers', () => {
     expect(scoreAttempt(PAPER, SAMPLE_ANSWER_KEY, answers, new Map())).toEqual({
-      mcqMarks: 1,
+      autoMarks: 1,
       writtenMarks: 0,
       totalMarks: 1,
       correctCount: 1,
-      mcqCount: 2,
+      autoCount: 2,
       markedWrittenCount: 0,
       writtenCount: 1,
     });
@@ -46,7 +46,7 @@ describe('scoreAttempt', () => {
 
   it('lets the teacher overrule an MCQ mark', () => {
     const marks = new Map([['q2', { marks: 1, comment: 'Also right' }]]);
-    expect(scoreAttempt(PAPER, SAMPLE_ANSWER_KEY, answers, marks).mcqMarks).toBe(2);
+    expect(scoreAttempt(PAPER, SAMPLE_ANSWER_KEY, answers, marks).autoMarks).toBe(2);
   });
 
   it('names every top scorer, and nobody when all have zero', () => {
@@ -145,25 +145,31 @@ describe('marking and releasing results', () => {
       topScorers: null,
       releasedAt: null,
     });
-    expect(
-      result.body.questions.map((question: { marks: number | null }) => question.marks),
-    ).toEqual([1, 0, null]);
-    expect(result.body.questions[1]).toMatchObject({ chosenOption: null, correctOption: 2 });
-    expect(result.body.questions[2]).toMatchObject({ marks: null, modelAnswer: null });
+    expect(result.body.units.map((unit: { marks: number | null }) => unit.marks)).toEqual([
+      1,
+      0,
+      null,
+    ]);
+    expect(result.body.units[1]).toMatchObject({
+      chosenOption: null,
+      correctOption: 2,
+      isCorrect: false,
+    });
+    expect(result.body.units[2]).toMatchObject({ marks: null, markedBy: null, modelAnswer: null });
     const home = await student.get('/api/student/home');
-    expect(home.body.tests[0]).toMatchObject({ hasMcqResult: true, releasedMarks: null });
+    expect(home.body.tests[0]).toMatchObject({ hasInstantResult: true, releasedMarks: null });
   });
 
   it('keeps every result hidden until release when the test asks for it', async () => {
-    await teacher.patch(`/api/tests/${test.id}`).send({ instantMcqResult: false });
+    await teacher.patch(`/api/tests/${test.id}`).send({ instantResult: false });
     const student = await logInAsStudent(context.app, classIdOfTest(context.app, test.code));
     expect((await student.get(`/api/student/results/${test.code}`)).status).toBe(403);
     const home = await student.get('/api/student/home');
-    expect(home.body.tests[0]).toMatchObject({ hasMcqResult: false });
+    expect(home.body.tests[0]).toMatchObject({ hasInstantResult: false });
   });
 
   it('shows students their full result after release, with the chosen details', async () => {
-    await teacher.patch(`/api/tests/${test.id}`).send({ instantMcqResult: false });
+    await teacher.patch(`/api/tests/${test.id}`).send({ instantResult: false });
     const student = await logInAsStudent(context.app, classIdOfTest(context.app, test.code));
     const before = await student.get(`/api/student/results/${test.code}`);
     expect(before.status).toBe(403);
@@ -186,22 +192,31 @@ describe('marking and releasing results', () => {
       comment: 'Great work.',
       topScorers: ['Ayesha Khan'],
     });
-    expect(result.body.questions[0]).toEqual({
-      questionId: 'q1',
+    expect(result.body.units[0]).toEqual({
+      unitId: 'q1',
       marks: 1,
+      markedBy: 'automatic',
       chosenOption: 1,
       typedAnswer: null,
+      blankAnswers: [],
+      isCorrect: true,
+      blankResults: [],
       correctOption: null,
+      correctAnswers: [],
       modelAnswer: null,
       comment: '',
     });
-    expect(result.body.questions[2]).toMatchObject({ marks: 3, modelAnswer: null });
+    expect(result.body.units[2]).toMatchObject({
+      marks: 3,
+      markedBy: 'teacher',
+      modelAnswer: null,
+    });
 
     await teacher
       .put(`/api/tests/${test.id}/release`)
       .send({ showCorrectAnswers: true, showComments: true, showTopScorer: true });
     const withAnswers = await student.get(`/api/student/results/${test.code}`);
-    expect(withAnswers.body.questions[2]).toMatchObject({
+    expect(withAnswers.body.units[2]).toMatchObject({
       typedAnswer: 'Law',
       modelAnswer: SAMPLE_ANSWER_KEY.q3?.text,
     });

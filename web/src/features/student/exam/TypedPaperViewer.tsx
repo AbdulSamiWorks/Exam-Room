@@ -10,7 +10,7 @@ import styles from './TypedPaperViewer.module.css';
 
 type TypedPaperViewerProps = Pick<
   PaperViewProps,
-  'chosenOptions' | 'onChooseOption' | 'renderQuestionExtra'
+  'chosenOptions' | 'onChooseOption' | 'renderUnitAnswer' | 'renderBlank'
 > & {
   testCode: string;
   attemptToken: string;
@@ -55,7 +55,8 @@ function LoadedPaper({
   footer,
   chosenOptions,
   onChooseOption,
-  renderQuestionExtra,
+  renderUnitAnswer,
+  renderBlank,
 }: TypedPaperViewerProps & { studentPaper: StudentPaperResponse }) {
   const view = useMemo(
     () => studentPaperView(studentPaper.paper, studentPaper.shuffleSeed),
@@ -66,9 +67,9 @@ function LoadedPaper({
   const shownChosenOptions =
     chosenOptions &&
     Object.fromEntries(
-      Object.entries(chosenOptions).map(([questionId, option]) => [
-        questionId,
-        option === undefined ? undefined : shownOptionOf(view, questionId, option),
+      Object.entries(chosenOptions).map(([unitId, option]) => [
+        unitId,
+        option === undefined ? undefined : shownOptionOf(view, unitId, option),
       ]),
     );
 
@@ -88,10 +89,11 @@ function LoadedPaper({
           chosenOptions={shownChosenOptions}
           onChooseOption={
             onChooseOption &&
-            ((questionId, shownOption) =>
-              onChooseOption(questionId, originalOptionOf(view, questionId, shownOption)))
+            ((unitId, shownOption) =>
+              onChooseOption(unitId, originalOptionOf(view, unitId, shownOption)))
           }
-          renderQuestionExtra={renderQuestionExtra}
+          renderUnitAnswer={renderUnitAnswer}
+          renderBlank={renderBlank}
         />
         {footer}
       </div>

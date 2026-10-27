@@ -1,7 +1,7 @@
-import type { MultipleChoiceSummary } from './result-summary';
-import styles from './MultipleChoiceCounts.module.css';
+import type { AnswerSummary } from './result-summary';
+import styles from './AnswerCounts.module.css';
 
-export function MultipleChoiceCounts({ summary }: { summary: MultipleChoiceSummary }) {
+export function AnswerCounts({ summary }: { summary: AnswerSummary }) {
   if (summary.right + summary.wrong + summary.unanswered === 0) return null;
   return (
     <ul className={styles.counts}>

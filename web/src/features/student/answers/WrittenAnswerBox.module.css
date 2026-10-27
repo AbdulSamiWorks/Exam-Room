@@ -29,3 +29,9 @@
   outline: 3px solid var(--color-focus);
   border-color: var(--color-primary);
 }
+
+.shortArea {
+  composes: textArea;
+  min-height: 0;
+  resize: none;
+}

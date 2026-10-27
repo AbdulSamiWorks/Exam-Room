@@ -22,12 +22,12 @@ export type ResultRowActions = {
 
 export function ResultRow({
   result,
-  questionCount,
+  answerCount,
   markingPath,
   actions,
 }: {
   result: AttemptResult;
-  questionCount: number;
+  answerCount: number;
   markingPath?: string;
   actions: ResultRowActions;
 }) {
@@ -48,8 +48,8 @@ export function ResultRow({
         <Fact label="Finished" value={describeClockTime(result.finishedAt)} />
         <Fact label="Exits" value={describeExits(result)} />
         <Fact label="Away" value={describeAwayTime(result.awayMs)} />
-        {questionCount > 0 && (
-          <Fact label="Answered" value={`${result.answeredCount} of ${questionCount}`} />
+        {answerCount > 0 && (
+          <Fact label="Answered" value={`${result.answeredCount} of ${answerCount}`} />
         )}
         {result.photoCount > 0 && <Fact label="Photos" value={String(result.photoCount)} />}
         {result.totalMarks !== null && <Fact label="Marks" value={String(result.totalMarks)} />}

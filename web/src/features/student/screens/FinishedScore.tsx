@@ -1,12 +1,12 @@
 import { ButtonLink } from '../../../components/Button';
 import { describeScore } from '../../../lib/describe-marks';
-import { MultipleChoiceCounts } from '../../student-account/MultipleChoiceCounts';
-import { multipleChoiceSummary } from '../../student-account/result-summary';
+import { AnswerCounts } from '../../student-account/AnswerCounts';
+import { automaticSummary, checksOnlyMultipleChoice } from '../../student-account/result-summary';
 import { studentResultPath } from '../../student-account/student-paths';
 import { useStudentResult } from '../../student-account/use-student-result';
-import styles from './FinishedMcqScore.module.css';
+import styles from './FinishedScore.module.css';
 
-export function FinishedMcqScore({ testCode }: { testCode: string }) {
+export function FinishedScore({ testCode }: { testCode: string }) {
   const resultQuery = useStudentResult(testCode);
   const resultPath = studentResultPath(testCode);
 
@@ -16,7 +16,7 @@ export function FinishedMcqScore({ testCode }: { testCode: string }) {
   if (resultQuery.isError) {
     return (
       <ButtonLink to={resultPath} size="large" fullWidth>
-        See my MCQ result
+        See my result
       </ButtonLink>
     );
   }
@@ -24,9 +24,13 @@ export function FinishedMcqScore({ testCode }: { testCode: string }) {
   const result = resultQuery.data;
   return (
     <div className={styles.scoreBox}>
-      <p className={styles.label}>Your multiple choice score</p>
+      <p className={styles.label}>
+        {checksOnlyMultipleChoice(result)
+          ? 'Your multiple choice score'
+          : 'Your score for the answers the app checks'}
+      </p>
       <p className={styles.score}>{describeScore(result.totalMarks, result.maxMarks)}</p>
-      <MultipleChoiceCounts summary={multipleChoiceSummary(result)} />
+      <AnswerCounts summary={automaticSummary(result.units)} />
       <ButtonLink to={resultPath} size="large" fullWidth>
         See which answers were right
       </ButtonLink>

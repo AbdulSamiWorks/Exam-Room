@@ -14,11 +14,11 @@ function marking(markedWrittenCount: number, writtenCount: number): AttemptMarki
     comment: '',
     photoCount: 0,
     score: {
-      mcqMarks: 0,
+      autoMarks: 0,
       writtenMarks: 0,
       totalMarks: 0,
       correctCount: 0,
-      mcqCount: 0,
+      autoCount: 0,
       markedWrittenCount,
       writtenCount,
     },

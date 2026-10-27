@@ -102,7 +102,7 @@ const testSettingsFields = {
     .min(0)
     .max(testLimits.maxBountyPoints, `At most ${testLimits.maxBountyPoints} points.`),
   waitingRoom: booleanField('Choose whether students wait for you to start.'),
-  instantMcqResult: booleanField('Choose when students see their multiple choice result.'),
+  instantResult: booleanField('Choose when students see their automatic marks.'),
   shuffleQuestions: booleanField('Choose the order of the questions.'),
 };
 
@@ -132,7 +132,7 @@ const createTestFieldsSchema = z.object({
   bountyNote: testSettingsFields.bountyNote.default(''),
   bountyPoints: testSettingsFields.bountyPoints.default(0),
   waitingRoom: testSettingsFields.waitingRoom.default(false),
-  instantMcqResult: testSettingsFields.instantMcqResult.default(true),
+  instantResult: testSettingsFields.instantResult.default(true),
   shuffleQuestions: testSettingsFields.shuffleQuestions.default(false),
   paperKind: z.enum(['pages', 'typed', 'none']).default('pages'),
   maxMarks: z.coerce
@@ -165,7 +165,7 @@ const STARTED_TEST_PAPER_MESSAGE =
 
 function settingsOfNewTest(fields: CreateTestFields) {
   const { subjectId, kind, chapterIds, title, durationMinutes, allowedExits } = fields;
-  const { leaveRule, writtenAnswers, bountyNote, bountyPoints, waitingRoom, instantMcqResult } =
+  const { leaveRule, writtenAnswers, bountyNote, bountyPoints, waitingRoom, instantResult } =
     fields;
   const { shuffleQuestions } = fields;
   return {
@@ -180,7 +180,7 @@ function settingsOfNewTest(fields: CreateTestFields) {
     bountyNote,
     bountyPoints,
     waitingRoom,
-    instantMcqResult,
+    instantResult,
     shuffleQuestions,
   };
 }

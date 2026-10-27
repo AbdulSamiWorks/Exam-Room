@@ -1,5 +1,4 @@
-import type { QuestionResult, StudentResultResponse } from '@exam-room/shared';
-import { questionsOf } from '@exam-room/shared/paper-rules';
+import type { StudentResultResponse } from '@exam-room/shared';
 import { Router } from 'express';
 import { z } from 'zod';
 import type { AppDependencies } from '../../app-dependencies.js';
@@ -11,8 +10,9 @@ import { findStoredPaper } from '../tests/paper-repository.js';
 import { findTestByCode } from '../tests/tests-repository.js';
 import { readMarkingRows } from './marking-repository.js';
 import { markAttempt } from './marking-service.js';
-import { multipleChoiceMarksOf, resultVisibility } from './result-visibility.js';
+import { resultVisibility } from './result-visibility.js';
 import { topScorerNames } from './score-attempt.js';
+import { automaticMaxMarksOf, unitResultsOf } from './student-result.js';
 
 const testCodeParamsSchema = z.object({
   testCode: z
@@ -46,34 +46,24 @@ export function createStudentResultsRouter(dependencies: AppDependencies): Route
       isFinal ? listAttemptsOfTest(database, test.id) : Promise.resolve([]),
     ]);
     const { showCorrectAnswers, showComments, showTopScorer } = rows.releaseOptions;
+    const { paper, answerKey } = storedPaper;
     const answers = new Map(marking.answers.map((answer) => [answer.questionId, answer]));
-    const paperQuestions = storedPaper.paper ? questionsOf(storedPaper.paper) : [];
-    const questions: QuestionResult[] = paperQuestions.map((question) => {
-      const showsMark = isFinal || question.kind === 'mcq';
-      const mark = showsMark ? marking.questionMarks[question.id] : undefined;
-      const answer = answers.get(question.id);
-      const correctOption = storedPaper.answerKey[question.id]?.option;
-      const modelAnswer = storedPaper.answerKey[question.id]?.text;
-      const isCorrect = correctOption !== undefined && answer?.choice === correctOption;
-      return {
-        questionId: question.id,
-        marks: mark?.marks ?? (question.kind === 'mcq' ? (isCorrect ? question.marks : 0) : null),
-        chosenOption: answer?.choice ?? null,
-        typedAnswer: answer?.text ?? null,
-        correctOption: showCorrectAnswers ? (correctOption ?? null) : null,
-        modelAnswer: isFinal && showCorrectAnswers ? (modelAnswer ?? null) : null,
-        comment: isFinal && showComments ? (mark?.comment ?? '') : '',
-      };
-    });
+    const units = paper
+      ? unitResultsOf(paper, answerKey, answers, marking.questionMarks, {
+          isFinal,
+          showCorrectAnswers,
+          showComments,
+        })
+      : [];
 
     response.json({
       isFinal,
       testTitle: test.title,
       subjectName: test.subject.name,
-      paper: storedPaper.paper,
-      maxMarks: isFinal ? (test.maxMarks ?? 0) : multipleChoiceMarksOf(paperQuestions),
-      totalMarks: isFinal ? marking.score.totalMarks : marking.score.mcqMarks,
-      questions,
+      paper,
+      maxMarks: isFinal || !paper ? (test.maxMarks ?? 0) : automaticMaxMarksOf(paper, answerKey),
+      totalMarks: isFinal ? marking.score.totalMarks : marking.score.autoMarks,
+      units,
       comment: isFinal && showComments ? marking.comment : '',
       topScorers: isFinal && showTopScorer ? topScorerNames(attempts) : null,
       releasedAt: test.resultsReleasedAt,

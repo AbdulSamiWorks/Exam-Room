@@ -98,11 +98,81 @@ paper in the same pattern. Good settings for this pattern:
 Urdu and other right-to-left text works everywhere. Pictures are added in the preview with
 **+ Add a picture to question N**; the app makes them small before uploading (at most 20 pictures).
 
+## Answers typed on the phone and checked by the app
+
+For English and grammar (tenses, voice, narration, correct the sentence, translation), students can
+type each answer in its own box, and the app checks it against your answer at once. Right gives the
+marks, wrong gives 0, and the student sees the right sentence (if the result is shown). You can
+always change a mark on **Marks and release**.
+
+```text
+# Section B: Short answers
+Type each answer in its own box.
+
+1. Change into negative sentences. [2 marks]
+a) The shopkeeper sells fresh fruit.
+Answer: The shopkeeper does not sell fresh fruit.
+b) I have locked the door.
+Answer: I have not locked the door.
+
+2. Fill in the blanks with the correct form of the verb in brackets. [2 marks]
+a) Listen! Someone _____ (knock) at the door.
+Answer: is knocking
+b) My uncle _____ (work) in this bank since 2015.
+Answer: has been working | has worked
+
+3. Read the passage and fill in each blank. [2 marks]
+Ahmed (1) _____ (live) in Multan. Every morning he (2) _____ (catch) the bus.
+Answer: lives; catches
+
+4. Read the passage again and answer the questions. [5 marks]
+a) Where does Ahmed live?
+Answer: in Multan | He lives in Multan.
+b) Write a short note about your own morning. [4]
+Model answer: Any four clear sentences in the Present Simple tense.
+```
+
+The rules:
+
+| You write                                     | It means                                                                                       |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `a) ...` and right under it `Answer: ...`     | The question has parts; each part gets its own answer box, and the app checks the answer       |
+| Several right answers: `Answer: x \| y`       | Any of them counts as right                                                                    |
+| `_____` (3 or more `_`) in a question or part | A box inside the sentence. Give the answers in order: `Answer: lives; catches`                 |
+| `Model answer: ...` under a part              | A box that you (or the AI) mark; the model answer helps the marking and is shown after release |
+| `Answer:` with nothing after it               | A box without an answer; you (or the AI) give the marks                                        |
+| Parts without marks                           | They share the question's marks equally (3 marks and 6 parts: ½ mark each)                     |
+
+How the app checks: capital letters, spaces, full stops, commas and question marks do not matter,
+and short forms count the same as long forms: `doesn't` = `does not`, `won't` = `will not`,
+`can't` = `cannot`, `I'm` = `I am`, `they're` = `they are`, `we've` = `we have`, `he'll` = `he will`,
+`p.m.` = `pm`. `'s` and `'d` are not changed, because they can mean two things (`he's` = he is or he
+has), so give both answers if both are right. Every other word must be the same, so the app never
+gives marks for a wrong tense.
+
+Good to know:
+
+- Parts are written `a)`, `b)`, `c)` (or `(a)`, `A.`), in order.
+- The first part must have its own `Answer:` (or `Model answer:`) line right under it. Without
+  that, the parts stay text inside one written question, as before (good for Section B questions
+  that have one model answer for all parts).
+- `Answer:` under a written question without parts is still its model answer.
+- A long sentence or paragraph that students may write in their own words should use
+  `Model answer:`; the preview warns you when an exact answer is very long.
+- Students cannot paste into the boxes, and the phone's spelling correction is switched off.
+- **New test → Paper → Type or paste → English tenses** loads the full 50-mark tenses paper with
+  every answer, to copy or change.
+
 ## JSON
 
 The same paper as JSON. `type` is optional (questions with `options` are multiple choice), `marks`
 is optional (1 mark), and `answer` is optional (a letter for multiple choice, text for written
 questions). A paper without sections can use `"questions": [...]` at the top.
+
+For answers the app checks, use `"type": "short"` with `"answers": ["right answer", "also right"]`,
+`"type": "blanks"` with one entry per blank (`"answers": ["lives", ["has been working", "has
+worked"]]`), and `"type": "parts"` with `"parts": [...]` (each part is `short`, `blanks` or
+`written`, with optional `marks`).
 
 ```json
 {
@@ -145,9 +215,10 @@ questions). A paper without sections can use `"questions": [...]` at the top.
 
 ## Limits
 
-At most 200 questions and 20 sections; 2 to 6 options per multiple choice question; up to 100
-marks per question in whole or half marks; question text up to 2,000 characters and options up to
-500 characters.
+At most 200 questions and 20 sections; 2 to 6 options per multiple choice question; up to 26 parts
+per question and 30 blanks per question or part; up to 10 right answers per box; up to 100 marks
+per question in whole or half marks; question text up to 2,000 characters and options and right
+answers up to 500 characters.
 
 ## Answer sheets for PDF tests
 
@@ -159,6 +230,8 @@ in order, for example `BCADB...` (use `?` to skip one).
 ## How it is stored (for developers)
 
 The app turns both formats into one `Paper` (sections → questions with ids `q1`, `q2`, …, kind,
-text, marks, options, picture number) and a separate `AnswerKey` (`{ "q1": { "option": 1 } }`).
+text, marks, options, picture number, and parts with ids `q27a`, `q27b`) and a separate `AnswerKey`
+(`{ "q1": { "option": 1 }, "q27a": { "accepted": ["..."] }, "q32": { "blanks": [["lives"]] } }`).
+Each answer box is stored as one answer: `q5`, `q27a`, and `q32.3` for blank 3 of question 32.
 Both are checked by the same rules in `shared/src/paper-rules.ts` in the browser and on the server
 (D44). The text and JSON readers live in `web/src/features/teacher/paper/`.

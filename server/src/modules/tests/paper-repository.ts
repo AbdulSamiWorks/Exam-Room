@@ -1,5 +1,5 @@
 import type { AnswerKey, Paper, TeacherPaperResponse } from '@exam-room/shared';
-import { maxMarksOf, questionsOf } from '@exam-room/shared/paper-rules';
+import { markableUnitsOf, maxMarksOf, questionsOf } from '@exam-room/shared/paper-rules';
 import type { InStatement } from '@libsql/client';
 import type { Database } from '../../database/connection.js';
 import type { PageImage } from './page-images.js';
@@ -14,6 +14,7 @@ export type PaperColumnValues = {
   paper: string | null;
   answerKey: string;
   questionCount: number;
+  answerCount: number;
   maxMarks: number | null;
 };
 
@@ -21,12 +22,19 @@ const EMPTY_ANSWER_KEY = '{}';
 
 export function paperColumnValues(storedPaper: StoredPaper | undefined): PaperColumnValues {
   if (!storedPaper) {
-    return { paper: null, answerKey: EMPTY_ANSWER_KEY, questionCount: 0, maxMarks: null };
+    return {
+      paper: null,
+      answerKey: EMPTY_ANSWER_KEY,
+      questionCount: 0,
+      answerCount: 0,
+      maxMarks: null,
+    };
   }
   return {
     paper: JSON.stringify(storedPaper.paper),
     answerKey: JSON.stringify(storedPaper.answerKey),
     questionCount: questionsOf(storedPaper.paper).length,
+    answerCount: markableUnitsOf(storedPaper.paper).length,
     maxMarks: maxMarksOf(storedPaper.paper),
   };
 }
@@ -84,9 +92,17 @@ export async function replacePaperBeforeAnyStart(
     if (await startedAttemptExists(transaction, testId)) return false;
     await transaction.batch([
       {
-        sql: `UPDATE tests SET paper = ?, answer_key = ?, question_count = ?, max_marks = ?
+        sql: `UPDATE tests
+              SET paper = ?, answer_key = ?, question_count = ?, answer_count = ?, max_marks = ?
               WHERE id = ?`,
-        args: [columns.paper, columns.answerKey, columns.questionCount, columns.maxMarks, testId],
+        args: [
+          columns.paper,
+          columns.answerKey,
+          columns.questionCount,
+          columns.answerCount,
+          columns.maxMarks,
+          testId,
+        ],
       },
       { sql: 'DELETE FROM paper_images WHERE test_id = ?', args: [testId] },
       ...insertPaperImageStatements(testId, images),

@@ -58,7 +58,7 @@ describe('typed papers', () => {
       .field('bountyNote', 'A book')
       .field('bountyPoints', '5')
       .field('waitingRoom', 'true')
-      .field('instantMcqResult', 'true')
+      .field('instantResult', 'true')
       .field('shuffleQuestions', 'true')
       .field('maxMarks', '10')
       .field('paper', JSON.stringify({ ...SAMPLE_PAPER, sections: [SAMPLE_PAPER.sections[1]] }))
@@ -67,7 +67,7 @@ describe('typed papers', () => {
     expect(response.status).toBe(201);
     expect(response.body.test).toMatchObject({
       waitingRoom: true,
-      instantMcqResult: true,
+      instantResult: true,
       shuffleQuestions: true,
     });
   });

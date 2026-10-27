@@ -91,11 +91,11 @@ function buildAttemptMarking(
 
 function enteredScore(totalMarks: number | null): AttemptScore {
   return {
-    mcqMarks: 0,
+    autoMarks: 0,
     writtenMarks: totalMarks ?? 0,
     totalMarks: totalMarks ?? 0,
     correctCount: 0,
-    mcqCount: 0,
+    autoCount: 0,
     markedWrittenCount: totalMarks === null ? 0 : 1,
     writtenCount: 1,
   };

@@ -24,7 +24,7 @@ export function settingsOf(test: TestRecord): StoredTestSettings {
     bountyNote: test.bountyNote,
     bountyPoints: test.bountyPoints,
     waitingRoom: test.waitingRoom,
-    instantMcqResult: test.instantMcqResult,
+    instantResult: test.instantResult,
     shuffleQuestions: test.shuffleQuestions,
   };
 }
@@ -45,7 +45,7 @@ export function applySettingChanges(
     bountyNote: changes.bountyNote ?? current.bountyNote,
     bountyPoints: changes.bountyPoints ?? current.bountyPoints,
     waitingRoom: changes.waitingRoom ?? current.waitingRoom,
-    instantMcqResult: changes.instantMcqResult ?? current.instantMcqResult,
+    instantResult: changes.instantResult ?? current.instantResult,
     shuffleQuestions: changes.shuffleQuestions ?? current.shuffleQuestions,
   };
 }

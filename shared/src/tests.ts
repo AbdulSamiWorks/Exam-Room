@@ -30,12 +30,13 @@ export type TestSummary = TestSchedule & {
   paperKind: PaperKind;
   pageCount: number;
   questionCount: number;
+  answerCount: number;
   maxMarks: number | null;
   writtenAnswers: WrittenAnswers;
   bountyNote: string;
   bountyPoints: number;
   waitingRoom: boolean;
-  instantMcqResult: boolean;
+  instantResult: boolean;
   shuffleQuestions: boolean;
   resultsReleasedAt: number | null;
   studentCount: number;
@@ -66,7 +67,7 @@ export type TestSettings = {
   bountyNote: string;
   bountyPoints: number;
   waitingRoom: boolean;
-  instantMcqResult: boolean;
+  instantResult: boolean;
   shuffleQuestions: boolean;
 };
 

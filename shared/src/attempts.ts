@@ -25,7 +25,7 @@ export type PublicTest = TestSchedule & {
   bountyNote: string;
   bountyPoints: number;
   waitingRoom: boolean;
-  instantMcqResult: boolean;
+  instantResult: boolean;
   availability: TestAvailability;
 };
 

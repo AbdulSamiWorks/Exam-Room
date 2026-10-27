@@ -48,7 +48,7 @@ export async function saveOfflineMarks(
         : {
             sql: `INSERT INTO attempts
                     (test_id, student_id, student_name, roll_no, roll_no_key, token_hash, status,
-                     finish_reason, started_at, deadline_at, finished_at, mcq_marks,
+                     finish_reason, started_at, deadline_at, finished_at, auto_marks,
                      written_marks, total_marks)
                   VALUES (?, ?, ?, ?, ?, NULL, 'submitted', 'teacher', ?, ?, ?, 0, ?, ?)
                   ON CONFLICT (test_id, student_id) DO UPDATE SET
