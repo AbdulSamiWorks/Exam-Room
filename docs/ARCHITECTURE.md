@@ -2,7 +2,7 @@
 
 > Status: **approved plan, v1** (2026-10-22). Milestones M0–M19 are all built (2026-10-25), and the
 > owner's feedback rounds M20 to M22 (2026-10-24, §17) are done; the real-device checks in §15 are
-> still to do. Colours and their roles: `docs/DESIGN.md`. Update this file whenever a decision
+> still to do. M23 (new question kinds) and M24 (AI marking) are planned in §18 (2026-10-27). Colours and their roles: `docs/DESIGN.md`. Update this file whenever a decision
 > below changes.
 
 Exam Room is a small mobile-first web app. A teacher uploads a test paper (PDF), shares a link, and
@@ -581,6 +581,8 @@ Tunnel — same code, `DATABASE_URL=file:...`.
 | M17 | Assignments, bounties and points                                                                       |
 | M18 | Dashboard and progress for students and the teacher                                                    |
 | M19 | Waiting room: the teacher starts everyone at the same time                                             |
+| M23 | Question kinds: parts, short answers and blanks checked exactly; English and tenses papers             |
+| M24 | AI marking of written answers and photos with Claude, GPT, Gemini or any OpenAI-compatible service     |
 
 Status (2026-10-25): M0–M19 are built and tested (unit tests, API tests and a smoke test of the
 production build), and M20, the owner's first feedback round, is done (§17). Still to do by hand:
@@ -666,6 +668,19 @@ the real-device checks in §15.
 | D70 | Per-test mixed order for typed papers (on for new tests): the server gives each attempt a mixing number (its id); the phone mixes the questions inside each section and the MCQ options with a seeded shuffle, keeping options like All of the above in place, and stores answers in the teacher's order. Paste, drop, laptop shortcuts and printing are blocked during the test | Stops neighbours copying "5 is c" with no extra server work; a website still cannot block other apps (§9), so leaving is detected and counted | Shared figures between questions → teacher picks Same for everyone |
 | D71 | A Marks and results panel near the top of every test page with students, and a Mark button per finished student that opens that student on the marking page; answer photos sit inside each student's marking form | The owner could not find where to mark or see photos | — |
 | D72 | Tapping a Coming up card shows a popup (Not open yet, or the opening date and time) and the student stays on the dashboard; only open, started and finished tests open a page | The not-open page had no way back and looked blank to students; the dashboard refreshes every 30 s, so a test that just opened shows Start soon after | Shared test links still open the not-open page, which opens the test by itself |
+
+| D73 | A question may have parts (`kind: 'parts'`, part ids `q27a`); a markable unit is a question without parts or one part, and marks, teacher marks, AI marks and the answer key are per unit | Federal Board and grammar papers number one question with parts a), b), c), each with its own answer and marks | — |
+| D74 | Plain text: `Answer:` under a part or a blanks question is checked exactly; `Model answer:` is a guide for the teacher or the AI; `Answer:` under a written question without parts stays a model answer; `\|` separates right answers and `;` the answers of the blanks | Old papers keep their meaning; one keyword per idea, easy to write by hand | Teachers mix them up → a per-question choice in the preview |
+| D75 | Exact checking compares words only: capitals, spaces, punctuation and curly quotes do not count, and short forms count as the long ones (don't = do not, won't = will not, can't = cannot, I'm, you're, we've, they'll …); `'s` and `'d` stay as written because each has two meanings | Grammar answers are about the words, not commas or full stops; one pure shared function, tested | A punctuation exercise is needed → per-question strict checking |
+| D76 | Every input box is one stored answer (answer slot): `q5`, `q27a`, `q32.3` for blank 3; the API field keeps the name `questionId` | The outbox, the sequence rule and the late-answer rule stay unchanged, and answers waiting in phone outboxes during a deploy still arrive | — |
+| D77 | MCQ marks become automatic marks (`auto_marks`: MCQ and exact answers) and the instant MCQ result becomes the instant result (`instant_result`), both renamed in migration 16 | Exact answers are marked the same moment and the same way as MCQs | — |
+| D78 | `answer_count` (markable units) is stored with the paper next to `question_count` | "Answered N of M" counts units while the paper still says 32 questions; lists stay one query | — |
+| D79 | AI connections live in the database: provider, model, an optional web address and the API key encrypted with AES-256-GCM under a key derived from `SESSION_SECRET`; only the last 4 characters are ever shown | The owner adds and changes AIs on a page without touching Render; a copy of the database alone does not reveal the keys | A new `SESSION_SECRET` → the keys must be typed again |
+| D80 | Providers are called with plain `fetch`, one small adapter each (OpenAI, Anthropic, Google Gemini, OpenAI-compatible) that returns the reply text; no provider SDKs | No new dependencies on the small server, one fake `fetch` in tests, and the OpenAI-compatible adapter adds most other services without code | A provider needs streaming or files → use its SDK in that adapter only |
+| D81 | AI marking is chosen per test (`tests.ai_connection_id`, NULL = off) and only marks the units the app cannot check itself; one request per student carries every such question, its model answer, the typed answers and the answer photos, and asks for JSON | Owner's choice; one request is cheaper than one per question and lets the AI read the photos once | Papers too large for one request → split by section |
+| D82 | AI marking jobs: one `ai_marking_jobs` row per attempt with a status, a lease and tries; requests (the student's finished screen, the teacher's marking page) start due jobs, which run after the response, at most 2 at a time; rate limits and server errors retry with growing waits up to 5 tries | No scheduler and nothing lost on a restart (the lease runs out and the next request takes the job); a whole class finishing at once stays within 512 MB | Many classes at once → a real queue |
+| D83 | A teacher mark overrules the automatic mark, which overrules the AI mark; AI marks count in the score and are shown with the AI's feedback, and students see them right after finishing only when the instant result is on | The teacher stays the judge; the AI only fills in what nobody marked yet | — |
+| D84 | Typed answers go to the AI once the phone has sent everything after Finish; photo answers when the student taps Check my answers or when the 30-minute photo time is over; a late answer or Check again with AI puts the job back to waiting | The AI must see the complete answers, and photos arrive after Finish | — |
 
 ## 14. Future extension points (not built now)
 
@@ -1103,3 +1118,124 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 - **Edit a test**: the title and subject at any time; the time limit, exits, leave rule and the paper
   only while no student has started.
 - **Export results**: a CSV download and a printable page, both built in the browser (D31).
+
+## 18. Plan for M23 and M24 (2026-10-27)
+
+On 2026-10-27 the owner asked for two things:
+
+1. **More kinds of questions that students answer on the phone**, for English papers in the Federal
+   Board pattern and for grammar tests (tenses): a reading passage with questions, change a sentence
+   (negative, interrogative, another tense), correct the error, name the tense, fill in the blanks
+   in sentences and in a whole passage, and translate from Urdu to English. When the teacher gives
+   the right sentence, the app compares the student's sentence with it: right gives the marks, wrong
+   gives 0 and shows the right sentence.
+2. **AI marking**: the teacher saves an API key of Claude, GPT or Gemini (and later any other
+   service with a small setting), decides per test whether the written (descriptive) answers go to
+   the AI, and after a student finishes the AI marks the typed answers or the answer photos and
+   explains each mark.
+
+The Federal Board HSSC-I English paper (searched 2026-10-27; fbise.edu.pk itself could not be
+reached from the cloud machine) has 20 MCQs (vocabulary, figures of speech, grammar), a reading
+passage with five questions and a summary, a poetry stanza with questions, and writing tasks
+(letter, report, paragraph). Every part of it fits the question kinds below.
+
+### Question kinds after M23
+
+| Kind      | The student                                    | Marked by                                       |
+| --------- | ---------------------------------------------- | ----------------------------------------------- |
+| `mcq`     | taps an option                                 | the app (answer key)                            |
+| `short`   | types one sentence or a few words              | the app, when the key gives the right answer(s) |
+| `blanks`  | types into boxes inside the text (`_____`)     | the app, blank by blank; marks shared equally   |
+| `written` | types a long answer, or sends photos           | the teacher, or the AI when the test uses it    |
+| `parts`   | answers parts a), b), c)… each of a kind above | per part                                        |
+
+A question with parts keeps its stem ("Change into negative sentences.") and its number (27);
+each part (27 a, 27 b) has its own answer box, marks, answer and mark (D73). Papers saved before
+M23 do not change.
+
+### M23 New question kinds and exact checking
+
+- **Shared model** (`shared/src/paper.ts`, `paper-rules.ts`): `kind` gains `short`, `blanks` and
+  `parts`; a `parts` question has `parts: [{ id, kind, text, marks, options }]` with ids `q27a`,
+  `q27b`. A **markable unit** is a question without parts or one part; marks, teacher marks,
+  AI marks and the answer key are per unit. The key gains `accepted` (right answers of a short
+  unit) and `blanks` (right answers per blank).
+- **Answer slots** (D76): every box on the phone is one stored answer: `q5`, `q27a`, and
+  `q32.3` for blank 3 of question 32. The outbox, the sequence rule and the late-answer rule do
+  not change.
+- **Exact checking** (D75) is one pure shared function used by the server and the result pages.
+- **Plain text format** (D74):
+  - `a) ...` lines followed by their own `Answer: ...` line make a question with parts; the
+    answer is checked exactly. `Model answer: ...` under a part makes it a written part that the
+    teacher or the AI marks with that guide. Parts without marks share the question's marks
+    equally.
+  - A question or part with `_____` and `Answer: had run; is studying` becomes blanks; the
+    answers are in order, separated by `;`.
+  - Several right answers are separated by `|`:
+    `Answer: He doesn't like cold weather. | He hates cold weather.`
+  - `Answer:` under a written question without parts stays a model answer, as before.
+- **JSON format**: `"type": "short" | "blanks" | "parts"`, `"answers": [...]` and `"parts": [...]`.
+- **Phone**: one-line boxes for short answers, boxes inside the sentence or passage for blanks,
+  the written box as before; spelling correction, auto-complete and paste are off in every box.
+- **Scores**: MCQ marks become **auto marks** (MCQ + exact answers; D77). The switch "Students see
+  their multiple choice result right after finishing" becomes "Students see the automatic marks
+  right after finishing". The result shows each answer with ✓ or ✗ and the right answer when the
+  release (or the instant result) allows it.
+- **Marking page**: per unit, with the student's answer, ✓ or ✗ per blank, the right answers, and
+  a marks box that overrules the automatic mark.
+- **Sample paper**: the owner's 50-mark tenses paper as a second sample, with every answer.
+- Migration 16: `answer_count` on tests (D78), `mcq_marks` → `auto_marks`, `instant_mcq_result` →
+  `instant_result`.
+
+### M24 AI marking
+
+- **AI page** for the teacher (D79): add an AI with a provider (OpenAI GPT, Anthropic Claude,
+  Google Gemini, or **Other, OpenAI-compatible** with its web address, which covers services such
+  as DeepSeek, Groq, Mistral and OpenRouter), a model name (filled in with a suggestion) and the
+  API key. **Check** sends a tiny request and shows the provider's answer or error. The key is
+  stored encrypted and never shown again; only its last 4 characters are.
+- **Per test** (D81): "Check written answers with AI: Off / <AI name>", changeable at any time.
+  The AI marks the units the app cannot check by itself (written units, and short or blank units
+  without an answer); it never changes MCQ or exact marks.
+- **One request per student** with every AI-marked question, its marks, the model answer, the
+  typed answers and the answer photos; the reply is JSON with marks (in half marks, never above
+  the question's marks) and one or two sentences of feedback per question.
+- **Jobs** (D82): `ai_marking_jobs` keeps one row per attempt (`waiting`, `working`, `done`,
+  `failed`, a lease time, tries and the error). The student's finished screen and the teacher's
+  marking page start waiting jobs; the work runs after the response, at most two at a time, so a
+  whole class finishing together never fills the 512 MB. Rate limits, timeouts and server errors
+  wait and try again (up to 5 tries); a wrong key or model fails at once with the provider's
+  message. A restart mid-job loses nothing: the lease runs out and the next request takes the job
+  again.
+- **When** (D84): typed answers are marked as soon as the phone has sent everything after Finish;
+  photo answers when the student taps **Check my answers** after sending the photos, or when the
+  30-minute photo time is over. A late answer or **Check again with AI** puts the job back to
+  waiting.
+- **Marks** (D83): teacher mark > automatic mark > AI mark. The marking page shows the AI mark
+  and feedback under each answer; a teacher mark overrules it. With the instant result on,
+  students see the AI marks at once, marked "Checked by AI – your teacher may change it"; model
+  answers still wait for the release (D65).
+- API:
+
+  ```
+  GET    /api/ai-connections                 → the saved AIs (never the key)
+  POST   /api/ai-connections                 { name, provider, model, baseUrl, apiKey }
+  PATCH  /api/ai-connections/:id             { name?, model?, baseUrl?, apiKey? }
+  DELETE /api/ai-connections/:id             → tests that used it switch AI marking off
+  POST   /api/ai-connections/:id/check       → a tiny request to the provider
+  GET    /api/tests/:id/ai-marking           → each attempt's AI marking state (starts due jobs)
+  POST   /api/tests/:id/ai-marking           { attemptIds } → check these again with AI
+  GET    /api/attempt/ai-marking             → the student's own AI marking state
+  POST   /api/attempt/ai-marking             → my answers are complete, check them now
+  ```
+
+- Migration 17: `ai_connections`, `tests.ai_connection_id`, `ai_marks`, `ai_marking_jobs`.
+
+### Free-tier budget for M23–M24
+
+| Resource         | Use                                                                         | Limit / plan                                                             |
+| ---------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Render CPU       | Exact checking is string work when marks are computed; AI is a network wait | ~0.1 vCPU                                                                |
+| Render memory    | At most 2 AI requests at once, each up to ~15 MB with 10 photos             | 512 MB                                                                   |
+| Turso row writes | Blanks add one row per filled blank; AI adds one row per marked unit        | 10 M / month                                                             |
+| AI provider      | One request per student per test (more only on "Check again")               | Paid by the owner's API key; Gemini has a free tier with low rate limits |
