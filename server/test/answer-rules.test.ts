@@ -1,3 +1,4 @@
+import { answerSlotsOf } from '@exam-room/shared/paper-rules';
 import { LibsqlError } from '@libsql/client';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -9,6 +10,7 @@ import {
   isAnswerInTime,
   LATE_ANSWER_WINDOW_MS,
 } from '../src/modules/answers/answer-rules.js';
+import { GRAMMAR_PAPER } from './support/paper-fixtures.js';
 
 const FINISHED = { status: 'submitted' as const, finishedAt: 100_000 };
 const RUNNING = { status: 'in_progress' as const, finishedAt: null };
@@ -34,24 +36,23 @@ describe('isAnswerInTime', () => {
 });
 
 describe('answerProblem', () => {
-  const mcq = {
-    id: 'q1',
-    kind: 'mcq' as const,
-    text: 'A?',
-    marks: 1,
-    options: ['a', 'b'],
-    imageNumber: null,
-    number: 1,
-    sectionIndex: 0,
-  };
-  const written = { ...mcq, id: 'q2', kind: 'written' as const, options: [], number: 2 };
+  const slots = answerSlotsOf(GRAMMAR_PAPER);
+  const slot = (slotId: string) => slots.get(slotId);
 
-  it('checks the kind of answer each question takes', () => {
-    expect(answerProblem(mcq, { choice: 1, text: null }, 'on_paper')).toBeUndefined();
-    expect(answerProblem(mcq, { choice: 2, text: null }, 'on_paper')).toBeDefined();
-    expect(answerProblem(written, { choice: null, text: 'x' }, 'typed')).toBeUndefined();
-    expect(answerProblem(written, { choice: null, text: 'x' }, 'on_paper')).toBeDefined();
+  it('checks the kind of answer each box takes', () => {
+    expect(answerProblem(slot('q1'), { choice: 1, text: null }, 'on_paper')).toBeUndefined();
+    expect(answerProblem(slot('q1'), { choice: 3, text: null }, 'on_paper')).toBeDefined();
+    expect(answerProblem(slot('q1'), { choice: null, text: 'boils' }, 'typed')).toBeDefined();
+    expect(answerProblem(slot('q4'), { choice: null, text: 'x' }, 'typed')).toBeUndefined();
+    expect(answerProblem(slot('q4'), { choice: null, text: 'x' }, 'on_paper')).toBeDefined();
     expect(answerProblem(undefined, { choice: 0, text: null }, 'typed')).toBeDefined();
+  });
+
+  it('always takes typed short answers and blanks, also when written answers are on paper', () => {
+    expect(answerProblem(slot('q2a'), { choice: null, text: 'x' }, 'on_paper')).toBeUndefined();
+    expect(answerProblem(slot('q3.2'), { choice: null, text: 'x' }, 'photos')).toBeUndefined();
+    expect(answerProblem(slot('q3.2'), { choice: 0, text: null }, 'photos')).toBeDefined();
+    expect(slot('q3.3')).toBeUndefined();
   });
 });
 

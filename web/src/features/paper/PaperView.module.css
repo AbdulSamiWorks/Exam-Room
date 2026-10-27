@@ -69,7 +69,7 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-size: 1.0625rem;
-  line-height: 1.55;
+  line-height: 1.7;
 }
 
 .marks {
@@ -178,4 +178,47 @@
 
 .wrongChoice .optionMark {
   color: var(--color-danger);
+}
+
+.parts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0 0 0 calc(1.75em + 8px);
+  list-style: none;
+}
+
+.part {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.partHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.partLetter {
+  flex-shrink: 0;
+  min-width: 1.5em;
+  font-weight: 700;
+}
+
+.partText {
+  flex: 1;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 1.0625rem;
+  line-height: 1.9;
+}
+
+.partMarks {
+  flex-shrink: 0;
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
 }

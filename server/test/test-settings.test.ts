@@ -20,12 +20,13 @@ const test: TestRecord = {
   bountyNote: '',
   bountyPoints: 0,
   waitingRoom: false,
-  instantMcqResult: false,
+  instantResult: false,
   shuffleQuestions: false,
   resultsReleasedAt: null,
   paperKind: 'pages',
   pageCount: 2,
   questionCount: 0,
+  answerCount: 0,
   maxMarks: null,
   studentCount: 0,
   finishedCount: 0,
@@ -49,7 +50,7 @@ describe('applySettingChanges', () => {
       bountyNote: '',
       bountyPoints: 0,
       waitingRoom: false,
-      instantMcqResult: false,
+      instantResult: false,
       shuffleQuestions: false,
     });
   });

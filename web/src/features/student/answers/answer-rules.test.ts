@@ -19,7 +19,7 @@ function publicTest(overrides: Partial<PublicTest>): PublicTest {
     bountyNote: '',
     bountyPoints: 0,
     waitingRoom: false,
-    instantMcqResult: false,
+    instantResult: false,
     opensAt: null,
     closesAt: null,
     availability: 'open',

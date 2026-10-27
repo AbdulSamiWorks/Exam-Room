@@ -29,3 +29,11 @@
   background: var(--color-surface);
   font-weight: 700;
 }
+
+.emptyBlank {
+  display: inline-block;
+  width: 4.5em;
+  height: 1em;
+  border-bottom: 2px solid currentColor;
+  vertical-align: baseline;
+}

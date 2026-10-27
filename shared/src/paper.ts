@@ -1,4 +1,16 @@
-export type QuestionKind = 'mcq' | 'written';
+export type AnswerKind = 'mcq' | 'written' | 'short' | 'blanks';
+
+export type QuestionKind = AnswerKind | 'parts';
+
+export type PartKind = Exclude<AnswerKind, 'mcq'>;
+
+export type QuestionPart = {
+  id: string;
+  kind: PartKind;
+  text: string;
+  marks: number;
+  options: string[];
+};
 
 export type PaperQuestion = {
   id: string;
@@ -7,6 +19,7 @@ export type PaperQuestion = {
   marks: number;
   options: string[];
   imageNumber: number | null;
+  parts?: QuestionPart[];
 };
 
 export type PaperSection = {
@@ -23,6 +36,8 @@ export type Paper = {
 export type QuestionAnswer = {
   option?: number;
   text?: string;
+  accepted?: string[];
+  blanks?: string[][];
 };
 
 export type AnswerKey = Record<string, QuestionAnswer>;
@@ -34,6 +49,20 @@ export type WrittenAnswers = 'on_paper' | 'typed' | 'photos' | 'typed_and_photos
 export type NumberedQuestion = PaperQuestion & {
   number: number;
   sectionIndex: number;
+};
+
+export type MarkableUnit = Omit<QuestionPart, 'kind'> & {
+  kind: AnswerKind;
+  questionId: string;
+  questionNumber: number;
+  partLetter: string | null;
+  label: string;
+};
+
+export type AnswerSlot = {
+  slotId: string;
+  unit: MarkableUnit;
+  blankIndex: number | null;
 };
 
 export type TeacherPaperResponse = {
@@ -64,4 +93,8 @@ export type PaperLimits = {
   maxMarksPerQuestion: 100;
   maxPaperImages: 20;
   maxPaperImageBytes: 1_000_000;
+  maxParts: 26;
+  maxBlanks: 30;
+  maxAcceptedAnswers: 10;
+  maxAcceptedAnswerLength: 500;
 };

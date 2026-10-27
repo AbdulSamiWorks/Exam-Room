@@ -11,6 +11,9 @@ export function describeHowToAnswer(test: PublicTest): string {
   const written = takesTypedWrittenAnswers(test.writtenAnswers)
     ? 'type written answers in the boxes'
     : 'write the written answers on your own paper';
-  const where = test.paperKind === 'pages' ? ' on the answer sheet' : '';
+  const where =
+    test.paperKind === 'pages'
+      ? ' on the answer sheet'
+      : ', type short answers and blanks in their boxes,';
   return `Tap the multiple choice answers${where} and ${written}. Every answer is saved on your phone at once and sent automatically, also when the internet is slow. When you are done, tap Finish.`;
 }

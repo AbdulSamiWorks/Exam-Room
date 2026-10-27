@@ -189,14 +189,14 @@ export function TestSettingsFields({
       />
 
       <ChoiceGroup
-        label="Students see their multiple choice result"
-        hint="Right after finishing: each student sees their MCQ marks and the correct answers as soon as they finish, also later in their portal. Written answers always wait for your marking and release."
+        label="Students see the marks the app gives"
+        hint="Right after finishing: each student sees the marks of the multiple choice questions, short answers and blanks, with the right answers, as soon as they finish, also later in their portal. Written answers always wait for your marking and release."
         choices={RESULT_CHOICES}
-        selectedValue={values.instantMcqResult ? 'after_finishing' : 'after_release'}
+        selectedValue={values.instantResult ? 'after_finishing' : 'after_release'}
         onChange={(resultChoice) =>
           onChange((current) => ({
             ...current,
-            instantMcqResult: resultChoice === 'after_finishing',
+            instantResult: resultChoice === 'after_finishing',
           }))
         }
       />

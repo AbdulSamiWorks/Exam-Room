@@ -41,3 +41,62 @@ function describeIssuePath(paper: Paper, path: readonly PropertyKey[]): string {
 export function questionIdFor(questionIndex: number): string {
   return `q${questionIndex + 1}`;
 }
+
+export const DEFAULT_MARKS = 1;
+export const ANSWER_ALTERNATIVES_SEPARATOR = '|';
+export const BLANK_ANSWERS_SEPARATOR = ';';
+const MARK_STEPS_PER_MARK = 2;
+
+export type PartMarks = {
+  partMarks: number[];
+  totalMarks: number;
+  problem: string | undefined;
+};
+
+export function splitPartMarks(
+  questionMarks: number | undefined,
+  givenPartMarks: ReadonlyArray<number | undefined>,
+): PartMarks {
+  const givenTotal = givenPartMarks.reduce<number>((total, marks) => total + (marks ?? 0), 0);
+  const unmarkedCount = givenPartMarks.filter((marks) => marks === undefined).length;
+  if (questionMarks === undefined) {
+    const partMarks = givenPartMarks.map((marks) => marks ?? DEFAULT_MARKS);
+    return {
+      partMarks,
+      totalMarks: givenTotal + unmarkedCount * DEFAULT_MARKS,
+      problem: undefined,
+    };
+  }
+  if (unmarkedCount === 0) {
+    const problem =
+      givenTotal === questionMarks
+        ? undefined
+        : `the parts add up to ${givenTotal} marks but the question has ${questionMarks}.`;
+    return {
+      partMarks: givenPartMarks.map((marks) => marks ?? 0),
+      totalMarks: questionMarks,
+      problem,
+    };
+  }
+  const sharedMarks = (questionMarks - givenTotal) / unmarkedCount;
+  const canShare = sharedMarks > 0 && Number.isInteger(sharedMarks * MARK_STEPS_PER_MARK);
+  return {
+    partMarks: givenPartMarks.map((marks) => marks ?? (canShare ? sharedMarks : DEFAULT_MARKS)),
+    totalMarks: questionMarks,
+    problem: canShare
+      ? undefined
+      : 'the marks cannot be shared equally between the parts in half marks. Give each part its marks, for example [1].',
+  };
+}
+
+export function splitAlternatives(answer: string): string[] {
+  return answer
+    .split(ANSWER_ALTERNATIVES_SEPARATOR)
+    .map((alternative) => alternative.trim())
+    .filter(Boolean);
+}
+
+export function splitBlankAnswers(answer: string, blankCount: number): string[][] {
+  const perBlank = blankCount > 1 ? answer.split(BLANK_ANSWERS_SEPARATOR) : [answer];
+  return perBlank.map(splitAlternatives);
+}

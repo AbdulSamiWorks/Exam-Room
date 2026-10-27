@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { parseInlineText, parseRichText } from './rich-text';
+import { parseInlineText, parseRichText, type InlinePiece } from './rich-text';
+
+function textOf(pieces: InlinePiece[] | undefined): string {
+  return (pieces ?? []).map((piece) => (piece.kind === 'blank' ? '_' : piece.text)).join('');
+}
 
 describe('parseInlineText', () => {
   it('reads superscripts and subscripts', () => {
@@ -22,10 +26,8 @@ describe('parseRichText', () => {
     expect(blocks.map((block) => block.kind)).toEqual(['text', 'table', 'text']);
     const table = blocks[1];
     if (table?.kind !== 'table') throw new Error('No table');
-    expect(table.headerRow?.map((cell) => cell[0]?.text)).toEqual(['A', 'B', 'F']);
-    expect(table.bodyRows.map((row) => row.map((cell) => cell[0]?.text ?? ''))).toEqual([
-      ['0', '1', ''],
-    ]);
+    expect(table.headerRow?.map((cell) => textOf(cell))).toEqual(['A', 'B', 'F']);
+    expect(table.bodyRows.map((row) => row.map((cell) => textOf(cell)))).toEqual([['0', '1', '']]);
   });
 
   it('keeps a table without a separator as plain rows', () => {
@@ -37,5 +39,28 @@ describe('parseRichText', () => {
   it('keeps line breaks of normal text', () => {
     const [block] = parseRichText('a) First part\nb) Second part');
     expect(block?.kind === 'text' && block.lines).toHaveLength(2);
+  });
+});
+
+describe('blanks', () => {
+  it('numbers every blank of a text in order, also inside tables', () => {
+    const blocks = parseRichText('Ahmed (1) _____ (live) and (2) ___ (go).\n| x | _____ |');
+    const pieces = blocks.flatMap((block) =>
+      block.kind === 'table' ? block.bodyRows.flat(2) : block.lines.flat(),
+    );
+    expect(pieces.filter((piece) => piece.kind === 'blank')).toEqual([
+      { kind: 'blank', blankIndex: 0 },
+      { kind: 'blank', blankIndex: 1 },
+      { kind: 'blank', blankIndex: 2 },
+    ]);
+  });
+
+  it('keeps subscripts apart from blanks', () => {
+    expect(parseInlineText('H_{2}O ____').map((piece) => piece.kind)).toEqual([
+      'text',
+      'subscript',
+      'text',
+      'blank',
+    ]);
   });
 });

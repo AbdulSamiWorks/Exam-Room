@@ -4,6 +4,7 @@ import type {
   OfflineMarksResponse,
   ReleaseResultsResponse,
 } from '@exam-room/shared';
+import { UNIT_ID } from '@exam-room/shared/paper-rules';
 import { Router, type Request } from 'express';
 import { z } from 'zod';
 import type { AppDependencies } from '../../app-dependencies.js';
@@ -25,7 +26,7 @@ const MAX_COMMENT_LENGTH = 2000;
 
 const saveMarksSchema = z.object({
   questionMarks: z.record(
-    z.string().regex(/^q\d{1,4}$/),
+    z.string().regex(UNIT_ID),
     z.object({
       marks: z.number().min(0).multipleOf(0.5, 'Marks can be whole or half marks.').nullable(),
       comment: z.string().trim().max(MAX_COMMENT_LENGTH),

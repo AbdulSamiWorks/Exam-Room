@@ -1,15 +1,16 @@
+import type { MarkableUnit, StudentResultResponse, UnitResult } from '@exam-room/shared';
 import { useParams } from 'react-router';
 import { FormError } from '../../components/FormError';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Page } from '../../components/Page';
 import { Panel } from '../../components/Panel';
 import { ThemeToggle } from '../../components/ThemeToggle';
-import { describeMarks, describeScore, formatMarks } from '../../lib/describe-marks';
+import { describeScore } from '../../lib/describe-marks';
 import { joinWithAnd } from '../../lib/text';
 import { PaperView } from '../paper/PaperView';
-import { RichText } from '../paper/RichText';
-import { MultipleChoiceCounts } from './MultipleChoiceCounts';
-import { multipleChoiceSummary } from './result-summary';
+import { AnswerCounts } from './AnswerCounts';
+import { automaticSummary, checksOnlyMultipleChoice } from './result-summary';
+import { ResultBlank, UnitResultView } from './UnitResultView';
 import { useStudentResult } from './use-student-result';
 import styles from './StudentResultPage.module.css';
 
@@ -29,16 +30,6 @@ export function StudentResultPage() {
   }
 
   const result = resultQuery.data;
-  const questionsById = new Map(
-    result.questions.map((question) => [question.questionId, question]),
-  );
-  const chosenOptions = Object.fromEntries(
-    result.questions.map((question) => [question.questionId, question.chosenOption ?? undefined]),
-  );
-  const correctOptions = Object.fromEntries(
-    result.questions.map((question) => [question.questionId, question.correctOption ?? undefined]),
-  );
-
   return (
     <Page
       title={result.testTitle}
@@ -48,9 +39,15 @@ export function StudentResultPage() {
     >
       <div className={styles.sections}>
         <Panel>
-          {!result.isFinal && <p className={styles.note}>Multiple choice result</p>}
+          {!result.isFinal && (
+            <p className={styles.note}>
+              {checksOnlyMultipleChoice(result)
+                ? 'Multiple choice result'
+                : 'Answers checked by the app'}
+            </p>
+          )}
           <p className={styles.score}>{describeScore(result.totalMarks, result.maxMarks)}</p>
-          <MultipleChoiceCounts summary={multipleChoiceSummary(result)} />
+          <AnswerCounts summary={automaticSummary(result.units)} />
           {!result.isFinal && (
             <p className={styles.note}>
               Your teacher marks the written answers. The full result comes when your teacher
@@ -69,47 +66,33 @@ export function StudentResultPage() {
             </p>
           )}
         </Panel>
-        {result.paper && (
-          <PaperView
-            paper={result.paper}
-            chosenOptions={chosenOptions}
-            correctOptions={correctOptions}
-            renderQuestionExtra={(question) => {
-              const questionResult = questionsById.get(question.id);
-              if (!questionResult) return null;
-              return (
-                <div className={styles.questionResult}>
-                  {questionResult.typedAnswer && (
-                    <p className={styles.typedAnswer} dir="auto">
-                      {questionResult.typedAnswer}
-                    </p>
-                  )}
-                  <p className={styles.marks}>
-                    {questionResult.marks === null
-                      ? result.isFinal
-                        ? 'Not marked'
-                        : 'Marked later by your teacher'
-                      : `${formatMarks(questionResult.marks)} of ${describeMarks(question.marks)}`}
-                  </p>
-                  {questionResult.modelAnswer && (
-                    <div className={styles.modelAnswer}>
-                      <p className={styles.modelAnswerTitle}>Model answer</p>
-                      <div dir="auto">
-                        <RichText text={questionResult.modelAnswer} />
-                      </div>
-                    </div>
-                  )}
-                  {questionResult.comment && (
-                    <p className={styles.comment} dir="auto">
-                      {questionResult.comment}
-                    </p>
-                  )}
-                </div>
-              );
-            }}
-          />
-        )}
+        {result.paper && <ResultPaper result={result} />}
       </div>
     </Page>
+  );
+}
+
+function ResultPaper({ result }: { result: StudentResultResponse }) {
+  const unitsById = new Map(result.units.map((unit) => [unit.unitId, unit]));
+  const optionsBy = (pick: (unit: UnitResult) => number | null) =>
+    Object.fromEntries(result.units.map((unit) => [unit.unitId, pick(unit) ?? undefined]));
+
+  function renderUnitAnswer(unit: MarkableUnit) {
+    const unitResult = unitsById.get(unit.id);
+    if (!unitResult) return null;
+    return <UnitResultView unit={unit} result={unitResult} isFinal={result.isFinal} />;
+  }
+
+  return (
+    <PaperView
+      paper={result.paper ?? { instructions: '', sections: [] }}
+      chosenOptions={optionsBy((unit) => unit.chosenOption)}
+      correctOptions={optionsBy((unit) => unit.correctOption)}
+      renderUnitAnswer={renderUnitAnswer}
+      renderBlank={(unit, blankIndex) => {
+        const unitResult = unitsById.get(unit.id);
+        return unitResult ? <ResultBlank result={unitResult} blankIndex={blankIndex} /> : null;
+      }}
+    />
   );
 }

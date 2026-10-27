@@ -107,16 +107,16 @@ export async function saveScores(
   if (updates.length === 0) return;
   await database.batch(
     updates.map(({ attemptId, score }) => ({
-      sql: `UPDATE attempts SET mcq_marks = ?, written_marks = ?, total_marks = ?
-            WHERE id = ? AND (total_marks IS NULL OR total_marks <> ? OR mcq_marks <> ?
+      sql: `UPDATE attempts SET auto_marks = ?, written_marks = ?, total_marks = ?
+            WHERE id = ? AND (total_marks IS NULL OR total_marks <> ? OR auto_marks <> ?
                               OR written_marks <> ?)`,
       args: [
-        score.mcqMarks,
+        score.autoMarks,
         score.writtenMarks,
         score.totalMarks,
         attemptId,
         score.totalMarks,
-        score.mcqMarks,
+        score.autoMarks,
         score.writtenMarks,
       ],
     })),

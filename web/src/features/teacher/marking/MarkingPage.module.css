@@ -216,3 +216,19 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+.questionStem {
+  margin: 0;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed var(--color-border);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.blankList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding-left: 24px;
+}

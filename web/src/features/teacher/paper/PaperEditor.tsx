@@ -1,5 +1,5 @@
 import type { NumberedQuestion } from '@exam-room/shared';
-import { questionsOf } from '@exam-room/shared/paper-rules';
+import { checksAutomatically, markableUnitsOf, questionsOf } from '@exam-room/shared/paper-rules';
 import { useState, type ChangeEvent } from 'react';
 import { Button } from '../../../components/Button';
 import { TextAreaField } from '../../../components/TextAreaField';
@@ -7,8 +7,9 @@ import { describeMarks } from '../../../lib/describe-marks';
 import { shrinkImage } from '../../../lib/shrink-image';
 import { countOf } from '../../../lib/text';
 import { PaperView } from '../../paper/PaperView';
+import { PreviewBlank, PreviewUnitAnswer } from './PreviewAnswer';
 import { describePaperProblem, type ImportedPaper } from './imported-paper';
-import { SAMPLE_PAPER_TEXT } from './sample-paper';
+import { SAMPLE_PAPERS } from './sample-paper';
 import type { PaperDraft } from './use-paper-draft';
 import { useObjectUrls } from './use-object-urls';
 import styles from './PaperEditor.module.css';
@@ -36,15 +37,17 @@ export function PaperEditor({ draft, errorMessage }: { draft: PaperDraft; errorM
         errorMessage={errorMessage}
       />
       <div className={styles.actions}>
-        {!draft.text.trim() && (
-          <Button
-            variant="secondary"
-            size="small"
-            onClick={() => draft.changeText(SAMPLE_PAPER_TEXT)}
-          >
-            Start from a sample paper
-          </Button>
-        )}
+        {!draft.text.trim() &&
+          SAMPLE_PAPERS.map((sample) => (
+            <Button
+              key={sample.name}
+              variant="secondary"
+              size="small"
+              onClick={() => draft.changeText(sample.text)}
+            >
+              Sample: {sample.name}
+            </Button>
+          ))}
       </div>
       <FormatHelp />
       {imported && <ImportReport imported={imported} />}
@@ -54,6 +57,12 @@ export function PaperEditor({ draft, errorMessage }: { draft: PaperDraft; errorM
           <PaperView
             paper={imported.paper}
             correctOptions={correctOptionsOf(imported)}
+            renderUnitAnswer={(unit) => (
+              <PreviewUnitAnswer unit={unit} answer={imported.answerKey[unit.id]} />
+            )}
+            renderBlank={(unit, blankIndex) => (
+              <PreviewBlank accepted={imported.answerKey[unit.id]?.blanks?.[blankIndex]} />
+            )}
             renderQuestionExtra={(question) => (
               <PictureControl
                 question={question}
@@ -75,6 +84,12 @@ function ImportReport({ imported }: { imported: ImportedPaper }) {
     (question) => imported.answerKey[question.id]?.option !== undefined,
   );
   const totalMarks = questions.reduce((total, question) => total + question.marks, 0);
+  const typedUnits = markableUnitsOf(imported.paper).filter(
+    (unit) => unit.kind === 'short' || unit.kind === 'blanks',
+  );
+  const checkedUnits = typedUnits.filter((unit) =>
+    checksAutomatically(unit, imported.answerKey[unit.id]),
+  );
 
   if (imported.problems.length > 0) {
     return (
@@ -96,6 +111,8 @@ function ImportReport({ imported }: { imported: ImportedPaper }) {
       <p className={styles.reportTitle}>
         {countOf(questions.length, 'question')} · {describeMarks(totalMarks)}
         {mcqs.length > 0 && ` · answers for ${answeredMcqs.length} of ${mcqs.length} MCQs`}
+        {typedUnits.length > 0 &&
+          ` · the app checks ${checkedUnits.length} of ${typedUnits.length} typed answers`}
       </p>
       {imported.warnings.length > 0 && (
         <ul className={styles.warnings}>
@@ -177,6 +194,18 @@ function FormatHelp() {
         <li>
           Parts with their own marks, like <code>a) Define speed. [2]</code>, stay one written
           question.
+        </li>
+        <li>
+          A part followed by its own <code>Answer: …</code> line gets its own answer box, and the
+          app checks the sentence word by word. Write several right answers like{' '}
+          <code>Answer: He doesn't play. | He does not play.</code>
+        </li>
+        <li>
+          <code>Model answer: …</code> under a part gives it a box that you or the AI mark.
+        </li>
+        <li>
+          Blanks are written as <code>_____</code>. Give their answers in order:{' '}
+          <code>Answer: had run; is knocking</code>.
         </li>
         <li>Students never see the answers before you release the results.</li>
       </ul>

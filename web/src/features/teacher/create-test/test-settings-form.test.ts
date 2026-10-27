@@ -78,7 +78,7 @@ describe('toUpdateTestRequest', () => {
       title: 'Chapter 3 Quiz',
       bountyNote: '',
       bountyPoints: 0,
-      instantMcqResult: true,
+      instantResult: true,
     });
     expect(toUpdateTestRequest(filledValues, false)).toMatchObject({
       durationMinutes: 30,

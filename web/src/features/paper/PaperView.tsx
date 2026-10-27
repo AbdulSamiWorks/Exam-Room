@@ -1,9 +1,9 @@
-import type { NumberedQuestion, Paper } from '@exam-room/shared';
-import { numberQuestions, optionLetter } from '@exam-room/shared/paper-rules';
+import type { MarkableUnit, NumberedQuestion, Paper } from '@exam-room/shared';
+import { numberQuestions, optionLetter, unitsOfQuestion } from '@exam-room/shared/paper-rules';
 import type { ReactNode } from 'react';
 import { classNames } from '../../lib/class-names';
 import { describeMarks } from '../../lib/describe-marks';
-import { InlineText, RichText } from './RichText';
+import { InlineText, RichText, type RenderBlank } from './RichText';
 import styles from './PaperView.module.css';
 
 export type PaperViewProps = {
@@ -11,9 +11,13 @@ export type PaperViewProps = {
   renderPicture?: (imageNumber: number, question: NumberedQuestion) => ReactNode;
   correctOptions?: Readonly<Record<string, number | undefined>>;
   chosenOptions?: Readonly<Record<string, number | undefined>>;
-  onChooseOption?: (questionId: string, option: number) => void;
+  onChooseOption?: (unitId: string, option: number) => void;
+  renderUnitAnswer?: (unit: MarkableUnit) => ReactNode;
+  renderBlank?: (unit: MarkableUnit, blankIndex: number) => ReactNode;
   renderQuestionExtra?: (question: NumberedQuestion) => ReactNode;
 };
+
+type AnsweringProps = Omit<PaperViewProps, 'paper' | 'renderPicture' | 'renderQuestionExtra'>;
 
 type OptionState = 'chosenOption' | 'rightChoice' | 'wrongChoice' | 'correctOption';
 
@@ -37,10 +41,8 @@ function optionState(
 export function PaperView({
   paper,
   renderPicture,
-  correctOptions,
-  chosenOptions,
-  onChooseOption,
   renderQuestionExtra,
+  ...answering
 }: PaperViewProps) {
   const numberedQuestions = numberQuestions(paper);
 
@@ -75,10 +77,8 @@ export function PaperView({
                       ? undefined
                       : renderPicture?.(question.imageNumber, question)
                   }
-                  correctOption={correctOptions?.[question.id]}
-                  chosenOption={chosenOptions?.[question.id]}
-                  onChooseOption={onChooseOption}
                   extra={renderQuestionExtra?.(question)}
+                  {...answering}
                 />
               ))}
           </ol>
@@ -88,71 +88,133 @@ export function PaperView({
   );
 }
 
-type QuestionViewProps = {
+type QuestionViewProps = AnsweringProps & {
   question: NumberedQuestion;
   picture: ReactNode;
-  correctOption: number | undefined;
-  chosenOption: number | undefined;
-  onChooseOption: PaperViewProps['onChooseOption'];
   extra: ReactNode;
 };
 
-function QuestionView({
-  question,
-  picture,
-  correctOption,
-  chosenOption,
-  onChooseOption,
-  extra,
-}: QuestionViewProps) {
-  const textId = `question-${question.id}-text`;
+function QuestionView({ question, picture, extra, ...answering }: QuestionViewProps) {
+  const units = unitsOfQuestion(question);
+  const [onlyUnit] = units;
+  const hasParts = question.kind === 'parts';
+  const showsPartMarks = new Set(units.map((unit) => unit.marks)).size > 1;
 
   return (
     <li className={styles.question}>
       <div className={styles.questionHeader}>
         <span className={styles.questionNumber}>{question.number}.</span>
-        <div id={textId} className={styles.questionText} dir="auto">
-          <RichText text={question.text} />
+        <div id={textIdOf(question.id)} className={styles.questionText} dir="auto">
+          <RichText
+            text={question.text}
+            renderBlank={hasParts || !onlyUnit ? undefined : blankRenderer(onlyUnit, answering)}
+          />
         </div>
         <span className={styles.marks}>{describeMarks(question.marks)}</span>
       </div>
       {picture}
-      {question.options.length > 0 && (
-        <div
-          className={styles.options}
-          role="radiogroup"
-          aria-labelledby={textId}
-          aria-readonly={onChooseOption ? undefined : true}
-        >
-          {question.options.map((option, optionIndex) => {
-            const state = optionState(
-              chosenOption === optionIndex,
-              correctOption,
-              correctOption === optionIndex,
-            );
-            return (
-              <button
-                key={optionIndex}
-                type="button"
-                role="radio"
-                aria-checked={chosenOption === optionIndex}
-                disabled={!onChooseOption}
-                className={classNames(styles.option, state && styles[state])}
-                onClick={() => onChooseOption?.(question.id, optionIndex)}
-              >
-                <span className={styles.optionLetter}>{optionLetter(optionIndex)}</span>
-                <span className={styles.optionText} dir="auto">
-                  <InlineText text={option} />
-                </span>
-                {state && OPTION_STATE_LABELS[state] && (
-                  <span className={styles.optionMark}>{OPTION_STATE_LABELS[state]}</span>
+      {hasParts ? (
+        <ol className={styles.parts}>
+          {units.map((unit) => (
+            <li key={unit.id} className={styles.part}>
+              <div className={styles.partHeader}>
+                <span className={styles.partLetter}>{unit.partLetter})</span>
+                <div id={textIdOf(unit.id)} className={styles.partText} dir="auto">
+                  <RichText text={unit.text} renderBlank={blankRenderer(unit, answering)} />
+                </div>
+                {showsPartMarks && (
+                  <span className={styles.partMarks}>{describeMarks(unit.marks)}</span>
                 )}
-              </button>
-            );
-          })}
-        </div>
+              </div>
+              <UnitAnswerArea unit={unit} {...answering} />
+            </li>
+          ))}
+        </ol>
+      ) : (
+        onlyUnit && <UnitAnswerArea unit={onlyUnit} {...answering} />
       )}
       {extra}
     </li>
+  );
+}
+
+function textIdOf(unitId: string): string {
+  return `question-${unitId}-text`;
+}
+
+function blankRenderer(unit: MarkableUnit, answering: AnsweringProps): RenderBlank | undefined {
+  const { renderBlank } = answering;
+  if (unit.kind !== 'blanks' || !renderBlank) return undefined;
+  return (blankIndex) => renderBlank(unit, blankIndex);
+}
+
+type UnitAnswerAreaProps = AnsweringProps & {
+  unit: MarkableUnit;
+};
+
+function UnitAnswerArea({
+  unit,
+  correctOptions,
+  chosenOptions,
+  onChooseOption,
+  renderUnitAnswer,
+}: UnitAnswerAreaProps) {
+  return (
+    <>
+      {unit.kind === 'mcq' && (
+        <OptionList
+          unit={unit}
+          correctOption={correctOptions?.[unit.id]}
+          chosenOption={chosenOptions?.[unit.id]}
+          onChooseOption={onChooseOption}
+        />
+      )}
+      {renderUnitAnswer?.(unit)}
+    </>
+  );
+}
+
+type OptionListProps = {
+  unit: MarkableUnit;
+  correctOption: number | undefined;
+  chosenOption: number | undefined;
+  onChooseOption: PaperViewProps['onChooseOption'];
+};
+
+function OptionList({ unit, correctOption, chosenOption, onChooseOption }: OptionListProps) {
+  return (
+    <div
+      className={styles.options}
+      role="radiogroup"
+      aria-labelledby={textIdOf(unit.id)}
+      aria-readonly={onChooseOption ? undefined : true}
+    >
+      {unit.options.map((option, optionIndex) => {
+        const state = optionState(
+          chosenOption === optionIndex,
+          correctOption,
+          correctOption === optionIndex,
+        );
+        return (
+          <button
+            key={optionIndex}
+            type="button"
+            role="radio"
+            aria-checked={chosenOption === optionIndex}
+            disabled={!onChooseOption}
+            className={classNames(styles.option, state && styles[state])}
+            onClick={() => onChooseOption?.(unit.id, optionIndex)}
+          >
+            <span className={styles.optionLetter}>{optionLetter(optionIndex)}</span>
+            <span className={styles.optionText} dir="auto">
+              <InlineText text={option} />
+            </span>
+            {state && OPTION_STATE_LABELS[state] && (
+              <span className={styles.optionMark}>{OPTION_STATE_LABELS[state]}</span>
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }

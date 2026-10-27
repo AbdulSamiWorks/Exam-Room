@@ -49,12 +49,13 @@ const SELECT_TEST_SUMMARY = `
     tests.paper_kind,
     tests.page_count,
     tests.question_count,
+    tests.answer_count,
     tests.max_marks,
     tests.written_answers,
     tests.bounty_note,
     tests.bounty_points,
     tests.waiting_room,
-    tests.instant_mcq_result,
+    tests.instant_result,
     tests.shuffle_questions,
     tests.results_released_at,
     tests.created_at,
@@ -131,10 +132,10 @@ export async function insertTest(
     const insertedTest = await transaction.execute({
       sql: `INSERT INTO tests
               (code, subject_id, kind, title, duration_minutes, allowed_exits, leave_rule,
-               written_answers, bounty_note, bounty_points, waiting_room, instant_mcq_result,
+               written_answers, bounty_note, bounty_points, waiting_room, instant_result,
                shuffle_questions, paper_kind, page_count, paper, answer_key, question_count,
-               max_marks, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               answer_count, max_marks, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id`,
       args: [
         newTest.code,
@@ -148,13 +149,14 @@ export async function insertTest(
         newTest.bountyNote,
         newTest.bountyPoints,
         newTest.waitingRoom ? 1 : 0,
-        newTest.instantMcqResult ? 1 : 0,
+        newTest.instantResult ? 1 : 0,
         newTest.shuffleQuestions ? 1 : 0,
         content.paperKind,
         pages.length,
         paperColumns.paper,
         paperColumns.answerKey,
         paperColumns.questionCount,
+        paperColumns.answerCount,
         paperColumns.maxMarks,
         newTest.createdAt,
       ],
@@ -223,7 +225,7 @@ export async function saveTestSettings(
         sql: `UPDATE tests
               SET subject_id = ?, kind = ?, title = ?, duration_minutes = ?, allowed_exits = ?,
                   leave_rule = ?, written_answers = ?, bounty_note = ?, bounty_points = ?,
-                  waiting_room = ?, instant_mcq_result = ?, shuffle_questions = ?
+                  waiting_room = ?, instant_result = ?, shuffle_questions = ?
               WHERE id = ?`,
         args: [
           settings.subjectId,
@@ -236,7 +238,7 @@ export async function saveTestSettings(
           settings.bountyNote,
           settings.bountyPoints,
           settings.waitingRoom ? 1 : 0,
-          settings.instantMcqResult ? 1 : 0,
+          settings.instantResult ? 1 : 0,
           settings.shuffleQuestions ? 1 : 0,
           testId,
         ],
@@ -356,12 +358,13 @@ function toTestRecord(row: Row): TestRecord {
     paperKind: String(row.paper_kind) as PaperKind,
     pageCount: Number(row.page_count),
     questionCount: Number(row.question_count),
+    answerCount: Number(row.answer_count),
     maxMarks: row.max_marks === null ? null : Number(row.max_marks),
     writtenAnswers: String(row.written_answers) as WrittenAnswers,
     bountyNote: String(row.bounty_note),
     bountyPoints: Number(row.bounty_points),
     waitingRoom: Number(row.waiting_room) === 1,
-    instantMcqResult: Number(row.instant_mcq_result) === 1,
+    instantResult: Number(row.instant_result) === 1,
     shuffleQuestions: Number(row.shuffle_questions) === 1,
     resultsReleasedAt: row.results_released_at === null ? null : Number(row.results_released_at),
     studentCount: Number(row.student_count),

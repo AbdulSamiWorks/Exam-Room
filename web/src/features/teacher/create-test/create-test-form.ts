@@ -94,7 +94,7 @@ function appendSettings(
   appendText('bountyNote', settings.bountyNote);
   appendText('bountyPoints', String(settings.bountyPoints));
   appendText('waitingRoom', String(settings.waitingRoom));
-  appendText('instantMcqResult', String(settings.instantMcqResult));
+  appendText('instantResult', String(settings.instantResult));
   appendText('shuffleQuestions', String(settings.shuffleQuestions));
   return formData;
 }

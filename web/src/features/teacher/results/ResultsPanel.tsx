@@ -111,7 +111,7 @@ export function ResultsPanel({ test }: { test: TestSummary }) {
               <ResultRow
                 key={attempt.id}
                 result={attempt}
-                questionCount={test.questionCount}
+                answerCount={test.answerCount}
                 markingPath={
                   test.questionCount > 0 ? testMarkingPath(testId, attempt.id) : undefined
                 }

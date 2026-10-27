@@ -11,7 +11,7 @@ import { useTest } from '../tests/use-tests';
 import { AnswerKeyEditor } from './AnswerKeyEditor';
 import { AnswerSheetForm } from './AnswerSheetForm';
 import { PaperEditor } from './PaperEditor';
-import { paperToText } from './paper-text-format';
+import { editableTextOf } from './import-paper';
 import { usePaperDraft } from './use-paper-draft';
 import {
   fetchTeacherPaperImage,
@@ -113,7 +113,7 @@ function EditableTypedPaper({ test, stored, paper }: PaperSectionsProps & { pape
     <TypedPaperForm
       key={JSON.stringify(paper)}
       testId={test.id}
-      initialText={paperToText(paper, stored.answerKey)}
+      initialText={editableTextOf(paper, stored.answerKey)}
       initialPictures={picturesQuery.data}
     />
   );

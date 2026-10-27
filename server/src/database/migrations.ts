@@ -431,4 +431,14 @@ export const migrations: readonly Migration[] = [
          CHECK (shuffle_questions IN (0, 1))`,
     ],
   },
+  {
+    id: 16,
+    name: 'automatic marks and the number of answers of a paper',
+    statements: [
+      `ALTER TABLE attempts RENAME COLUMN mcq_marks TO auto_marks`,
+      `ALTER TABLE tests RENAME COLUMN instant_mcq_result TO instant_result`,
+      `ALTER TABLE tests ADD COLUMN answer_count INTEGER NOT NULL DEFAULT 0`,
+      `UPDATE tests SET answer_count = question_count`,
+    ],
+  },
 ];

@@ -22,7 +22,7 @@ function card(overrides: Partial<StudentTestCard>): StudentTestCard {
     finishReason: null,
     maxMarks: null,
     releasedMarks: null,
-    hasMcqResult: false,
+    hasInstantResult: false,
     chapterNames: [],
     bountyNote: '',
     bountyPoints: 0,
@@ -71,7 +71,9 @@ describe('studentTestPill', () => {
     });
     expect(studentTestPill(card({ ...finished, releasedMarks: 9.5 })).tone).toBe('okay');
     expect(studentTestPill(card({ ...finished, releasedMarks: 4 })).tone).toBe('low');
-    expect(studentTestPill(card({ ...finished, hasMcqResult: true })).label).toBe('MCQ result');
+    expect(studentTestPill(card({ ...finished, hasInstantResult: true })).label).toBe(
+      'Result so far',
+    );
   });
 });
 
