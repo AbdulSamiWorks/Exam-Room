@@ -2,7 +2,8 @@
 
 > Status: **approved plan, v1** (2026-10-22). Milestones M0–M19 are all built (2026-10-25), and the
 > owner's feedback rounds M20 to M22 (2026-10-24, §17) are done; the real-device checks in §15 are
-> still to do. M23 (new question kinds) and M24 (AI marking) are planned in §18 (2026-10-27). Colours and their roles: `docs/DESIGN.md`. Update this file whenever a decision
+> still to do. M23 (new question kinds) is built (2026-10-27, §17); M24 (AI marking) is planned in
+> §18 and not started. Colours and their roles: `docs/DESIGN.md`. Update this file whenever a decision
 > below changes.
 
 Exam Room is a small mobile-first web app. A teacher uploads a test paper (PDF), shares a link, and
@@ -154,11 +155,13 @@ answers    (attempt_id → attempts, question_id, choice NULL, text NULL,
 question_marks (attempt_id → attempts, question_id, marks NULL, comment,
             PRIMARY KEY (attempt_id, question_id)) WITHOUT ROWID   -- teacher marks overrule auto marks
 
-attempts   + mcq_marks, written_marks, total_marks (D48), teacher_comment
+attempts   + auto_marks (MCQ and exact answers, renamed in migration 16, D77), written_marks,
+             total_marks (D48), teacher_comment
 tests      + results_released_at, show_correct_answers, show_comments, show_top_scorer (D49, D50),
              bounty_note, bounty_points (D51); paper_kind may be 'none' for an offline
              assignment (rebuilt in migration 12), waiting_room 0/1 (migration 13, D58),
-             instant_mcq_result 0/1 (migration 14, D61), shuffle_questions 0/1 (migration 15, D70)
+             instant_result 0/1 (migration 14, renamed in 16, D61, D77), shuffle_questions 0/1
+             (migration 15, D70), answer_count (migration 16, D78)
 
 points     (id PK, student_id → students, test_id NULL → tests, points, reason, created_at)
              -- test_id set: a bounty, replaced on every release; NULL: given by hand
@@ -910,6 +913,33 @@ Tables that must change a constraint are rebuilt with `database.migrate()` (D35)
 | Render hours     | One service awake all month ≈ 744 hours                               | 750 hours / month                  |
 
 ## 17. Built milestones
+
+### M23 New question kinds checked by the app (built 2026-10-27)
+
+- **Question kinds** (D73): `short`, `blanks` and `parts` next to `mcq` and `written`. A markable
+  unit is a question without parts or one part (`q27a`); the answer key gains `accepted` and
+  `blanks`. `markableUnitsOf`, `answerSlotsOf` and `checksAutomatically` live in
+  `shared/src/paper-rules.ts`.
+- **Exact checking** (D75): `shared/src/answer-checking.ts` (`normalizeAnswer`,
+  `isAcceptedAnswer`, `checkUnit`), shared by the server scores and the marking page; `p.m.` and
+  `pm` also count the same.
+- **Answer slots** (D76): one stored answer per box (`q32.3` for a blank); the server checks each
+  slot against the paper; "Answered N of M" counts units (`answer_count`, D78).
+- **Scores** (D77): `scoreAttempt` adds automatic marks (MCQ and exact answers, a teacher mark
+  overrules) and written marks; marks are rounded to 2 decimals because blanks share marks.
+  Migration 16 renamed `mcq_marks` → `auto_marks` and `instant_mcq_result` → `instant_result` and
+  added `answer_count`.
+- **Student results** are per unit (`unitResultsOf`): the answer, ✓ or ✗ per blank, the right
+  answers when allowed, the mark and who gave it. The finished screen shows "Your score for the
+  answers the app checks" when the paper has more than MCQs.
+- **Phone**: short answers in a one-line box, blanks as boxes inside the sentence or passage;
+  paste, drop, spelling correction and auto-complete are off in every box.
+- **Teacher**: the preview shows the right answers under each part and inside each blank, and
+  counts how many typed answers the app checks; the marking page shows one row per unit with the
+  automatic mark as the placeholder. Papers that plain text cannot hold (a top-level short
+  question from JSON) open in the editor as JSON.
+- **Formats** (D74): plain text and JSON as in `docs/PAPER-FORMAT.md`; the owner's 50-mark
+  English tenses paper is the second sample paper (49 answer boxes).
 
 ### M22 Owner's third feedback round (built 2026-10-24)
 
